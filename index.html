@@ -167,7 +167,7 @@
         let transcript = "";
         let timer = 0;
         let timerInterval = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'song-siang-fa86e';
+        const appId = 'song-siang-fa86e';
 
         // --- Init Firebase ---
         const fbApp = initializeApp(firebaseConfig);
@@ -204,15 +204,14 @@
             lucide.createIcons();
         };
 
-        // --- Auth Protocol (Rule 3 Fix for custom-token-mismatch) ---
+        // --- Auth Protocol (Rule 3) ---
         const initFlow = async () => {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     try {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } catch (tokenErr) {
-                        // If token fails (mismatch or expired), fallback to anonymous
-                        console.warn("Auth token mismatch or error, falling back to anonymous", tokenErr);
+                        console.warn("Auth token mismatch, falling back to anonymous", tokenErr);
                         await signInAnonymously(auth);
                     }
                 } else {
@@ -220,12 +219,17 @@
                 }
             } catch (err) {
                 console.error("Auth init completely failed", err);
-                showModal("ข้อผิดพลาด", "ไม่สามารถเริ่มระบบยืนยันตัวตนได้ กรุณารีเฟรชหน้าจอ", "error");
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('views').classList.remove('hidden');
             }
         };
 
         onAuthStateChanged(auth, async (u) => {
             user = u;
+            // Hide loading as soon as auth state is known
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('views').classList.remove('hidden');
+
             if (u && !u.isAnonymous) {
                 const email = u.email || "";
                 if (email === "ie.architecture65@gmail.com") {
@@ -256,19 +260,19 @@
             }
             updateAuthUI();
             
-            // Listen to settings after auth
+            // Start listening to settings after auth
             onSnapshot(getSettingsDoc(), (snap) => {
                 if (snap.exists()) {
                     config = { ...config, ...snap.data() };
                     document.getElementById('header-project-name').innerText = config.projectName;
                     if (currentView === 'login') renderLogin();
+                    if (currentView === 'admin') renderAdmin();
+                } else {
+                    // Create default settings if doc doesn't exist
+                    setDoc(getSettingsDoc(), config);
                 }
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('views').classList.remove('hidden');
             }, (err) => {
                 console.error("Settings listener failed", err);
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('views').classList.remove('hidden');
             });
         });
 
@@ -404,7 +408,7 @@
                         <div id="recording-feedback" class="w-full space-y-6 hidden">
                              <div class="w-full bg-orange-50/30 p-8 rounded-[36px] border-2 border-dashed border-orange-100 text-left">
                                 <div class="flex justify-between items-center mb-4">
-                                    <span class="text-[10px] font-bold text-orange-400 uppercase tracking-widest">AI Transcript</span>
+                                    <span class="text-[9px] font-bold text-orange-400 uppercase tracking-widest">AI Transcript</span>
                                     <span id="word-count-badge" class="text-[10px] font-bold px-4 py-1.5 rounded-full bg-white text-orange-600 shadow-sm">0 / ${targetStudent ? '∞' : config.wordLimit}</span>
                                 </div>
                                 <p id="transcript-preview" class="text-sm text-slate-600 italic leading-relaxed min-h-[4rem]">"..."</p>
@@ -537,15 +541,37 @@
                         </div>
                         
                         <div class="grid sm:grid-cols-2 gap-8 mb-8">
-                            <div class="space-y-1.5 text-left"><label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Project Name</label><input id="adm-p-name" type="text" value="${config.projectName}" class="w-full bg-slate-50 border-none p-5 rounded-[24px] font-black italic text-lg text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none transition-all"></div>
-                            <div class="space-y-1.5 text-left"><label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Word Limit</label><input id="adm-word-limit" type="number" value="${config.wordLimit}" class="w-full bg-slate-50 border-none p-5 rounded-[24px] font-black text-xl text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none transition-all"></div>
-                            <div class="space-y-1.5 text-left"><label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Public Access</label><button onclick="config.publicEnabled=!config.publicEnabled; renderAdmin()" class="w-full ${config.publicEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-5 rounded-[24px] font-bold text-sm shadow-lg transition-all active:scale-95 uppercase tracking-widest">${config.publicEnabled ? 'Enabled' : 'Disabled'}</button></div>
-                            <div class="space-y-1.5 text-left"><label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Student Submit</label><button onclick="config.studentEnabled=!config.studentEnabled; renderAdmin()" class="w-full ${config.studentEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-5 rounded-[24px] font-bold text-sm shadow-lg transition-all active:scale-95 uppercase tracking-widest">${config.studentEnabled ? 'Active' : 'Locked'}</button></div>
+                            <div class="space-y-1.5 text-left">
+                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Project Name</label>
+                                <input id="adm-p-name" type="text" oninput="config.projectName = this.value" value="${config.projectName}" class="w-full bg-slate-50 border-none p-5 rounded-[24px] font-black italic text-lg text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none transition-all">
+                            </div>
+                            <div class="space-y-1.5 text-left">
+                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Word Limit</label>
+                                <input id="adm-word-limit" type="number" oninput="config.wordLimit = parseInt(this.value)" value="${config.wordLimit}" class="w-full bg-slate-50 border-none p-5 rounded-[24px] font-black text-xl text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none transition-all">
+                            </div>
+                            <div class="space-y-1.5 text-left">
+                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Public Access</label>
+                                <button onclick="config.publicEnabled=!config.publicEnabled; renderAdmin()" class="w-full ${config.publicEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-5 rounded-[24px] font-bold text-sm shadow-lg transition-all active:scale-95 uppercase tracking-widest">
+                                    ${config.publicEnabled ? 'Enabled' : 'Disabled'}
+                                </button>
+                            </div>
+                            <div class="space-y-1.5 text-left">
+                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Student Submit</label>
+                                <button onclick="config.studentEnabled=!config.studentEnabled; renderAdmin()" class="w-full ${config.studentEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-5 rounded-[24px] font-bold text-sm shadow-lg transition-all active:scale-95 uppercase tracking-widest">
+                                    ${config.studentEnabled ? 'Active' : 'Locked'}
+                                </button>
+                            </div>
                         </div>
                         
-                        <div class="grid gap-4 mb-10">
-                            <div class="space-y-1.5 text-left"><label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Admin Folder ID (Receipts)</label><input id="adm-folder" type="text" value="${config.driveAdminFolder}" class="w-full bg-slate-50 border-none p-4 rounded-[20px] font-mono text-[10px] text-slate-400"></div>
-                            <div class="space-y-1.5 text-left"><label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Guest Folder ID (Inbox)</label><input id="adm-inbox-folder" type="text" value="${config.driveInboxFolder}" class="w-full bg-slate-50 border-none p-4 rounded-[20px] font-mono text-[10px] text-slate-400"></div>
+                        <div class="grid gap-4 mb-10 text-left">
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Admin Folder ID</label>
+                                <input id="adm-folder" type="text" oninput="config.driveAdminFolder = this.value" value="${config.driveAdminFolder}" class="w-full bg-slate-50 border-none p-4 rounded-[20px] font-mono text-[10px] text-slate-400">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Guest Folder ID</label>
+                                <input id="adm-inbox-folder" type="text" oninput="config.driveInboxFolder = this.value" value="${config.driveInboxFolder}" class="w-full bg-slate-50 border-none p-4 rounded-[20px] font-mono text-[10px] text-slate-400">
+                            </div>
                         </div>
 
                         <button onclick="saveAdminSettings()" id="save-btn" class="w-full bg-orange-600 text-white py-5 rounded-[32px] font-black italic shadow-2xl shadow-orange-100 hover:scale-[1.01] transition-transform uppercase tracking-widest">Update Settings</button>
@@ -586,15 +612,7 @@
         window.saveAdminSettings = async () => {
             const btn = document.getElementById('save-btn'); btn.disabled = true;
             try { 
-                const newConfig = {
-                    projectName: document.getElementById('adm-p-name').value,
-                    wordLimit: parseInt(document.getElementById('adm-word-limit').value),
-                    driveAdminFolder: document.getElementById('adm-folder').value,
-                    driveInboxFolder: document.getElementById('adm-inbox-folder').value,
-                    publicEnabled: config.publicEnabled,
-                    studentEnabled: config.studentEnabled
-                };
-                await setDoc(getSettingsDoc(), newConfig); 
+                await setDoc(getSettingsDoc(), config); 
                 showModal("สำเร็จ", "บันทึกการตั้งค่าเรียบร้อยแล้ว", "success");
             } catch (e) { showModal("ล้มเหลว", e.message, "error"); }
             btn.disabled = false;
