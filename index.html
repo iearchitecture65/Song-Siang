@@ -15,68 +15,44 @@
             70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
         .btn-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .btn-hover:active { transform: scale(0.95); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
 
-    <!-- Error Modal -->
+    <!-- Modal แจ้งเตือน -->
     <div id="error-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300 text-center">
             <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6 mx-auto">
                 <i data-lucide="shield-alert" size="32"></i>
             </div>
-            <h3 class="text-xl font-bold text-slate-800 mb-2">แจ้งเตือนจากระบบ</h3>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">แจ้งเตือน</h3>
             <p id="error-message" class="text-slate-500 text-sm leading-relaxed mb-6"></p>
-            <button onclick="closeErrorModal()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-all">ตกลง</button>
+            <button onclick="closeErrorModal()" class="w-full bg-slate-100 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200">รับทราบ</button>
         </div>
     </div>
 
-    <!-- App Wrapper -->
     <div id="app-root" class="min-h-screen flex flex-col">
-        
-        <!-- Header (Only shown after login or in guest mode) -->
         <header id="main-header" class="hidden bg-white/80 backdrop-blur-md border-b sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
             <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.reload()">
                 <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-200">
                     <i data-lucide="music-4" size="24"></i>
                 </div>
-                <h1 class="text-xl font-bold tracking-tight text-indigo-900">Song Siang</h1>
+                <h1 class="text-xl font-bold tracking-tight text-indigo-900 italic">Song Siang</h1>
             </div>
-            <div id="auth-status" class="flex items-center gap-3">
-                <!-- Injected by JS -->
-            </div>
+            <div id="auth-status" class="flex items-center gap-3"></div>
         </header>
 
-        <!-- Main Content -->
         <main id="main-content" class="flex-grow max-w-4xl mx-auto p-4 sm:p-8 w-full">
-            <!-- Loading Screen -->
             <div id="loading-screen" class="flex flex-col items-center justify-center py-20 gap-4">
                 <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <p class="text-slate-400 font-medium">กำลังเตรียมความพร้อม...</p>
+                <p class="text-slate-400 font-medium">กำลังโหลดข้อมูล...</p>
             </div>
-
-            <!-- Content Area -->
-            <div id="views" class="hidden animate-in fade-in duration-500">
-                <!-- Views will be injected here -->
-            </div>
+            <div id="views" class="hidden animate-in fade-in duration-500"></div>
         </main>
 
-        <!-- Navigation Bar (For Students) -->
-        <nav id="student-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t flex justify-around p-3 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <nav id="student-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t flex justify-around p-3 z-50 shadow-lg">
             <button onclick="renderView('home')" class="nav-btn flex flex-col items-center gap-1 text-indigo-600" data-view="home">
                 <i data-lucide="layout-grid" size="20"></i>
                 <span class="text-[10px] font-bold uppercase tracking-widest">หน้าแรก</span>
@@ -92,12 +68,12 @@
         </nav>
     </div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, query, where, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, signInAnonymously, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Config ที่คุณให้มา
         const firebaseConfig = {
             apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
             authDomain: "song-siang-fa86e.firebaseapp.com",
@@ -105,12 +81,6 @@
             storageBucket: "song-siang-fa86e.firebasestorage.app",
             messagingSenderId: "1090864995280",
             appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
-        };
-
-        const serviceAccountMeta = {
-            projectId: "song-siang-489920",
-            clientEmail: "drive-uploader@song-siang-489920.iam.gserviceaccount.com",
-            folderId: "1XlkXHCoxlWVDAsmDnPo0I32kiAjf6pUT"
         };
 
         const STUDENT_LIST = [
@@ -164,100 +134,77 @@
 
         // --- App State ---
         let user = null;
-        let role = 'guest'; // admin, student, public
+        let role = 'guest';
         let studentId = '';
         let wordLimit = 50;
         let publicEnabled = true;
         let currentView = 'login';
         let targetStudent = null;
         let mediaRecorder = null;
-        let audioChunks = [];
+        let recordedBlob = null;
         let recognition = null;
         let transcript = "";
         let timer = 0;
         let timerInterval = null;
+        const appId = "song-siang-fa86e";
 
-        // --- Initialize ---
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // --- Initialize Firebase ---
+        const fbApp = initializeApp(firebaseConfig);
+        const auth = getAuth(fbApp);
+        const db = getFirestore(fbApp);
         const provider = new GoogleAuthProvider();
 
-        // Listen for Global Settings
-        onSnapshot(doc(db, "settings", "general"), (doc) => {
-            if (doc.exists()) {
-                wordLimit = doc.data().wordLimit || 50;
-                publicEnabled = doc.data().publicEnabled !== undefined ? doc.data().publicEnabled : true;
+        // Path Helpers (RULE 1)
+        const getPublicDataCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
+        const getPublicDataDoc = (name, id) => doc(db, 'artifacts', appId, 'public', 'data', name, id);
+        const getSettingsDoc = () => doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'general');
+
+        // Listeners
+        onSnapshot(getSettingsDoc(), (snapshot) => {
+            if (snapshot.exists()) {
+                wordLimit = snapshot.data().wordLimit || 50;
+                publicEnabled = snapshot.data().publicEnabled !== undefined ? snapshot.data().publicEnabled : true;
                 if (currentView === 'login') renderLogin();
             }
         });
 
-        // Auth Listener
         onAuthStateChanged(auth, async (u) => {
             user = u;
             if (u && !u.isAnonymous) {
                 const email = u.email || "";
-                
-                // Admin Special Case
                 if (email === "ie.architecture65@gmail.com") {
                     role = 'admin';
-                    document.getElementById('main-header').classList.remove('hidden');
                     renderView('admin');
-                } 
-                // Student Domain Check
-                else if (email.endsWith('@kmitl.ac.th')) {
+                } else if (email.endsWith('@kmitl.ac.th')) {
                     const prefix = email.split('@')[0];
                     if (STUDENT_LIST.some(s => s.id === prefix)) {
-                        role = 'student';
-                        studentId = prefix;
-                        document.getElementById('main-header').classList.remove('hidden');
-                        renderView('home');
+                        role = 'student'; studentId = prefix; renderView('home');
                     } else {
-                        await signOut(auth);
-                        showAuthError("ขออภัยครับ รหัสนักศึกษาของคุณไม่มีในรายชื่อห้องเรียนนี้");
+                        await signOut(auth); showAuthError("รหัสนักศึกษาของคุณไม่อยู่ในรายชื่อห้องเรียนนี้");
                     }
-                } 
-                // Forbidden Email
-                else {
-                    await signOut(auth);
-                    showAuthError("ระบบอนุญาตเฉพาะอีเมล @kmitl.ac.th สำหรับนักศึกษา หรืออีเมลแอดมินเท่านั้น");
+                } else {
+                    await signOut(auth); showAuthError("อนุญาตเฉพาะอีเมล @kmitl.ac.th หรือแอดมินเท่านั้น");
                 }
-            } else if (u && u.isAnonymous) {
-                role = 'public';
                 document.getElementById('main-header').classList.remove('hidden');
-                renderView('home');
+            } else if (u && u.isAnonymous) {
+                role = 'public'; renderView('home');
+                document.getElementById('main-header').classList.remove('hidden');
             } else {
-                role = 'guest';
+                role = 'guest'; renderLogin();
                 document.getElementById('main-header').classList.add('hidden');
                 document.getElementById('student-nav').classList.add('hidden');
-                renderLogin();
             }
             updateAuthUI();
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('views').classList.remove('hidden');
         });
 
-        // --- Core Functions ---
-        window.login = async () => {
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (err) {
-                showAuthError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ: " + err.message);
-            }
-        };
-
+        // --- Auth Actions ---
+        window.login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { showAuthError(e.message); } };
         window.loginAsPublic = async () => {
-            if (!publicEnabled) {
-                showAuthError("ขออภัยครับ ระบบส่งเสียงสำหรับบุคคลทั่วไปถูกปิดโดยแอดมิน");
-                return;
-            }
-            try {
-                await signInAnonymously(auth);
-            } catch (err) {
-                showAuthError("ไม่สามารถเข้าถึงระบบบุคคลทั่วไปได้: " + err.message);
-            }
+            if (!publicEnabled) { showAuthError("ระบบสำหรับบุคคลทั่วไปปิดอยู่"); return; }
+            try { await signInAnonymously(auth); } catch (e) { showAuthError(e.message); }
         };
-
         window.logout = () => signOut(auth);
 
         function updateAuthUI() {
@@ -267,210 +214,125 @@
                     <div class="flex items-center gap-3">
                         <div class="text-right hidden sm:block">
                             <p class="text-sm font-bold text-slate-800 leading-none">${user.displayName}</p>
-                            <p class="text-[10px] text-indigo-500 uppercase font-bold tracking-tighter mt-1">${role} ${studentId ? `| ${studentId}` : ''}</p>
+                            <p class="text-[10px] text-indigo-500 uppercase font-bold mt-1">${role} ${studentId ? `| ${studentId}` : ''}</p>
                         </div>
-                        <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                            <i data-lucide="log-out" size="20"></i>
-                        </button>
-                    </div>
-                `;
+                        <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500"><i data-lucide="log-out" size="20"></i></button>
+                    </div>`;
             } else if (user && user.isAnonymous) {
-                container.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Public Session</span>
-                        <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                            <i data-lucide="log-out" size="20"></i>
-                        </button>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `<button onclick="login()" class="bg-indigo-600 text-white px-5 py-2 rounded-full text-sm font-bold">เข้าสู่ระบบ</button>`;
+                container.innerHTML = `<button onclick="logout()" class="p-2 text-slate-400">Guest <i data-lucide="log-out" size="18"></i></button>`;
             }
             lucide.createIcons();
         }
+
+        // --- View Handlers ---
+        window.renderView = (viewName) => {
+            currentView = viewName;
+            document.getElementById('student-nav').classList.toggle('hidden', role !== 'student');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('text-indigo-600', b.dataset.view === viewName));
+
+            if (viewName === 'home') renderHome();
+            else if (viewName === 'record') renderRecord();
+            else if (viewName === 'inbox') renderInbox();
+            else if (viewName === 'admin') renderAdmin();
+            lucide.createIcons();
+        };
 
         function renderLogin() {
             currentView = 'login';
-            const container = document.getElementById('views');
-            container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 sm:py-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                    <div class="w-24 h-24 bg-indigo-600 text-white rounded-[32px] flex items-center justify-center shadow-2xl shadow-indigo-200 mb-8">
-                        <i data-lucide="music-4" size="48"></i>
-                    </div>
-                    <h2 class="text-4xl font-black text-slate-800 mb-2 tracking-tighter italic">SONG SIANG</h2>
-                    <p class="text-slate-400 text-sm font-medium uppercase tracking-[0.2em] mb-12">Classroom Voice System</p>
-                    
+            document.getElementById('views').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 animate-in fade-in slide-in-from-bottom-8">
+                    <div class="w-20 h-20 bg-indigo-600 text-white rounded-[28px] flex items-center justify-center shadow-xl mb-6"><i data-lucide="music-4" size="40"></i></div>
+                    <h2 class="text-4xl font-black text-slate-800 mb-1 tracking-tighter italic uppercase">Song Siang</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-10">Classroom Voice System</p>
                     <div class="w-full max-w-xs space-y-4">
-                        <button onclick="login()" class="w-full bg-white border border-slate-200 p-4 rounded-3xl flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-95 group">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="20" alt="Google">
-                            <span class="font-bold text-slate-700">นักศึกษา / แอดมิน</span>
+                        <button onclick="login()" class="w-full bg-white border border-slate-200 p-4 rounded-3xl flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-all active:scale-95 group font-bold text-slate-700">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18"> นักศึกษา / แอดมิน
                         </button>
-                        
-                        <div class="relative py-4">
-                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
-                            <div class="relative flex justify-center text-xs uppercase font-bold tracking-widest text-slate-300"><span class="bg-slate-50 px-4 italic">OR</span></div>
-                        </div>
-
-                        <button onclick="loginAsPublic()" class="w-full ${publicEnabled ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100' : 'bg-slate-300 cursor-not-allowed'} text-white p-4 rounded-3xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <i data-lucide="${publicEnabled ? 'message-circle' : 'lock'}" size="18"></i>
-                            ${publicEnabled ? 'บุคคลทั่วไปส่งเสียง' : 'ระบบบุคคลทั่วไปปิดอยู่'}
+                        <div class="flex items-center gap-4 py-2 opacity-30"><hr class="flex-grow border-slate-300"><span class="text-[10px] font-bold">OR</span><hr class="flex-grow border-slate-300"></div>
+                        <button onclick="loginAsPublic()" class="w-full ${publicEnabled ? 'bg-indigo-600' : 'bg-slate-300'} text-white p-4 rounded-3xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
+                            <i data-lucide="${publicEnabled ? 'message-circle' : 'lock'}" size="18"></i> ${publicEnabled ? 'บุคคลทั่วไปส่งเสียง' : 'ระบบปิดอยู่'}
                         </button>
                     </div>
-                    
-                    <p class="mt-12 text-[10px] text-slate-400 font-bold uppercase tracking-widest">KMITL Architecture 65 Project</p>
-                </div>
-            `;
+                </div>`;
             lucide.createIcons();
         }
-
-        window.renderView = (viewName) => {
-            currentView = viewName;
-            const container = document.getElementById('views');
-            const nav = document.getElementById('student-nav');
-            
-            if (role === 'student') nav.classList.remove('hidden');
-            else nav.classList.add('hidden');
-
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                if (btn.dataset.view === viewName) {
-                    btn.classList.add('text-indigo-600');
-                    btn.classList.remove('text-slate-400');
-                } else {
-                    btn.classList.remove('text-indigo-600');
-                    btn.classList.add('text-slate-400');
-                }
-            });
-
-            switch (viewName) {
-                case 'home': renderHome(); break;
-                case 'record': renderRecord(); break;
-                case 'inbox': renderInbox(); break;
-                case 'admin': renderAdmin(); break;
-            }
-            lucide.createIcons();
-        };
 
         function renderHome() {
             const container = document.getElementById('views');
             if (role === 'admin') { renderAdmin(); return; }
-
             if (role === 'public') {
                 container.innerHTML = `
-                    <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[40px] p-8 text-white shadow-2xl relative overflow-hidden">
-                            <div class="relative z-10">
-                                <h2 class="text-3xl font-black mb-2 italic">TALK TO US</h2>
-                                <p class="text-indigo-100 opacity-90 text-sm">เลือกคนที่คุณต้องการส่งความในใจถึง แล้วเริ่มอัดเสียงได้เลย!</p>
-                            </div>
-                            <i data-lucide="mic" class="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 transform rotate-12"></i>
+                    <div class="space-y-6">
+                        <div class="bg-indigo-600 rounded-[40px] p-8 text-white shadow-xl relative overflow-hidden">
+                            <h2 class="text-3xl font-black italic mb-2 tracking-tight">TALK TO US</h2>
+                            <p class="text-indigo-100 text-sm opacity-90">เลือกเพื่อนที่ต้องการส่งความในใจถึงได้เลย</p>
                         </div>
-                        
-                        <!-- Special: Send to Everyone -->
-                        <button onclick="targetStudent={id:'Everyone', nick:'ทุกคนในห้อง'}; renderView('record')" class="w-full bg-white p-6 rounded-[32px] border-2 border-indigo-100 flex items-center gap-4 hover:bg-indigo-50 transition-colors shadow-sm">
-                            <div class="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center">
-                                <i data-lucide="users" size="28"></i>
-                            </div>
-                            <div class="text-left">
-                                <p class="font-black text-indigo-900 text-lg italic">ส่งถึงทุกคน (Everyone)</p>
-                                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Broadcast to all students</p>
-                            </div>
+                        <button onclick="targetStudent={id:'Everyone', nick:'ทุกคนในห้อง'}; renderView('record')" class="w-full bg-white p-6 rounded-[32px] border-2 border-indigo-50 flex items-center gap-4 hover:border-indigo-200 shadow-sm transition-all">
+                            <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center"><i data-lucide="users" size="24"></i></div>
+                            <div class="text-left"><p class="font-black text-indigo-900 text-lg italic">ส่งถึงทุกคน (Everyone)</p></div>
                         </button>
-
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="student-grid"></div>
-                    </div>
-                `;
+                    </div>`;
                 const grid = document.getElementById('student-grid');
                 STUDENT_LIST.forEach(s => {
                     const btn = document.createElement('button');
-                    btn.className = "bg-white p-5 rounded-3xl border border-slate-100 hover:border-indigo-300 hover:shadow-xl transition-all text-left group";
-                    btn.innerHTML = `
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">${s.id}</p>
-                        <p class="font-black text-slate-800 group-hover:text-indigo-600 tracking-tight italic">${s.nick}</p>
-                        <p class="text-[10px] text-slate-500 truncate mt-1">${s.name}</p>
-                    `;
+                    btn.className = "bg-white p-5 rounded-3xl border border-slate-100 hover:border-indigo-300 transition-all text-left shadow-sm";
+                    btn.innerHTML = `<p class="text-[10px] text-slate-400 font-bold mb-1">${s.id}</p><p class="font-black text-slate-800 italic">${s.nick}</p>`;
                     btn.onclick = () => { targetStudent = s; renderView('record'); };
                     grid.appendChild(btn);
                 });
             } else {
-                // Student Home
                 container.innerHTML = `
-                    <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div class="space-y-6">
                         <div class="bg-white p-10 rounded-[48px] border border-slate-100 shadow-sm text-center">
-                            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl mx-auto flex items-center justify-center mb-4">
-                                <i data-lucide="sparkles" size="40"></i>
-                            </div>
                             <h2 class="text-2xl font-black text-slate-800 tracking-tighter">HELLO, ${studentId}</h2>
-                            <p class="text-slate-400 mt-1">วันนี้คุณพร้อมส่งคลิปเสียงสำหรับวิชานี้หรือยัง?</p>
+                            <p class="text-slate-400 text-sm mt-1">อัดเสียงส่งงานหรือเช็คกล่องข้อความของคุณ</p>
                         </div>
                         <div class="grid gap-4">
-                            <button onclick="renderView('record')" class="bg-indigo-600 text-white p-8 rounded-[40px] flex items-center justify-between shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-transform group">
-                                <div class="flex items-center gap-5">
-                                    <div class="bg-indigo-500 p-4 rounded-2xl group-hover:rotate-12 transition-transform"><i data-lucide="mic-2"></i></div>
-                                    <div class="text-left">
-                                        <p class="font-black text-xl italic tracking-tighter leading-none">อัดเสียงส่งงาน</p>
-                                        <p class="text-xs text-indigo-100 opacity-80 mt-2 font-bold uppercase tracking-widest">Classroom Video Submission</p>
-                                    </div>
-                                </div>
+                            <button onclick="renderView('record')" class="bg-indigo-600 text-white p-8 rounded-[40px] flex items-center justify-between shadow-lg hover:scale-[1.02] transition-transform">
+                                <div class="flex items-center gap-5 text-left"><div class="bg-indigo-500 p-4 rounded-2xl"><i data-lucide="mic-2"></i></div><div><p class="font-black text-xl italic leading-none">อัดเสียงส่งงาน</p><p class="text-[10px] opacity-70 uppercase font-bold mt-2">Classroom Video Submission</p></div></div>
                                 <i data-lucide="chevron-right"></i>
                             </button>
-                            <button onclick="renderView('inbox')" class="bg-white border border-slate-200 p-8 rounded-[40px] flex items-center justify-between hover:border-indigo-300 transition-all group">
-                                <div class="flex items-center gap-5">
-                                    <div class="bg-slate-50 p-4 rounded-2xl text-slate-600 group-hover:scale-110 transition-transform"><i data-lucide="inbox"></i></div>
-                                    <div class="text-left text-slate-800">
-                                        <p class="font-black text-xl italic tracking-tighter leading-none">กล่องเสียงจากเพื่อน</p>
-                                        <p class="text-xs text-slate-400 mt-2 font-bold uppercase tracking-widest">Public Messages Inbox</p>
-                                    </div>
-                                </div>
+                            <button onclick="renderView('inbox')" class="bg-white border border-slate-200 p-8 rounded-[40px] flex items-center justify-between hover:border-indigo-300 transition-all">
+                                <div class="flex items-center gap-5 text-left"><div class="bg-slate-50 p-4 rounded-2xl text-slate-600"><i data-lucide="inbox"></i></div><div><p class="font-black text-xl italic text-slate-800 leading-none">กล่องเสียงจากเพื่อน</p><p class="text-[10px] text-slate-400 uppercase font-bold mt-2">Guest Messages Inbox</p></div></div>
                                 <i data-lucide="chevron-right"></i>
                             </button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
+            lucide.createIcons();
         }
 
         function renderRecord() {
             const container = document.getElementById('views');
-            transcript = "";
-            timer = 0;
-            const currentTarget = targetStudent;
-
+            transcript = ""; timer = 0;
             container.innerHTML = `
-                <div class="max-w-md mx-auto space-y-8 animate-in slide-in-from-bottom-8 duration-500">
+                <div class="max-w-md mx-auto space-y-8 animate-in slide-in-from-bottom-8">
                     <div class="text-center space-y-2">
-                        <h2 class="text-3xl font-black text-indigo-900 italic">${currentTarget ? `ส่งถึง: ${currentTarget.nick}` : 'อัดเสียงส่งงาน'}</h2>
-                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest">
-                            ${currentTarget ? 'TALK YOUR HEART OUT' : `LIMIT: ${wordLimit} WORDS`}
-                        </p>
+                        <h2 class="text-3xl font-black text-indigo-900 italic tracking-tighter">${targetStudent ? `ส่งถึง: ${targetStudent.nick}` : 'อัดเสียงส่งงาน'}</h2>
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">${targetStudent ? 'SPEAK YOUR HEART' : `WORD LIMIT: ${wordLimit}`}</p>
                     </div>
-
                     <div class="bg-white p-10 rounded-[56px] shadow-2xl border border-slate-100 flex flex-col items-center gap-8">
                         <div id="timer-display" class="text-6xl font-mono font-bold text-slate-200 tracking-tighter">00:00</div>
-                        
-                        <div class="relative">
-                            <button id="record-btn" onclick="toggleRecording()" class="w-32 h-32 rounded-full bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-90">
-                                <i data-lucide="mic" id="mic-icon" size="48" class="text-white"></i>
-                            </button>
-                        </div>
-
-                        <div id="status-text" class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Press to start talking</div>
-
+                        <button id="record-btn" onclick="toggleRecording()" class="w-32 h-32 rounded-full bg-indigo-600 flex items-center justify-center shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
+                            <i data-lucide="mic" id="mic-icon" size="48" class="text-white"></i>
+                        </button>
+                        <div id="status-text" class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Press to start</div>
                         <div id="recording-feedback" class="w-full space-y-4 hidden">
                              <div class="w-full bg-slate-50 p-6 rounded-[32px] border border-dashed border-slate-200 text-left">
                                 <div class="flex justify-between items-center mb-3">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Transcript</span>
-                                    <span id="word-count-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-600">0 / ${currentTarget ? '∞' : wordLimit} คำ</span>
+                                    <span id="word-count-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-600">0 / ${targetStudent ? '∞' : wordLimit}</span>
                                 </div>
-                                <p id="transcript-preview" class="text-sm text-slate-600 italic leading-relaxed min-h-[4rem] line-clamp-3">"รอรับเสียง..."</p>
+                                <p id="transcript-preview" class="text-sm text-slate-600 italic leading-relaxed min-h-[4rem] line-clamp-3">"..."</p>
                             </div>
-                            <div class="flex gap-2 pt-2">
-                                <button onclick="resetRecording()" class="flex-1 bg-slate-100 py-4 rounded-3xl font-bold text-slate-500 hover:bg-slate-200 transition-all">ยกเลิก</button>
-                                <button id="submit-btn" onclick="submitVoice()" class="flex-1 bg-green-500 py-4 rounded-3xl font-bold text-white shadow-lg shadow-green-100 hover:bg-green-600 transition-all">ส่งเสียง</button>
+                            <div class="flex gap-2">
+                                <button onclick="resetRecording()" class="flex-1 bg-slate-100 py-4 rounded-3xl font-bold text-slate-500 hover:bg-slate-200">อัดใหม่</button>
+                                <button id="submit-btn" onclick="submitVoice()" class="flex-1 bg-green-500 py-4 rounded-3xl font-bold text-white shadow-lg hover:bg-green-600 transition-all">ส่งเสียง</button>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
             lucide.createIcons();
         }
 
@@ -478,7 +340,6 @@
             const btn = document.getElementById('record-btn');
             const icon = document.getElementById('mic-icon');
             const status = document.getElementById('status-text');
-            const feedback = document.getElementById('recording-feedback');
             const timerEl = document.getElementById('timer-display');
 
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
@@ -487,156 +348,106 @@
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => { recordedBlob = new Blob(audioChunks, { type: 'audio/mp3' }); };
                     mediaRecorder.start();
 
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     if (SpeechRecognition) {
                         recognition = new SpeechRecognition();
-                        recognition.continuous = true;
-                        recognition.interimResults = true;
-                        recognition.lang = 'th-TH';
+                        recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'th-TH';
                         recognition.onresult = (e) => {
-                            let text = "";
-                            for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+                            let text = ""; for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
                             transcript = text;
                             const count = text.trim().split(/\s+/).filter(w => w.length > 0).length;
                             document.getElementById('transcript-preview').innerText = `"${text}"`;
                             const badge = document.getElementById('word-count-badge');
-                            badge.innerText = `${count} / ${targetStudent ? '∞' : wordLimit} คำ`;
-                            
-                            const submitBtn = document.getElementById('submit-btn');
+                            badge.innerText = `${count} / ${targetStudent ? '∞' : wordLimit}`;
+                            const subBtn = document.getElementById('submit-btn');
                             if (!targetStudent && count > wordLimit) {
                                 badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-600';
-                                submitBtn.disabled = true;
-                                submitBtn.classList.add('opacity-50', 'grayscale');
+                                subBtn.disabled = true; subBtn.classList.add('opacity-50');
                             } else {
                                 badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-600';
-                                submitBtn.disabled = false;
-                                submitBtn.classList.remove('opacity-50', 'grayscale');
+                                subBtn.disabled = false; subBtn.classList.remove('opacity-50');
                             }
                         };
                         recognition.start();
                     }
 
-                    btn.classList.add('recording-pulse', 'bg-red-500');
-                    btn.classList.remove('bg-indigo-600');
-                    timerEl.classList.replace('text-slate-200', 'text-red-500');
-                    status.innerText = "RECORDING IN PROGRESS...";
-                    icon.setAttribute('data-lucide', 'square');
-                    lucide.createIcons();
-
-                    timer = 0;
-                    timerInterval = setInterval(() => {
-                        timer++;
-                        const m = Math.floor(timer / 60).toString().padStart(2, '0');
-                        const s = (timer % 60).toString().padStart(2, '0');
+                    btn.classList.add('recording-pulse', 'bg-red-500'); icon.setAttribute('data-lucide', 'square');
+                    timerEl.classList.replace('text-slate-200', 'text-red-500'); status.innerText = "RECORDING...";
+                    timer = 0; timerInterval = setInterval(() => {
+                        timer++; const m = Math.floor(timer / 60).toString().padStart(2, '0'); const s = (timer % 60).toString().padStart(2, '0');
                         timerEl.innerText = `${m}:${s}`;
                     }, 1000);
-
+                    lucide.createIcons();
                 } catch (err) { showAuthError("ไมโครโฟนถูกปฏิเสธ: " + err.message); }
             } else {
-                mediaRecorder.stop();
-                recognition?.stop();
-                clearInterval(timerInterval);
-                btn.classList.add('hidden');
-                feedback.classList.remove('hidden');
-                status.innerText = "CHECK & SEND YOUR MESSAGE";
-                timerEl.classList.replace('text-red-500', 'text-slate-800');
-                icon.setAttribute('data-lucide', 'mic');
+                mediaRecorder.stop(); recognition?.stop(); clearInterval(timerInterval);
+                btn.classList.add('hidden'); document.getElementById('recording-feedback').classList.remove('hidden');
+                status.innerText = "CHECK & SEND"; timerEl.classList.replace('text-red-500', 'text-slate-800');
                 lucide.createIcons();
             }
         };
 
         window.submitVoice = async () => {
+            if (!user) { showAuthError("กรุณาเข้าสู่ระบบก่อนครับ"); return; }
             const btn = document.getElementById('submit-btn');
-            if (!user) return;
-            btn.disabled = true;
-            btn.innerText = "SENDING...";
+            btn.disabled = true; btn.innerText = "SENDING...";
 
             try {
-                const count = transcript.trim().split(/\s+/).filter(w => w.length > 0).length;
+                // ข้อมูลที่จะบันทึกลง Firestore (RULE 1)
                 const payload = {
                     from: studentId || (user.isAnonymous ? "Guest" : user.displayName),
                     targetId: targetStudent ? targetStudent.id : "Admin",
                     timestamp: new Date().toISOString(),
-                    wordCount: count,
                     transcript: transcript,
+                    wordCount: transcript.trim().split(/\s+/).filter(w => w.length > 0).length,
                     driveUrl: "https://drive.google.com/drive/folders/" + serviceAccountMeta.folderId,
-                    fileName: `voice_${Date.now()}.mp3`
                 };
 
+                // บันทึก Metadata ลง Firestore (เพื่อแสดงรายการในหน้าแอป)
                 if (role === 'student' && !targetStudent) {
-                    await setDoc(doc(db, "submissions", studentId), payload);
+                    await setDoc(getPublicDataDoc('submissions', studentId), payload);
                 } else {
-                    await addDoc(collection(db, "messages"), payload);
+                    await addDoc(getPublicDataCollection('messages'), payload);
                 }
 
+                /* หมายเหตุสำหรับคุณ: การส่งไฟล์ Blob (recordedBlob) เข้า Google Drive โดยตรงจาก HTML
+                   ต้องใช้ Access Token จาก OAuth2 หรือทำผ่าน Cloud Function (แนะนำ)
+                   ในขั้นตอนนี้ ข้อมูลตัวหนังสือและลิงก์โฟลเดอร์จะถูกบันทึกสำเร็จแล้วครับ
+                */
+
                 document.getElementById('views').innerHTML = `
-                    <div class="text-center py-20 space-y-6 animate-in zoom-in duration-500">
-                        <div class="w-24 h-24 bg-green-100 text-green-600 rounded-[32px] mx-auto flex items-center justify-center">
-                            <i data-lucide="check" size="48"></i>
-                        </div>
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter italic">MESSAGE SENT!</h2>
-                        <p class="text-slate-400 font-medium">บันทึกข้อมูลเข้าระบบเรียบร้อยแล้ว</p>
-                        <button onclick="renderView('home')" class="bg-indigo-600 text-white px-10 py-4 rounded-3xl font-bold shadow-lg shadow-indigo-100">BACK HOME</button>
-                    </div>
-                `;
-                lucide.createIcons();
-                targetStudent = null;
+                    <div class="text-center py-20 animate-in zoom-in">
+                        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full mx-auto flex items-center justify-center mb-6"><i data-lucide="check" size="40"></i></div>
+                        <h2 class="text-3xl font-black italic tracking-tighter mb-2">SENT!</h2>
+                        <p class="text-slate-400 text-sm mb-8">บันทึกข้อมูลเรียบร้อยแล้ว</p>
+                        <button onclick="renderView('home')" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold">BACK HOME</button>
+                    </div>`;
+                lucide.createIcons(); targetStudent = null;
             } catch (e) {
-                showAuthError("เกิดข้อผิดพลาดในการบันทึก: " + e.message);
-                btn.disabled = false;
-                btn.innerText = "ส่งเสียง";
+                console.error(e);
+                showAuthError("บันทึกข้อมูลไม่สำเร็จ: " + e.message + " (ตรวจสอบสิทธิ์ Firebase ของคุณ)");
+                btn.disabled = false; btn.innerText = "ส่งเสียง";
             }
         };
 
-        window.resetRecording = () => {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-            recognition?.stop();
-            clearInterval(timerInterval);
-            renderView('record');
-        };
+        window.resetRecording = () => { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); recognition?.stop(); clearInterval(timerInterval); renderView('record'); };
 
         function renderInbox() {
-            const container = document.getElementById('views');
-            if (!user || role !== 'student') { renderView('home'); return; }
-
-            container.innerHTML = `
-                <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <h2 class="text-2xl font-black text-slate-800 flex items-center gap-3 italic tracking-tighter">
-                        <i data-lucide="mail" class="text-indigo-600"></i> INBOX
-                    </h2>
-                    <div id="inbox-list" class="grid gap-4">
-                        <div class="flex justify-center py-20"><div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>
-                    </div>
-                </div>
-            `;
+            const listContainer = document.getElementById('views');
+            listContainer.innerHTML = `<h2 class="text-2xl font-black italic mb-6 flex items-center gap-2"><i data-lucide="mail"></i> INBOX</h2><div id="inbox-list" class="grid gap-4">กำลังโหลด...</div>`;
             const list = document.getElementById('inbox-list');
-            const q = query(collection(db, "messages"), where("targetId", "in", [studentId, "Everyone"]));
-            
+            const q = query(getPublicDataCollection('messages'), where("targetId", "in", [studentId, "Everyone"]));
             onSnapshot(q, (snapshot) => {
                 list.innerHTML = "";
-                if (snapshot.empty) {
-                    list.innerHTML = `<div class="bg-white p-12 rounded-[48px] text-center border border-slate-100 text-slate-400 font-medium italic">ยังไม่มีใครส่งเสียงหาคุณในตอนนี้</div>`;
-                    return;
-                }
+                if (snapshot.empty) { list.innerHTML = `<div class="bg-white p-12 rounded-[40px] text-center text-slate-400 italic">No messages found.</div>`; return; }
                 snapshot.docs.forEach(d => {
-                    const msg = d.data();
-                    const isGlobal = msg.targetId === "Everyone";
+                    const msg = d.data(); const isGlobal = msg.targetId === "Everyone";
                     const item = document.createElement('div');
-                    item.className = `bg-white p-6 rounded-[36px] shadow-sm border ${isGlobal ? 'border-indigo-200' : 'border-slate-100'} space-y-4 text-left`;
-                    item.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[10px] font-bold ${isGlobal ? 'text-indigo-600' : 'text-slate-400'} uppercase tracking-widest">${isGlobal ? 'GLOBAL MESSAGE' : 'PRIVATE MESSAGE'}</p>
-                                <p class="text-[10px] text-slate-300 font-medium">${new Date(msg.timestamp).toLocaleString('th-TH')}</p>
-                            </div>
-                        </div>
-                        <p class="text-sm text-slate-600 italic leading-relaxed">"${msg.transcript}"</p>
-                        <a href="${msg.driveUrl}" target="_blank" class="inline-flex items-center gap-2 text-indigo-600 text-xs font-bold bg-indigo-50 px-3 py-2 rounded-xl">
-                            <i data-lucide="play-circle" size="16"></i> LISTEN AUDIO
-                        </a>
-                    `;
+                    item.className = `bg-white p-6 rounded-[32px] border ${isGlobal ? 'border-indigo-100' : 'border-slate-100'} text-left shadow-sm`;
+                    item.innerHTML = `<p class="text-[10px] font-bold ${isGlobal ? 'text-indigo-600' : 'text-slate-400'} uppercase mb-2">${isGlobal ? 'GLOBAL' : 'PRIVATE'}</p><p class="text-sm text-slate-600 italic leading-relaxed mb-4">"${msg.transcript}"</p><a href="${msg.driveUrl}" target="_blank" class="text-indigo-600 text-xs font-bold bg-indigo-50 px-3 py-2 rounded-lg inline-flex items-center gap-1"><i data-lucide="play-circle" size="14"></i> LISTEN</a>`;
                     list.appendChild(item);
                 });
                 lucide.createIcons();
@@ -645,64 +456,24 @@
 
         function renderAdmin() {
             const container = document.getElementById('views');
-            if (role !== 'admin') { renderView('home'); return; }
-
             container.innerHTML = `
-                <div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
-                    <div class="bg-white p-8 rounded-[48px] shadow-xl border border-indigo-50 space-y-8">
-                        <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3 tracking-tighter italic">
-                            <i data-lucide="settings" class="text-indigo-600"></i> ADMIN PANEL
-                        </h2>
-                        
-                        <div class="grid sm:grid-cols-2 gap-8">
-                            <div class="space-y-2">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Word Limit (Student)</label>
-                                <input id="word-limit-input" type="number" value="${wordLimit}" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-[24px] focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-black text-2xl tracking-tighter italic">
-                            </div>
-                            
-                            <div class="space-y-2 flex flex-col justify-end">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Public Access (Guest Mode)</label>
-                                <button onclick="togglePublicAccess()" id="public-toggle-btn" class="w-full ${publicEnabled ? 'bg-green-500 shadow-green-100' : 'bg-red-500 shadow-red-100'} text-white p-4 rounded-[24px] font-bold flex items-center justify-between px-6 shadow-lg transition-all">
-                                    <span>${publicEnabled ? 'เปิดใช้งานอยู่' : 'ปิดใช้งานอยู่'}</span>
-                                    <i data-lucide="${publicEnabled ? 'check-circle' : 'x-circle'}"></i>
-                                </button>
-                            </div>
+                <div class="space-y-8 text-left">
+                    <div class="bg-white p-8 rounded-[48px] shadow-lg border border-indigo-50">
+                        <h2 class="text-2xl font-black italic mb-6">ADMIN PANEL</h2>
+                        <div class="grid sm:grid-cols-2 gap-6 mb-6">
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Limit (Words)</label><input id="word-limit-input" type="number" value="${wordLimit}" class="w-full bg-slate-50 border p-4 rounded-2xl font-bold text-xl"></div>
+                            <div class="space-y-1"><label class="text-[10px] font-bold text-slate-400 uppercase">Public Access</label><button onclick="togglePublicAccess()" id="public-toggle-btn" class="w-full ${publicEnabled ? 'bg-green-500' : 'bg-red-500'} text-white p-4 rounded-2xl font-bold">${publicEnabled ? 'OPEN' : 'CLOSED'}</button></div>
                         </div>
-
-                        <button onclick="saveAdminSettings()" id="save-settings-btn" class="w-full bg-indigo-600 text-white py-5 rounded-[28px] font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95">UPDATE SETTINGS</button>
+                        <button onclick="saveAdminSettings()" id="save-btn" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">SAVE SETTINGS</button>
                     </div>
-
-                    <div class="space-y-4 text-left">
-                        <h3 class="text-lg font-bold text-slate-700 uppercase tracking-tighter flex items-center gap-2 ml-2">
-                             <i data-lucide="layout-list" size="20"></i> STUDENT SUBMISSIONS
-                        </h3>
-                        <div id="admin-submissions" class="grid gap-3"></div>
-                    </div>
-                </div>
-            `;
-            
+                    <div class="space-y-4"><h3 class="font-bold text-slate-400 uppercase text-xs ml-4">Submissions</h3><div id="admin-submissions" class="grid gap-2"></div></div>
+                </div>`;
             const subList = document.getElementById('admin-submissions');
-            onSnapshot(collection(db, "submissions"), (snapshot) => {
-                subList.innerHTML = "";
-                if (snapshot.empty) {
-                    subList.innerHTML = `<div class="text-center py-10 text-slate-300 text-sm italic">No submissions yet</div>`;
-                    return;
-                }
-                snapshot.docs.forEach(d => {
-                    const sub = d.data();
-                    const sInfo = STUDENT_LIST.find(s => s.id === sub.from);
-                    const item = document.createElement('div');
-                    item.className = "bg-white p-5 rounded-[36px] border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 text-left";
-                    item.innerHTML = `
-                        <div class="flex items-center gap-4 w-full text-left">
-                            <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-xs">${sub.from.slice(-2)}</div>
-                            <div class="flex-1">
-                                <p class="font-bold text-slate-800">${sInfo ? sInfo.nick : sub.from}</p>
-                                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">${sub.wordCount} words | ${sub.from}</p>
-                            </div>
-                        </div>
-                        <a href="${sub.driveUrl}" target="_blank" class="w-full sm:w-auto bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-600 px-6 py-2.5 rounded-2xl text-xs font-bold transition-all text-center">Open Drive</a>
-                    `;
+            onSnapshot(getPublicDataCollection('submissions'), (snapshot) => {
+                subList.innerHTML = ""; snapshot.docs.forEach(d => {
+                    const sub = d.data(); const item = document.createElement('div');
+                    item.className = "bg-white p-4 rounded-3xl border border-slate-50 flex justify-between items-center shadow-sm";
+                    item.innerHTML = `<div class="text-left"><p class="font-bold text-slate-800 leading-none">${sub.from}</p><p class="text-[10px] text-slate-400 mt-1">${sub.wordCount} words</p></div><a href="${sub.driveUrl}" target="_blank" class="bg-slate-50 text-slate-400 p-2 rounded-xl hover:text-indigo-600"><i data-lucide="external-link" size="18"></i></a>`;
                     subList.appendChild(item);
                 });
                 lucide.createIcons();
@@ -710,38 +481,15 @@
             lucide.createIcons();
         }
 
-        window.togglePublicAccess = () => {
-            publicEnabled = !publicEnabled;
-            renderAdmin(); // Re-render locally to show change
-        };
-
+        window.togglePublicAccess = () => { publicEnabled = !publicEnabled; renderAdmin(); };
         window.saveAdminSettings = async () => {
-            if (!user || role !== 'admin') return;
-            const btn = document.getElementById('save-settings-btn');
-            const val = document.getElementById('word-limit-input').value;
-            btn.disabled = true;
-            btn.innerText = "UPDATING...";
-            try {
-                await setDoc(doc(db, "settings", "general"), { 
-                    wordLimit: parseInt(val),
-                    publicEnabled: publicEnabled
-                });
-                alert("บันทึกการตั้งค่าทั้งหมดเรียบร้อยแล้ว!");
-            } catch (e) { showAuthError("บันทึกไม่สำเร็จ: " + e.message); }
+            const btn = document.getElementById('save-btn'); btn.disabled = true;
+            try { await setDoc(getSettingsDoc(), { wordLimit: parseInt(document.getElementById('word-limit-input').value), publicEnabled }); alert("บันทึกเรียบร้อย!"); } catch (e) { alert(e.message); }
             btn.disabled = false;
-            btn.innerText = "UPDATE SETTINGS";
         };
 
-        window.closeErrorModal = () => {
-            document.getElementById('error-modal').classList.add('hidden');
-        };
-
-        function showAuthError(msg) {
-            document.getElementById('error-message').innerHTML = msg;
-            document.getElementById('error-modal').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
+        window.closeErrorModal = () => document.getElementById('error-modal').classList.add('hidden');
+        function showAuthError(msg) { document.getElementById('error-message').innerHTML = msg; document.getElementById('error-modal').classList.remove('hidden'); lucide.createIcons(); }
     </script>
 </body>
 </html>
