@@ -9,76 +9,71 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: 'Kanit', sans-serif; background-color: #fffaf5; }
+        .italic-title { font-style: italic; }
+        .orange-theme { color: #f97316; }
+        .bg-orange-theme { background-color: #f97316; }
+        .custom-modal-backdrop { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
         .recording-pulse { animation: pulse 1.5s infinite; }
         @keyframes pulse {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
             70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(249, 115, 22, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
         }
-        .custom-modal-backdrop {
-            background-color: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-        }
-        .orange-gradient {
-            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-        }
-        .nav-active { color: #f97316; }
+        .btn-orange { background-color: #f97316; color: white; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-orange:hover { background-color: #ea580c; transform: translateY(-1px); }
+        .btn-orange:active { transform: scale(0.95); }
+        .nav-active { color: #f97316; background-color: #fff7ed; }
         .nav-inactive { color: #94a3b8; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(251, 146, 60, 0.1);
-        }
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col">
 
-    <!-- Global Alert/Confirm Modal -->
+    <!-- Global Modal System -->
     <div id="global-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 custom-modal-backdrop">
-        <div class="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300 text-center border border-orange-50">
-            <div id="modal-icon-container" class="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto"></div>
-            <h3 id="modal-title" class="text-xl font-bold text-slate-800 mb-2"></h3>
-            <p id="modal-message" class="text-slate-500 text-sm leading-relaxed mb-8"></p>
-            <div id="modal-actions" class="flex gap-3">
-                <button id="modal-primary-btn" class="flex-1 bg-orange-500 text-white py-3 rounded-2xl font-bold shadow-lg shadow-orange-100 hover:bg-orange-600 transition-all active:scale-95">ตกลง</button>
-                <button id="modal-secondary-btn" class="hidden flex-1 bg-slate-100 text-slate-500 py-3 rounded-2xl font-bold hover:bg-slate-200 transition-all">ยกเลิก</button>
+        <div class="bg-white rounded-[40px] p-10 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300 text-center border border-orange-100">
+            <div id="modal-icon-container" class="w-20 h-16 rounded-[24px] flex items-center justify-center mb-6 mx-auto"></div>
+            <h3 id="modal-title" class="text-2xl font-black text-slate-800 mb-2 italic-title tracking-tighter uppercase"></h3>
+            <p id="modal-message" class="text-slate-500 text-sm leading-relaxed mb-8 px-2 font-medium"></p>
+            <div id="modal-actions" class="flex flex-col gap-3">
+                <button id="modal-primary-btn" class="w-full btn-orange py-4 rounded-[20px] font-black uppercase tracking-widest text-xs shadow-xl italic-title">ตกลง</button>
+                <button id="modal-secondary-btn" class="hidden w-full bg-slate-50 text-slate-400 py-4 rounded-[20px] font-bold text-xs uppercase tracking-widest">ยกเลิก</button>
             </div>
         </div>
     </div>
 
     <!-- Header -->
-    <header id="main-header" class="hidden bg-white/80 backdrop-blur-md border-b border-orange-100 sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.reload()">
-            <div class="bg-orange-500 p-2 rounded-xl text-white shadow-lg shadow-orange-200">
+    <header id="main-header" class="hidden bg-white/80 backdrop-blur-md border-b border-orange-50 sticky top-0 z-50 px-8 py-5 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
+            <div class="bg-orange-theme p-2 rounded-2xl text-white shadow-lg shadow-orange-200">
                 <i data-lucide="mic-vocal" size="24"></i>
             </div>
-            <h1 id="header-project-name" class="text-xl font-black tracking-tight text-orange-600 italic">Song Siang</h1>
+            <h1 id="display-project-name" class="text-2xl font-black tracking-tighter orange-theme italic-title uppercase">Song Siang</h1>
         </div>
-        <div id="auth-status-container" class="flex items-center gap-3"></div>
+        <div id="auth-status" class="flex items-center gap-4"></div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-4xl mx-auto p-4 sm:p-8 w-full">
-        <div id="loading-screen" class="flex flex-col items-center justify-center py-20 gap-4">
-            <div class="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-orange-400 font-bold uppercase tracking-widest text-[10px]">Connecting to System</p>
+    <main class="flex-grow max-w-4xl mx-auto p-6 sm:p-10 w-full">
+        <!-- Connecting State -->
+        <div id="loading-screen" class="flex flex-col items-center justify-center py-32 gap-6 text-center">
+            <div class="w-14 h-14 border-[5px] border-orange-50 border-t-orange-500 rounded-full animate-spin"></div>
+            <p class="text-orange-400 font-black uppercase tracking-[0.4em] text-[10px] italic-title">Secure Connection Establish</p>
         </div>
-        <div id="views" class="hidden"></div>
+        <!-- Views Container -->
+        <div id="views" class="hidden animate-in fade-in duration-700"></div>
     </main>
 
-    <!-- Student Nav -->
-    <nav id="student-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-orange-50 flex justify-around p-3 z-50 shadow-lg">
-        <button onclick="renderView('home')" class="nav-btn flex flex-col items-center gap-1 nav-active" data-view="home">
-            <i data-lucide="home" size="20"></i>
-            <span class="text-[10px] font-bold uppercase tracking-widest">หน้าแรก</span>
+    <!-- Navigation -->
+    <nav id="student-nav" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-xl border border-orange-100 rounded-[32px] flex gap-2 p-2 z-50 shadow-2xl shadow-orange-100">
+        <button onclick="renderView('home')" class="nav-btn p-4 rounded-[24px] flex flex-col items-center gap-1 nav-active transition-all" data-view="home">
+            <i data-lucide="layout-grid" size="20"></i>
         </button>
-        <button onclick="renderView('record')" class="nav-btn flex flex-col items-center gap-1 nav-inactive" data-view="record">
+        <button onclick="renderView('record')" class="nav-btn p-4 rounded-[24px] flex flex-col items-center gap-1 nav-inactive transition-all" data-view="record">
             <i data-lucide="mic" size="20"></i>
-            <span class="text-[10px] font-bold uppercase tracking-widest">ส่งงาน</span>
         </button>
-        <button onclick="renderView('inbox')" class="nav-btn flex flex-col items-center gap-1 nav-inactive" data-view="inbox">
+        <button onclick="renderView('inbox')" class="nav-btn p-4 rounded-[24px] flex flex-col items-center gap-1 nav-inactive transition-all" data-view="inbox">
             <i data-lucide="mail" size="20"></i>
-            <span class="text-[10px] font-bold uppercase tracking-widest">กล่องเสียง</span>
         </button>
     </nav>
 
@@ -87,7 +82,6 @@
         import { getAuth, signInWithPopup, signInAnonymously, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, query, where, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
             authDomain: "song-siang-fa86e.firebaseapp.com",
@@ -151,151 +145,130 @@
         let user = null;
         let role = 'guest';
         let studentId = '';
-        let config = {
-            projectName: 'Song Siang',
-            wordLimit: 50,
-            publicEnabled: true,
-            studentEnabled: true,
-            driveAdminFolder: '1XlkXHCoxlWVDAsmDnPo0I32kiAjf6pUT',
-            driveInboxFolder: '1XlkXHCoxlWVDAsmDnPo0I32kiAjf6pUT'
-        };
+        let config = { projectName: 'Song Siang', wordLimit: 50, publicEnabled: true, studentEnabled: true };
         let currentView = 'login';
         let targetStudent = null;
         let mediaRecorder = null;
         let audioChunks = [];
+        let recordedBase64 = "";
         let recognition = null;
         let transcript = "";
         let timer = 0;
         let timerInterval = null;
-        const appId = 'song-siang-fa86e';
+        let unsubscribeSettings = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'song-siang-fa86e';
 
-        // --- Init Firebase ---
-        const fbApp = initializeApp(firebaseConfig);
-        const auth = getAuth(fbApp);
-        const db = getFirestore(fbApp);
+        // --- Firebase Core ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // Path Helpers (Rule 1)
-        const getPublicDataCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
-        const getPublicDataDoc = (name, id) => doc(db, 'artifacts', appId, 'public', 'data', name, id);
         const getSettingsDoc = () => doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'general');
+        const getPublicCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
 
-        // Modal System
+        // Modal Function
         window.showModal = (title, message, type = 'info', onPrimary = null, showSecondary = false) => {
             const modal = document.getElementById('global-modal');
-            const titleEl = document.getElementById('modal-title');
-            const messageEl = document.getElementById('modal-message');
             const iconContainer = document.getElementById('modal-icon-container');
-            const primaryBtn = document.getElementById('modal-primary-btn');
-            const secondaryBtn = document.getElementById('modal-secondary-btn');
-
-            titleEl.innerText = title;
-            messageEl.innerText = message;
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = message;
             
-            iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto " + 
-                (type === 'error' ? 'bg-red-50 text-red-500' : type === 'success' ? 'bg-green-50 text-green-500' : 'bg-orange-50 text-orange-500');
-            iconContainer.innerHTML = `<i data-lucide="${type === 'error' ? 'alert-triangle' : type === 'success' ? 'check-circle' : 'info'}" size="32"></i>`;
+            iconContainer.className = "w-20 h-20 rounded-[28px] flex items-center justify-center mb-6 mx-auto shadow-lg " + 
+                (type === 'error' ? 'bg-red-50 text-red-500 shadow-red-50' : type === 'success' ? 'bg-green-50 text-green-500 shadow-green-50' : 'bg-orange-50 text-orange-500 shadow-orange-50 shadow-lg');
+            iconContainer.innerHTML = `<i data-lucide="${type === 'error' ? 'shield-alert' : type === 'success' ? 'check-circle' : 'info'}" size="40"></i>`;
             
-            primaryBtn.onclick = () => { modal.classList.add('hidden'); if(onPrimary) onPrimary(); };
-            secondaryBtn.classList.toggle('hidden', !showSecondary);
-            secondaryBtn.onclick = () => modal.classList.add('hidden');
+            document.getElementById('modal-primary-btn').onclick = () => { modal.classList.add('hidden'); if(onPrimary) onPrimary(); };
+            document.getElementById('modal-secondary-btn').classList.toggle('hidden', !showSecondary);
+            document.getElementById('modal-secondary-btn').onclick = () => modal.classList.add('hidden');
 
             modal.classList.remove('hidden');
             lucide.createIcons();
         };
 
-        // --- Auth Protocol (Rule 3) ---
+        // --- Auth Protocol (Rule 3: Ensure Auth before Queries) ---
         const initFlow = async () => {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch (tokenErr) {
-                        console.warn("Auth token mismatch, falling back to anonymous", tokenErr);
-                        await signInAnonymously(auth);
-                    }
+                    await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (err) {
-                console.error("Auth init completely failed", err);
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('views').classList.remove('hidden');
+                console.error("Auth init failed", err);
+                document.getElementById('loading-screen').innerHTML = `<p class="text-red-500">Failed to connect to Firebase. Please refresh.</p>`;
             }
         };
 
         onAuthStateChanged(auth, async (u) => {
             user = u;
-            // Hide loading as soon as auth state is known
-            document.getElementById('loading-screen').classList.add('hidden');
-            document.getElementById('views').classList.remove('hidden');
+            if (unsubscribeSettings) unsubscribeSettings(); // Clear old listener if re-auth
 
             if (u && !u.isAnonymous) {
                 const email = u.email || "";
                 if (email === "ie.architecture65@gmail.com") {
-                    role = 'admin';
-                    document.getElementById('main-header').classList.remove('hidden');
-                    renderView('admin');
+                    role = 'admin'; renderView('admin');
                 } else if (email.endsWith('@kmitl.ac.th')) {
                     const prefix = email.split('@')[0];
                     if (STUDENT_LIST.some(s => s.id === prefix)) {
-                        role = 'student'; studentId = prefix;
-                        document.getElementById('main-header').classList.remove('hidden');
-                        renderView('home');
+                        role = 'student'; studentId = prefix; renderView('home');
                     } else {
-                        await signOut(auth); showModal("ล้มเหลว", "ไม่พบรหัสนี้ในรายชื่อนักศึกษาห้องเรียนนี้", "error");
+                        await signOut(auth); showModal("Refused", "คุณไม่มีรหัสในรายชื่อห้องเรียนนี้", "error");
                     }
                 } else {
-                    await signOut(auth); showModal("ล้มเหลว", "อนุญาตเฉพาะอีเมลสถาบัน หรือแอดมินเท่านั้น", "error");
+                    await signOut(auth); showModal("Refused", "สงวนสิทธิ์เฉพาะ KMITL หรือ Admin", "error");
                 }
-            } else if (u && u.isAnonymous) {
-                role = 'public';
                 document.getElementById('main-header').classList.remove('hidden');
-                renderView('home');
+            } else if (u && u.isAnonymous) {
+                role = 'public'; renderView('home');
+                document.getElementById('main-header').classList.remove('hidden');
             } else {
-                role = 'guest';
+                role = 'guest'; renderLogin();
                 document.getElementById('main-header').classList.add('hidden');
                 document.getElementById('student-nav').classList.add('hidden');
-                renderLogin();
             }
             updateAuthUI();
-            
-            // Start listening to settings after auth
-            onSnapshot(getSettingsDoc(), (snap) => {
-                if (snap.exists()) {
-                    config = { ...config, ...snap.data() };
-                    document.getElementById('header-project-name').innerText = config.projectName;
-                    if (currentView === 'login') renderLogin();
-                    if (currentView === 'admin') renderAdmin();
-                } else {
-                    // Create default settings if doc doesn't exist
-                    setDoc(getSettingsDoc(), config);
-                }
-            }, (err) => {
-                console.error("Settings listener failed", err);
-            });
+
+            // Establish Settings Listener ONLY after Auth (Rule 3)
+            if (u) {
+                unsubscribeSettings = onSnapshot(getSettingsDoc(), (snap) => {
+                    if (snap.exists()) {
+                        config = snap.data();
+                        document.getElementById('display-project-name').innerText = config.projectName;
+                        if (currentView === 'login') renderLogin();
+                        if (currentView === 'admin') renderAdmin();
+                    } else if (role === 'admin') {
+                        setDoc(getSettingsDoc(), config);
+                    }
+                    document.getElementById('loading-screen').classList.add('hidden');
+                    document.getElementById('views').classList.remove('hidden');
+                }, (err) => {
+                    console.error("Snapshot permission error:", err);
+                    document.getElementById('loading-screen').classList.add('hidden');
+                    document.getElementById('views').classList.remove('hidden');
+                });
+            }
         });
 
         initFlow();
 
-        // Actions
-        window.login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { showModal("ข้อผิดพลาด", e.message, "error"); } };
-        window.loginAsPublic = () => { if (!config.publicEnabled) { showModal("ปิดอยู่", "แอดมินปิดการส่งเสียงบุคคลทั่วไป", "info"); return; } renderView('home'); };
-        window.logout = () => showModal("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "info", () => signOut(auth), true);
+        window.login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { showModal("Error", e.message, "error"); } };
+        window.loginAsPublic = () => { if (!config.publicEnabled) { showModal("Notice", "ระบบบุคคลทั่วไปปิดอยู่", "info"); return; } renderView('home'); };
+        window.logout = () => showModal("Confirm", "ออกจากระบบหรือไม่?", "info", () => signOut(auth), true);
 
         function updateAuthUI() {
-            const container = document.getElementById('auth-status-container');
+            const container = document.getElementById('auth-status');
             if (user && !user.isAnonymous) {
                 container.innerHTML = `
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-4">
                         <div class="text-right hidden sm:block">
-                            <p class="text-[11px] font-bold text-slate-800 leading-none">${user.displayName}</p>
-                            <p class="text-[9px] text-orange-500 font-bold mt-1 uppercase">${role} | ${studentId || 'Admin'}</p>
+                            <p class="text-[12px] font-black text-slate-800 leading-none uppercase italic-title">${user.displayName}</p>
+                            <p class="text-[9px] text-orange-500 font-bold mt-1.5 uppercase tracking-widest leading-none">${role}</p>
                         </div>
-                        <button onclick="logout()" class="p-2 text-slate-300 hover:text-orange-500 transition-all"><i data-lucide="log-out" size="18"></i></button>
+                        <button onclick="logout()" class="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-orange-500 bg-white rounded-2xl shadow-sm"><i data-lucide="log-out" size="18"></i></button>
                     </div>`;
             } else if (user && user.isAnonymous) {
-                container.innerHTML = `<button onclick="logout()" class="text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full flex items-center gap-2">Guest User <i data-lucide="log-out" size="12"></i></button>`;
+                container.innerHTML = `<button onclick="logout()" class="text-[10px] font-black text-slate-400 bg-white border border-slate-100 px-6 py-2.5 rounded-full uppercase tracking-widest flex items-center gap-2 italic-title">Public User <i data-lucide="log-out" size="12"></i></button>`;
             }
             lucide.createIcons();
         }
@@ -305,7 +278,7 @@
             document.getElementById('student-nav').classList.toggle('hidden', role !== 'student');
             document.querySelectorAll('.nav-btn').forEach(b => {
                 const isActive = b.dataset.view === viewName;
-                b.className = `nav-btn flex flex-col items-center gap-1 ${isActive ? 'nav-active' : 'nav-inactive'}`;
+                b.className = `nav-btn p-4 rounded-[28px] flex flex-col items-center gap-1 ${isActive ? 'nav-active shadow-lg shadow-orange-50' : 'nav-inactive hover:bg-slate-50'}`;
             });
 
             if (viewName === 'home') renderHome();
@@ -318,19 +291,21 @@
         function renderLogin() {
             currentView = 'login';
             document.getElementById('views').innerHTML = `
-                <div class="flex flex-col items-center justify-center py-20 animate-in fade-in slide-in-from-bottom-12 duration-700">
-                    <div class="w-20 h-20 bg-orange-500 text-white rounded-[28px] flex items-center justify-center shadow-2xl shadow-orange-100 mb-8 transform rotate-3"><i data-lucide="mic-vocal" size="40"></i></div>
-                    <h2 class="text-3xl font-black text-slate-800 mb-1 tracking-tighter italic uppercase text-center">${config.projectName}</h2>
-                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.4em] mb-12">Architecture 65</p>
-                    <div class="w-full max-w-xs space-y-4">
-                        <button onclick="login()" class="w-full bg-white border border-slate-200 p-5 rounded-[24px] flex items-center justify-center gap-4 shadow-sm hover:border-orange-200 transition-all active:scale-95 group">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18">
-                            <span class="font-bold text-slate-700 text-sm">รหัส 65</span>
+                <div class="flex flex-col items-center justify-center py-20 animate-in fade-in slide-in-from-bottom-12 duration-1000">
+                    <div class="w-28 h-28 bg-orange-500 text-white rounded-[44px] flex items-center justify-center shadow-2xl shadow-orange-200 mb-10 transform rotate-3 scale-110"><i data-lucide="mic-vocal" size="56"></i></div>
+                    <h2 class="text-5xl font-black text-slate-800 mb-2 tracking-tighter italic-title uppercase leading-none">${config.projectName}</h2>
+                    <p class="text-slate-300 text-[11px] font-black uppercase tracking-[0.5em] mb-16 italic-title">Department of Architecture 65</p>
+                    <div class="w-full max-w-xs space-y-6">
+                        <button onclick="login()" class="w-full bg-white border-2 border-orange-50 p-6 rounded-[36px] flex items-center justify-center gap-5 shadow-sm hover:border-orange-200 hover:shadow-orange-50 transition-all active:scale-95 group">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="24">
+                            <span class="font-black text-slate-700 text-sm uppercase tracking-widest italic-title">รหัส 65</span>
                         </button>
-                        <div class="flex items-center gap-4 py-2 opacity-20"><hr class="flex-grow border-slate-400"><span class="text-[9px] font-bold">OR</span><hr class="flex-grow border-slate-400"></div>
-                        <button onclick="loginAsPublic()" class="w-full ${config.publicEnabled ? 'bg-orange-500' : 'bg-slate-300'} text-white p-5 rounded-[24px] font-bold text-sm flex items-center justify-center gap-3 shadow-lg shadow-orange-50 transition-all">
-                            <i data-lucide="${config.publicEnabled ? 'send' : 'lock'}" size="16"></i>
-                            ${config.publicEnabled ? 'บุคคลทั่วไปส่งเสียง' : 'ปิดระบบบุคคลทั่วไป'}
+                        <div class="relative py-4 opacity-30">
+                            <div class="absolute inset-0 flex items-center"><hr class="w-full border-slate-200"></div>
+                            <div class="relative flex justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest"><span class="bg-[#fffaf5] px-8 italic-title">Access Portal</span></div>
+                        </div>
+                        <button onclick="loginAsPublic()" class="w-full ${config.publicEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-300'} text-white p-7 rounded-[40px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 italic-title">
+                            <i data-lucide="${config.publicEnabled ? 'send' : 'lock'}" size="20"></i> บุคคลทั่วไป
                         </button>
                     </div>
                 </div>`;
@@ -342,47 +317,52 @@
             if (role === 'admin') { renderAdmin(); return; }
             if (role === 'public') {
                 container.innerHTML = `
-                    <div class="space-y-6">
-                        <div class="orange-gradient rounded-[40px] p-10 text-orange-900 shadow-sm relative overflow-hidden border border-orange-100">
-                            <h2 class="text-3xl font-black italic mb-2 tracking-tighter">MESSAGE TO CLASS</h2>
-                            <p class="text-orange-800/60 text-xs font-bold uppercase tracking-widest">ส่งความรู้สึกถึงเพื่อนๆ สถาปัตย์ 65</p>
-                            <i data-lucide="music" class="absolute -bottom-6 -right-6 w-32 h-32 opacity-10 transform rotate-12"></i>
+                    <div class="space-y-8 animate-in fade-in duration-500 text-left">
+                        <div class="orange-gradient rounded-[64px] p-12 text-orange-900 shadow-sm relative overflow-hidden border-2 border-white">
+                            <h2 class="text-4xl font-black italic-title mb-3 tracking-tighter uppercase leading-none text-left">Voice to<br>65 Room</h2>
+                            <p class="text-orange-800/60 text-[13px] font-bold uppercase tracking-widest italic-title text-left">Speak your thoughts to the class</p>
+                            <i data-lucide="music" class="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 transform rotate-12"></i>
                         </div>
-                        <button onclick="targetStudent={id:'Everyone', nick:'ทุกคนในห้อง'}; renderView('record')" class="w-full bg-white p-6 rounded-[32px] border border-orange-100 flex items-center gap-5 hover:border-orange-400 shadow-sm transition-all group text-left">
-                            <div class="w-12 h-12 bg-orange-500 text-white rounded-2xl flex items-center justify-center group-hover:rotate-6 transition-transform shadow-lg shadow-orange-100"><i data-lucide="megaphone" size="20"></i></div>
-                            <div class="font-black text-orange-900 text-lg italic tracking-tight">ประกาศถึงทุกคน (Global)</div>
+                        <button onclick="targetStudent={id:'Everyone', nick:'ทุกคนในห้อง'}; renderView('record')" class="w-full bg-white p-10 rounded-[48px] border-2 border-orange-50 flex items-center gap-8 hover:border-orange-400 shadow-sm transition-all group text-left shadow-xl shadow-orange-50/50">
+                            <div class="w-20 h-20 bg-orange-500 text-white rounded-3xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-xl shadow-orange-100"><i data-lucide="megaphone" size="36"></i></div>
+                            <div>
+                                <p class="font-black text-orange-900 text-2xl italic-title tracking-tighter uppercase leading-none italic">Global Broadcast</p>
+                                <p class="text-[12px] text-slate-400 font-bold mt-3 uppercase tracking-widest">ส่งถึงทุกคนในห้อง</p>
+                            </div>
                         </button>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="student-grid"></div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-5" id="student-grid"></div>
                     </div>`;
-                const grid = document.getElementById('student-grid');
                 STUDENT_LIST.forEach(s => {
                     const btn = document.createElement('button');
-                    btn.className = "bg-white p-5 rounded-[24px] border border-slate-100 hover:border-orange-300 transition-all text-left group shadow-sm";
-                    btn.innerHTML = `<p class="text-[9px] text-slate-300 font-bold mb-1 uppercase tracking-tighter">${s.id}</p><p class="font-black text-slate-700 group-hover:text-orange-500 italic leading-none">${s.nick}</p>`;
+                    btn.className = "bg-white p-8 rounded-[40px] border border-orange-50 hover:border-orange-300 transition-all text-left group shadow-sm hover:shadow-orange-50/50";
+                    btn.innerHTML = `<p class="text-[10px] text-slate-300 font-black mb-2 uppercase tracking-tighter">${s.id}</p><p class="font-black text-slate-700 group-hover:text-orange-500 italic-title text-xl leading-none italic">${s.nick}</p>`;
                     btn.onclick = () => { targetStudent = s; renderView('record'); };
-                    grid.appendChild(btn);
+                    document.getElementById('student-grid').appendChild(btn);
                 });
             } else {
                 container.innerHTML = `
-                    <div class="space-y-6">
-                        <div class="bg-white p-12 rounded-[56px] border border-orange-50 shadow-sm text-center">
-                            <h2 class="text-3xl font-black text-slate-800 tracking-tighter italic uppercase">Hi, ${STUDENT_LIST.find(s=>s.id===studentId)?.nick || studentId}</h2>
-                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">Welcome to Song Siang Dashboard</p>
+                    <div class="space-y-10 animate-in fade-in duration-500 text-left">
+                        <div class="bg-white p-20 rounded-[80px] border-2 border-orange-50 shadow-sm text-center relative overflow-hidden">
+                            <div class="relative z-10">
+                                <h2 class="text-5xl font-black text-slate-800 tracking-tighter italic-title uppercase leading-none mb-4 text-center">Hello,<br>${STUDENT_LIST.find(s=>s.id===studentId)?.nick || 'Arch 65'}</h2>
+                                <p class="text-orange-400 text-[13px] font-black uppercase tracking-[0.4em] italic-title leading-none text-center">Classroom Voice Terminal</p>
+                            </div>
+                            <i data-lucide="mic" class="absolute -bottom-10 -right-10 w-48 h-48 text-orange-50/30 transform rotate-12"></i>
                         </div>
-                        <div class="grid gap-4">
-                            <button onclick="renderView('record')" class="bg-orange-500 text-white p-10 rounded-[40px] flex items-center justify-between shadow-2xl shadow-orange-100 hover:scale-[1.01] transition-transform group text-left">
-                                <div class="flex items-center gap-6">
-                                    <div class="bg-white/20 p-5 rounded-2xl group-hover:rotate-12 transition-transform"><i data-lucide="mic-vocal"></i></div>
-                                    <div><p class="font-black text-xl italic tracking-tighter leading-none uppercase">อัดเสียงส่งงาน</p><p class="text-[9px] opacity-70 uppercase font-bold mt-2 tracking-[0.2em]">Assignment Submission</p></div>
+                        <div class="grid gap-8">
+                            <button onclick="renderView('record')" class="bg-orange-500 text-white p-14 rounded-[56px] flex items-center justify-between shadow-2xl shadow-orange-100 hover:scale-[1.02] transition-transform group text-left italic-title italic">
+                                <div class="flex items-center gap-10">
+                                    <div class="bg-white/20 p-8 rounded-[32px] group-hover:rotate-12 transition-transform shadow-lg"><i data-lucide="mic-vocal" size="40"></i></div>
+                                    <div><p class="font-black text-4xl italic-title tracking-tighter leading-none uppercase italic">Record</p><p class="text-[12px] opacity-70 uppercase font-black mt-4 tracking-[0.4em] italic leading-none">Project Submission</p></div>
                                 </div>
-                                <i data-lucide="chevron-right"></i>
+                                <i data-lucide="arrow-right" size="36"></i>
                             </button>
-                            <button onclick="renderView('inbox')" class="bg-white border border-orange-100 p-10 rounded-[40px] flex items-center justify-between hover:border-orange-400 transition-all group shadow-sm text-left">
-                                <div class="flex items-center gap-6">
-                                    <div class="bg-slate-50 p-5 rounded-2xl text-slate-400 group-hover:scale-110 transition-transform"><i data-lucide="mail"></i></div>
-                                    <div><p class="font-black text-xl italic text-slate-800 leading-none uppercase">กล่องเสียงถึงคุณ</p><p class="text-[9px] text-slate-400 uppercase font-bold mt-2 tracking-[0.2em]">Secret Inbox</p></div>
+                            <button onclick="renderView('inbox')" class="bg-white border-2 border-orange-50 p-14 rounded-[56px] flex items-center justify-between hover:border-orange-400 transition-all group shadow-sm text-left italic-title italic">
+                                <div class="flex items-center gap-10">
+                                    <div class="bg-orange-50 p-8 rounded-[32px] text-orange-400 group-hover:scale-110 transition-transform"><i data-lucide="mail" size="40"></i></div>
+                                    <div><p class="font-black text-4xl italic-title tracking-tighter leading-none uppercase text-slate-800 italic">Inbox</p><p class="text-[12px] text-slate-400 font-black mt-4 tracking-[0.4em] italic leading-none">Secret Messages</p></div>
                                 </div>
-                                <i data-lucide="chevron-right"></i>
+                                <i data-lucide="arrow-right" size="36" class="text-slate-100"></i>
                             </button>
                         </div>
                     </div>`;
@@ -391,31 +371,30 @@
         }
 
         function renderRecord() {
-            const container = document.getElementById('views');
-            transcript = ""; timer = 0;
-            container.innerHTML = `
-                <div class="max-w-md mx-auto space-y-10 animate-in slide-in-from-bottom-8 duration-500">
-                    <div class="text-center space-y-2">
-                        <h2 class="text-4xl font-black text-slate-800 italic tracking-tighter uppercase text-center">${targetStudent ? `ถึง: ${targetStudent.nick}` : 'Assignment'}</h2>
-                        <p class="text-orange-500 text-[10px] font-bold uppercase tracking-[0.4em] text-center">${targetStudent ? 'SPEAK YOUR HEART' : `LIMIT: ${config.wordLimit} WORDS`}</p>
+            transcript = ""; timer = 0; recordedBase64 = "";
+            document.getElementById('views').innerHTML = `
+                <div class="max-w-md mx-auto space-y-12 animate-in slide-in-from-bottom-12 duration-700">
+                    <div class="text-center space-y-4">
+                        <h2 class="text-5xl font-black text-slate-800 italic-title tracking-tighter uppercase leading-tight text-center">${targetStudent ? `To: ${targetStudent.nick}` : 'New Voice'}</h2>
+                        <p class="text-orange-500 text-[12px] font-black uppercase tracking-[0.6em] text-center">${targetStudent ? 'Speak freely' : `Limit: ${config.wordLimit} Words`}</p>
                     </div>
-                    <div class="bg-white p-12 rounded-[64px] shadow-2xl border border-orange-50 flex flex-col items-center gap-10">
-                        <div id="timer-display" class="text-7xl font-mono font-bold text-slate-100 tracking-tighter">00:00</div>
-                        <button id="record-btn" onclick="toggleRecording()" class="w-36 h-36 rounded-full bg-orange-500 flex items-center justify-center shadow-2xl shadow-orange-200 hover:bg-orange-600 transition-all active:scale-90">
-                            <i data-lucide="mic" id="mic-icon" size="48" class="text-white"></i>
+                    <div class="bg-white p-16 rounded-[88px] shadow-2xl border border-orange-50 flex flex-col items-center gap-12 relative">
+                        <div id="timer-display" class="text-8xl font-mono font-black text-slate-100 tracking-tighter italic-title leading-none">00:00</div>
+                        <button id="record-btn" onclick="toggleRecording()" class="w-44 h-44 rounded-full bg-orange-500 flex items-center justify-center shadow-2xl shadow-orange-200 hover:bg-orange-600 transition-all active:scale-90 group relative z-10">
+                            <i data-lucide="mic" id="mic-icon" size="64" class="text-white group-hover:scale-110 transition-transform"></i>
                         </button>
-                        <div id="status-text" class="text-slate-300 text-[9px] font-bold uppercase tracking-[0.5em] text-center">Tap to begin</div>
-                        <div id="recording-feedback" class="w-full space-y-6 hidden">
-                             <div class="w-full bg-orange-50/30 p-8 rounded-[36px] border-2 border-dashed border-orange-100 text-left">
-                                <div class="flex justify-between items-center mb-4">
-                                    <span class="text-[9px] font-bold text-orange-400 uppercase tracking-widest">AI Transcript</span>
-                                    <span id="word-count-badge" class="text-[10px] font-bold px-4 py-1.5 rounded-full bg-white text-orange-600 shadow-sm">0 / ${targetStudent ? '∞' : config.wordLimit}</span>
+                        <div id="status-text" class="text-slate-300 text-[12px] font-black uppercase tracking-[0.8em] italic-title text-center leading-none">Tap to start</div>
+                        <div id="recording-feedback" class="w-full space-y-10 hidden">
+                             <div class="w-full bg-orange-50/20 p-12 rounded-[56px] border-2 border-dashed border-orange-100 text-left">
+                                <div class="flex justify-between items-center mb-6">
+                                    <span class="text-[10px] font-black text-orange-300 uppercase tracking-widest leading-none">AI Result</span>
+                                    <span id="word-count-badge" class="text-[12px] font-black px-6 py-2.5 rounded-full bg-white text-orange-600 shadow-sm border border-orange-50 leading-none">0 / ${targetStudent ? '∞' : config.wordLimit}</span>
                                 </div>
-                                <p id="transcript-preview" class="text-sm text-slate-600 italic leading-relaxed min-h-[4rem]">"..."</p>
+                                <p id="transcript-preview" class="text-base text-slate-600 italic leading-relaxed min-h-[5rem] font-medium leading-relaxed italic-title">"Waiting for voice..."</p>
                             </div>
-                            <div class="flex gap-3">
-                                <button onclick="resetRecording()" class="flex-1 bg-slate-50 text-slate-400 py-4 rounded-3xl font-bold hover:bg-slate-100 transition-all text-sm">อัดใหม่</button>
-                                <button id="submit-btn" onclick="submitVoice()" class="flex-1 bg-orange-500 py-4 rounded-3xl font-bold text-white shadow-xl shadow-orange-100 hover:bg-orange-600 transition-all text-sm">ส่งเสียง</button>
+                            <div class="flex gap-5">
+                                <button onclick="resetRecording()" class="flex-1 bg-slate-50 text-slate-400 py-6 rounded-[36px] font-black uppercase tracking-widest text-[11px] hover:bg-slate-100 transition-all italic-title leading-none">Retry</button>
+                                <button id="submit-btn" onclick="submitVoice()" class="flex-1 bg-orange-theme py-6 rounded-[36px] font-black shadow-xl shadow-orange-100 uppercase tracking-widest text-[11px] italic-title leading-none text-white">Submit</button>
                             </div>
                         </div>
                     </div>
@@ -426,34 +405,37 @@
         window.toggleRecording = async () => {
             const btn = document.getElementById('record-btn');
             const icon = document.getElementById('mic-icon');
-            const status = document.getElementById('status-text');
             const timerEl = document.getElementById('timer-display');
 
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
+                    mediaRecorder = new MediaRecorder(stream); audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = async () => { 
+                        const blob = new Blob(audioChunks, { type: 'audio/mp3' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = () => { recordedBase64 = reader.result; };
+                    };
                     mediaRecorder.start();
 
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    if (SpeechRecognition) {
-                        recognition = new SpeechRecognition();
-                        recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'th-TH';
+                    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (SR) {
+                        recognition = new SR(); recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'th-TH';
                         recognition.onresult = (e) => {
                             let text = ""; for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
                             transcript = text;
                             const count = text.trim().split(/\s+/).filter(w => w.length > 0).length;
                             document.getElementById('transcript-preview').innerText = `"${text}"`;
-                            const badge = document.getElementById('word-count-badge');
-                            badge.innerText = `${count} / ${targetStudent ? '∞' : config.wordLimit}`;
+                            document.getElementById('word-count-badge').innerText = `${count} / ${targetStudent ? '∞' : config.wordLimit}`;
+                            
                             const subBtn = document.getElementById('submit-btn');
                             if (!targetStudent && count > config.wordLimit) {
-                                badge.className = 'text-[10px] font-bold px-4 py-1.5 rounded-full bg-red-500 text-white';
+                                document.getElementById('word-count-badge').className = 'text-[12px] font-black px-6 py-2.5 rounded-full bg-red-500 text-white shadow-lg';
                                 subBtn.disabled = true; subBtn.classList.add('opacity-50');
                             } else {
-                                badge.className = 'text-[10px] font-bold px-4 py-1.5 rounded-full bg-white text-orange-600';
+                                document.getElementById('word-count-badge').className = 'text-[12px] font-black px-6 py-2.5 rounded-full bg-white text-orange-600 shadow-sm border border-orange-50';
                                 subBtn.disabled = false; subBtn.classList.remove('opacity-50');
                             }
                         };
@@ -461,27 +443,30 @@
                     }
 
                     btn.classList.add('recording-pulse', 'bg-red-500'); icon.setAttribute('data-lucide', 'square');
-                    timerEl.classList.replace('text-slate-100', 'text-orange-500'); status.innerText = "RECORDING...";
+                    timerEl.classList.replace('text-slate-100', 'text-orange-500'); 
+                    document.getElementById('status-text').innerText = "RECORDING NOW";
                     timer = 0; timerInterval = setInterval(() => {
-                        timer++; const m = Math.floor(timer / 60).toString().padStart(2, '0'); const s = (timer % 60).toString().padStart(2, '0');
+                        timer++; const m = Math.floor(timer/60).toString().padStart(2,'0'); const s = (timer%60).toString().padStart(2,'0');
                         timerEl.innerText = `${m}:${s}`;
-                    }, 1000);
-                    lucide.createIcons();
-                } catch (err) { showModal("แจ้งเตือน", "ไม่สามารถเข้าถึงไมค์ได้: " + err.message, "error"); }
+                    }, 1000); lucide.createIcons();
+                } catch (e) { showModal("Mic Error", "ไม่สามารถใช้ไมค์ได้: " + e.message, "error"); }
             } else {
-                mediaRecorder.stop(); recognition?.stop(); clearInterval(timerInterval);
+                mediaRecorder.stop(); if(recognition) recognition.stop(); clearInterval(timerInterval);
                 btn.classList.add('hidden'); document.getElementById('recording-feedback').classList.remove('hidden');
-                status.innerText = "CHECK & SEND"; timerEl.classList.replace('text-orange-500', 'text-slate-800');
-                lucide.createIcons();
+                document.getElementById('status-text').innerText = "READY TO SEND";
+                timerEl.classList.replace('text-orange-500', 'text-slate-800'); lucide.createIcons();
             }
         };
 
         window.submitVoice = async () => {
-            if (!user) { showModal("แจ้งเตือน", "กรุณาเข้าสู่ระบบ", "error"); return; }
+            if (!user) { showModal("Notice", "กรุณาล็อกอินก่อนส่งงาน", "error"); return; }
             const btn = document.getElementById('submit-btn');
             btn.disabled = true; btn.innerText = "SENDING...";
 
             try {
+                // Ensure Base64 is ready (Wait a small bit if needed)
+                if (!recordedBase64) await new Promise(r => setTimeout(r, 1000));
+
                 const count = transcript.trim().split(/\s+/).filter(w => w.length > 0).length;
                 const payload = {
                     from: studentId || (user.isAnonymous ? "Guest" : user.displayName),
@@ -489,147 +474,120 @@
                     timestamp: new Date().toISOString(),
                     transcript: transcript,
                     wordCount: count,
-                    driveUrl: targetStudent ? 
-                        `https://drive.google.com/drive/folders/${config.driveInboxFolder}?q=${targetStudent.id}` : 
-                        `https://drive.google.com/drive/folders/${config.driveAdminFolder}?q=${studentId}`
+                    audioData: recordedBase64
                 };
 
                 if (role === 'student' && !targetStudent) {
-                    if(!config.studentEnabled) { showModal("แจ้งเตือน", "แอดมินปิดการส่งงานชั่วคราว", "info"); btn.disabled = false; return; }
-                    await setDoc(getPublicDataDoc('submissions', studentId), payload);
+                    if(!config.studentEnabled) { showModal("Notice", "ปิดรับงานชั่วคราว", "info"); btn.disabled = false; return; }
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', studentId), payload);
                 } else {
-                    await addDoc(getPublicDataCollection('messages'), payload);
+                    await addDoc(getPublicCollection('messages'), payload);
                 }
 
-                showModal("สำเร็จ!", "บันทึกข้อมูลเรียบร้อยแล้ว", "success", () => renderView('home'));
+                showModal("Sent!", "บันทึกข้อมูลเรียบร้อยแล้ว", "success", () => renderView('home'));
                 targetStudent = null;
             } catch (e) {
-                showModal("แจ้งเตือน", "บันทึกไม่สำเร็จ: " + e.message, "error");
-                btn.disabled = false; btn.innerText = "ส่งเสียง";
+                console.error("Submit error:", e);
+                showModal("Error", "ไม่สามารถส่งข้อมูลได้: " + e.message, "error");
+                btn.disabled = false; btn.innerText = "Submit";
             }
         };
 
-        window.resetRecording = () => { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); recognition?.stop(); clearInterval(timerInterval); renderView('record'); };
+        window.resetRecording = () => { if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop(); if(recognition) recognition.stop(); clearInterval(timerInterval); renderView('record'); };
 
         function renderInbox() {
             const container = document.getElementById('views');
-            container.innerHTML = `<h2 class="text-3xl font-black italic mb-8 flex items-center gap-3 text-slate-800 tracking-tighter uppercase text-left"><i data-lucide="mail" class="text-orange-500"></i> Inbox</h2><div id="inbox-list" class="grid gap-4">กำลังโหลด...</div>`;
-            const list = document.getElementById('inbox-list');
-            const q = query(getPublicDataCollection('messages'), where("targetId", "in", [studentId, "Everyone"]));
+            container.innerHTML = `<h2 class="text-5xl font-black italic-title mb-16 text-slate-800 tracking-tighter uppercase text-left italic"><i data-lucide="mail" class="text-orange-500 inline mr-6"></i> Inbox</h2><div id="inbox-list" class="grid gap-8"></div>`;
+            const q = query(getPublicCollection('messages'), where("targetId", "in", [studentId, "Everyone"]));
             onSnapshot(q, (snapshot) => {
-                list.innerHTML = "";
-                if (snapshot.empty) { list.innerHTML = `<div class="bg-white p-16 rounded-[48px] text-center text-slate-300 italic text-sm">No messages for you yet.</div>`; return; }
+                const list = document.getElementById('inbox-list');
+                if(!list) return; list.innerHTML = "";
+                if (snapshot.empty) { list.innerHTML = `<div class="bg-white p-24 rounded-[72px] text-center text-slate-300 font-black italic uppercase tracking-widest border border-orange-50 shadow-sm text-xs italic-title">No voices yet.</div>`; return; }
                 snapshot.docs.forEach(d => {
                     const msg = d.data(); const isGlobal = msg.targetId === "Everyone";
                     const item = document.createElement('div');
-                    item.className = `bg-white p-8 rounded-[36px] border ${isGlobal ? 'border-orange-200 bg-orange-50/10' : 'border-slate-100'} text-left shadow-sm`;
-                    item.innerHTML = `<div class="flex justify-between items-center mb-4"><span class="text-[9px] font-bold ${isGlobal ? 'text-orange-600' : 'text-slate-300'} uppercase tracking-widest text-left">${isGlobal ? 'Global Broadcast' : 'Private Voice'}</span><span class="text-[9px] text-slate-300 font-bold uppercase text-right">${new Date(msg.timestamp).toLocaleDateString()}</span></div><p class="text-slate-600 italic leading-relaxed mb-6 text-sm">"${msg.transcript}"</p><a href="${msg.driveUrl}" target="_blank" class="text-orange-600 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:underline"><i data-lucide="folder" size="12"></i> Open in Drive</a>`;
+                    item.className = `bg-white p-12 rounded-[56px] border-2 ${isGlobal ? 'border-orange-500 shadow-orange-100 shadow-2xl' : 'border-orange-50 shadow-sm'} text-left`;
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center mb-8"><span class="text-[11px] font-black ${isGlobal ? 'text-orange-600' : 'text-slate-300'} uppercase tracking-[0.3em] italic-title italic">${isGlobal ? 'Global' : 'Secret'}</span><span class="text-[10px] text-slate-300 font-black uppercase">${new Date(msg.timestamp).toLocaleDateString()}</span></div>
+                        <p class="text-slate-600 italic-title leading-relaxed mb-10 text-xl font-medium italic text-left">"${msg.transcript}"</p>
+                        <audio controls src="${msg.audioData}" class="w-full mb-4 h-8"></audio>
+                    `;
                     list.appendChild(item);
                 });
                 lucide.createIcons();
-            });
+            }, (err) => console.log("Inbox error:", err));
         }
 
         function renderAdmin() {
             const container = document.getElementById('views');
             container.innerHTML = `
-                <div class="space-y-10 text-left animate-in fade-in duration-500">
-                    <div class="bg-white p-10 rounded-[56px] shadow-2xl border border-orange-50">
-                        <div class="flex justify-between items-center mb-10">
-                            <h2 class="text-3xl font-black italic tracking-tighter text-orange-600 uppercase text-left">Admin Hub</h2>
-                            <button onclick="confirmReset()" class="text-[9px] font-bold text-red-400 hover:text-red-600 flex items-center gap-1 uppercase tracking-[0.2em] transition-colors"><i data-lucide="trash-2" size="12"></i> Reset Data</button>
+                <div class="space-y-16 text-left animate-in fade-in duration-500 text-left italic">
+                    <div class="bg-white p-12 rounded-[72px] shadow-2xl border-2 border-orange-50 relative overflow-hidden">
+                        <div class="flex justify-between items-center mb-16 relative z-10">
+                            <h2 class="text-4xl font-black italic-title tracking-tighter text-orange-600 uppercase text-left italic">Admin Hub</h2>
+                            <button onclick="confirmReset()" class="text-[10px] font-black text-red-400 hover:text-red-600 flex items-center gap-2 uppercase tracking-[0.3em] transition-colors italic-title italic"><i data-lucide="trash-2" size="14"></i> Wipe Data</button>
                         </div>
                         
-                        <div class="grid sm:grid-cols-2 gap-8 mb-8">
-                            <div class="space-y-1.5 text-left">
-                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Project Name</label>
-                                <input id="adm-p-name" type="text" oninput="config.projectName = this.value" value="${config.projectName}" class="w-full bg-slate-50 border-none p-5 rounded-[24px] font-black italic text-lg text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none transition-all">
-                            </div>
-                            <div class="space-y-1.5 text-left">
-                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Word Limit</label>
-                                <input id="adm-word-limit" type="number" oninput="config.wordLimit = parseInt(this.value)" value="${config.wordLimit}" class="w-full bg-slate-50 border-none p-5 rounded-[24px] font-black text-xl text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none transition-all">
-                            </div>
-                            <div class="space-y-1.5 text-left">
-                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Public Access</label>
-                                <button onclick="config.publicEnabled=!config.publicEnabled; renderAdmin()" class="w-full ${config.publicEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-5 rounded-[24px] font-bold text-sm shadow-lg transition-all active:scale-95 uppercase tracking-widest">
-                                    ${config.publicEnabled ? 'Enabled' : 'Disabled'}
-                                </button>
-                            </div>
-                            <div class="space-y-1.5 text-left">
-                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Student Submit</label>
-                                <button onclick="config.studentEnabled=!config.studentEnabled; renderAdmin()" class="w-full ${config.studentEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-5 rounded-[24px] font-bold text-sm shadow-lg transition-all active:scale-95 uppercase tracking-widest">
-                                    ${config.studentEnabled ? 'Active' : 'Locked'}
-                                </button>
-                            </div>
+                        <div class="grid sm:grid-cols-2 gap-12 mb-12 relative z-10 text-left italic-title italic">
+                            <div class="space-y-3 text-left"><label class="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] ml-6 italic-title text-left uppercase leading-none italic">Title</label><input id="adm-p-name" type="text" oninput="config.projectName=this.value" value="${config.projectName}" class="w-full bg-slate-50 border-none p-7 rounded-[32px] font-black italic text-2xl text-slate-700 focus:ring-2 focus:ring-orange-500 outline-none text-left italic-title italic"></div>
+                            <div class="space-y-3 text-left"><label class="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] ml-6 italic-title text-left uppercase leading-none italic">Word Limit</label><input id="adm-word-limit" type="number" oninput="config.wordLimit=parseInt(this.value)" value="${config.wordLimit}" class="w-full bg-slate-50 border-none p-7 rounded-[32px] font-black text-3xl text-slate-700 text-left italic-title italic"></div>
+                            <div class="space-y-3 text-left"><label class="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] ml-6 italic-title text-left uppercase leading-none italic">Public Term</label><button onclick="config.publicEnabled=!config.publicEnabled; renderAdmin()" class="w-full ${config.publicEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-7 rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-xl transition-all shadow-lg italic-title italic leading-none">${config.publicEnabled ? 'ONLINE' : 'OFFLINE'}</button></div>
+                            <div class="space-y-3 text-left"><label class="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] ml-6 italic-title text-left uppercase leading-none italic">Submission</label><button onclick="config.studentEnabled=!config.studentEnabled; renderAdmin()" class="w-full ${config.studentEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-200'} text-white p-7 rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-xl transition-all shadow-lg italic-title italic leading-none">${config.studentEnabled ? 'ACTIVE' : 'LOCKED'}</button></div>
                         </div>
                         
-                        <div class="grid gap-4 mb-10 text-left">
-                            <div class="space-y-1.5">
-                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Admin Folder ID</label>
-                                <input id="adm-folder" type="text" oninput="config.driveAdminFolder = this.value" value="${config.driveAdminFolder}" class="w-full bg-slate-50 border-none p-4 rounded-[20px] font-mono text-[10px] text-slate-400">
-                            </div>
-                            <div class="space-y-1.5">
-                                <label class="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-3">Guest Folder ID</label>
-                                <input id="adm-inbox-folder" type="text" oninput="config.driveInboxFolder = this.value" value="${config.driveInboxFolder}" class="w-full bg-slate-50 border-none p-4 rounded-[20px] font-mono text-[10px] text-slate-400">
-                            </div>
-                        </div>
-
-                        <button onclick="saveAdminSettings()" id="save-btn" class="w-full bg-orange-600 text-white py-5 rounded-[32px] font-black italic shadow-2xl shadow-orange-100 hover:scale-[1.01] transition-transform uppercase tracking-widest">Update Settings</button>
+                        <button onclick="saveAdminSettings()" id="save-btn" class="w-full bg-orange-theme text-white py-8 rounded-[48px] font-black italic shadow-2xl shadow-orange-100 hover:scale-[1.01] transition-transform uppercase tracking-[0.4em] text-sm relative z-10 italic-title italic">Update Settings</button>
                     </div>
 
-                    <div class="space-y-6 text-left">
-                        <div class="flex justify-between items-center px-4">
-                            <h3 class="font-black text-slate-400 uppercase tracking-widest text-[10px] italic">Live Submissions</h3>
-                        </div>
-                        <div id="admin-submissions" class="grid gap-3"></div>
+                    <div class="space-y-8 text-left italic-title italic">
+                        <h3 class="font-black text-slate-300 uppercase tracking-[0.5em] text-[12px] italic ml-8 text-left uppercase leading-none italic">Live Stream Activity</h3>
+                        <div id="admin-submissions" class="grid gap-5 text-left"></div>
                     </div>
                 </div>`;
-            const subList = document.getElementById('admin-submissions');
-            onSnapshot(getPublicDataCollection('submissions'), (snapshot) => {
-                subList.innerHTML = ""; 
+            
+            onSnapshot(getPublicCollection('submissions'), (snapshot) => {
+                const subList = document.getElementById('admin-submissions');
+                if(!subList) return; subList.innerHTML = ""; 
                 snapshot.docs.forEach(d => {
                     const sub = d.data(); const item = document.createElement('div');
-                    item.className = "bg-white p-5 rounded-[32px] border border-orange-50 flex justify-between items-center shadow-sm hover:border-orange-200 transition-all text-left";
+                    item.className = "bg-white p-8 rounded-[48px] border border-orange-50 flex flex-col gap-6 shadow-sm hover:border-orange-300 transition-all text-left italic-title italic";
                     item.innerHTML = `
-                        <div class="flex items-center gap-4 text-left">
-                            <div class="w-10 h-10 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 font-black text-[10px] italic">${sub.from.slice(-2)}</div>
-                            <div>
-                                <p class="font-black text-slate-800 leading-none italic text-sm text-left">${STUDENT_LIST.find(s=>s.id===sub.from)?.nick || sub.from}</p>
-                                <p class="text-[9px] text-slate-300 mt-1 font-bold uppercase tracking-widest text-left">${sub.wordCount} words | ${sub.from}</p>
+                        <div class="flex justify-between items-center text-left">
+                            <div class="flex items-center gap-6">
+                                <div class="w-16 h-16 bg-orange-50 rounded-[28px] flex items-center justify-center text-orange-500 font-black text-[14px] shadow-inner uppercase italic-title italic tracking-tighter leading-none">${sub.from.slice(-2)}</div>
+                                <div class="text-left">
+                                    <p class="font-black text-slate-800 leading-none italic-title text-xl italic text-left">${STUDENT_LIST.find(s=>s.id===sub.from)?.nick || sub.from}</p>
+                                    <p class="text-[11px] text-slate-300 mt-2 font-black uppercase tracking-[0.2em] italic-title italic text-left leading-none">${sub.wordCount} words | ID: ${sub.from}</p>
+                                </div>
                             </div>
+                            <button onclick="showModal('Transcript', '${sub.transcript.replace(/'/g, "\\'")}', 'info')" class="p-5 text-slate-200 hover:text-orange-500 transition-colors bg-slate-50 rounded-[24px]"><i data-lucide="file-text" size="22"></i></button>
                         </div>
-                        <div class="flex gap-2">
-                             <button onclick="showModal('Transcript', '${sub.transcript.replace(/'/g, "\\'")}', 'info')" class="p-2.5 text-slate-200 hover:text-orange-500 transition-colors"><i data-lucide="file-text" size="16"></i></button>
-                             <a href="https://drive.google.com/drive/folders/${config.driveAdminFolder}?q=${sub.from}" target="_blank" class="p-2.5 bg-orange-50 text-orange-500 rounded-xl hover:bg-orange-100 transition-colors shadow-sm shadow-orange-50/50"><i data-lucide="folder-open" size="16"></i></a>
-                        </div>`;
+                        <audio controls src="${sub.audioData}" class="w-full h-8 opacity-80"></audio>
+                    `;
                     subList.appendChild(item);
                 });
                 lucide.createIcons();
-            });
-            lucide.createIcons();
+            }, (err) => console.log("Admin list error:", err));
         }
 
         window.saveAdminSettings = async () => {
             const btn = document.getElementById('save-btn'); btn.disabled = true;
             try { 
                 await setDoc(getSettingsDoc(), config); 
-                showModal("สำเร็จ", "บันทึกการตั้งค่าเรียบร้อยแล้ว", "success");
-            } catch (e) { showModal("ล้มเหลว", e.message, "error"); }
+                showModal("Success!", "บันทึกการตั้งค่าลงระบบแล้ว", "success");
+            } catch (e) { showModal("Error", e.message, "error"); }
             btn.disabled = false;
         };
 
         window.confirmReset = () => {
-            showModal("ล้างข้อมูล", "คุณแน่ใจหรือไม่ที่จะลบข้อมูลการส่งงานทั้งหมด? (ไฟล์ใน Google Drive จะยังคงอยู่)", "error", async () => {
+            showModal("Danger Zone", "ต้องการล้างข้อมูลงานทั้งหมดหรือไม่? (กู้คืนไม่ได้)", "error", async () => {
                 try {
-                    const subs = await getDocs(getPublicDataCollection('submissions'));
-                    const msgs = await getDocs(getPublicDataCollection('messages'));
-                    const promises = [...subs.docs.map(d => deleteDoc(d.ref)), ...msgs.docs.map(d => deleteDoc(d.ref))];
-                    await Promise.all(promises);
-                    showModal("สำเร็จ", "ล้างข้อมูลระบบเรียบร้อยแล้ว", "success");
-                } catch(e) { showModal("ล้มเหลว", e.message, "error"); }
+                    const subs = await getDocs(getPublicCollection('submissions'));
+                    const msgs = await getDocs(getPublicCollection('messages'));
+                    await Promise.all([...subs.docs.map(d => deleteDoc(d.ref)), ...msgs.docs.map(d => deleteDoc(d.ref))]);
+                    showModal("Wiped", "ล้างฐานข้อมูลสำเร็จ", "success");
+                } catch(e) { showModal("Fail", e.message, "error"); }
             }, true);
         };
-
     </script>
 </body>
 </html>
