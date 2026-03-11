@@ -1,0 +1,570 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  onAuthStateChanged, 
+  signOut 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  collection, 
+  addDoc, 
+  query, 
+  where 
+} from 'firebase/firestore';
+import { 
+  Mic, 
+  StopCircle, 
+  Play, 
+  Send, 
+  User, 
+  Settings, 
+  Inbox, 
+  CheckCircle, 
+  LogOut, 
+  ChevronRight,
+  Music,
+  Trash2
+} from 'lucide-react';
+
+// --- Configuration ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
+  authDomain: "song-siang-fa86e.firebaseapp.com",
+  projectId: "song-siang-fa86e",
+  storageBucket: "song-siang-fa86e.firebasestorage.app",
+  messagingSenderId: "1090864995280",
+  appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+
+// รายชื่อนักศึกษาที่ให้มา
+const STUDENT_LIST = [
+  { id: "65030001", name: "นางสาวกชกร ทรัพย์โคกสูง", nick: "กิ๊ฟ" },
+  { id: "65030004", name: "นางสาวกนกวรรณ จันทร์มาเมือง", nick: "ฝ้าย" },
+  { id: "65030008", name: "นางสาวกมลเนตร ชัยชนะ", nick: "วิว" },
+  { id: "65030009", name: "นางสาวกมลฤทัย สว่างแจ้ง", nick: "เฟิร์น" },
+  { id: "65030022", name: "นางสาวกุลภัสสร์ ธีระเพ็ญแสง", nick: "ภัส" },
+  { id: "65030030", name: "นางสาวจันทรัตน์ อ่อนละมูล", nick: "น้ำฝน" },
+  { id: "65030036", name: "นายเฉลิมพร วันเพ็ญ", nick: "วันเพ็ญ" },
+  { id: "65030038", name: "นางสาวชญาสินี วงศ์รักษา", nick: "ต้นข้าว" },
+  { id: "65030040", name: "นางสาวชนาภา ท้วมเกร็ด", nick: "เต๋าเต๋า" },
+  { id: "65030043", name: "นายชยาวุธ ภวคุณกร", nick: "นน" },
+  { id: "65030045", name: "นางสาวชยุตรา เสนากูล", nick: "คะนิ้ง" },
+  { id: "65030048", name: "นางสาวชวพร ประสงค์ผล", nick: "มิว" },
+  { id: "65030054", name: "นางสาวโชติกา อายุวรรณ", nick: "กิว" },
+  { id: "65030057", name: "นายฐิติกานต์ ปุระเตนนท์", nick: "กัน" },
+  { id: "65030063", name: "นางสาวณัชชา อภิเดช", nick: "กล้องฟิล์ม" },
+  { id: "65030070", name: "นายณัฐนันท์ เตชัย", nick: "หวัง" },
+  { id: "65030093", name: "นายธนภัทร ไชยเมือง", nick: "อังเปา" },
+  { id: "65030094", name: "นายธนภัทร บุญต่าง", nick: "ภู" },
+  { id: "65030095", name: "นายธนภัทร พ้องเสียง", nick: "เพลง" },
+  { id: "65030097", name: "นางสาวธรรญชนก กิจพิบูลย์", nick: "ฟาง" },
+  { id: "65030105", name: "นายธาวิน ทองส่งเสริม", nick: "วิน" },
+  { id: "65030115", นาม: "นายนนทวัฒน์ ชีพอุบัติ", nick: "เฟรม" },
+  { id: "65030123", name: "นางสาวนันทกานต์ ชูจันทร์", nick: "จิ๊บ" },
+  { id: "65030138", name: "นายปฏิภาณ บำเรอจิต", nick: "ปลั๊ก" },
+  { id: "65030140", name: "นางสาวปณิตา พงษ์เรือง", nick: "ปิ่น" },
+  { id: "65030145", name: "นางสาวปรียากร สายสิม", nick: "ปาล์มมี่" },
+  { id: "65030173", name: "นางสาวพุธิตา ปันฟอง", nick: "ใบเตย" },
+  { id: "65030193", name: "นายภูวิศ ชินทองเปลว", nick: "โบ๊ท" },
+  { id: "65030215", name: "นางสาววนิชยา ทองสุข", nick: "ดรีม" },
+  { id: "65030216", name: "นางสาววนิดา วามะขัน", nick: "มิ้นท์" },
+  { id: "65030221", name: "นางสาววรัญญา ประสิทธิ์พิชิต", nick: "เมอ" },
+  { id: "65030225", name: "นางสาววริษา อุ่นวิเศษ", nick: "หมีพู" },
+  { id: "65030231", name: "นางสาววุฒิชัย อุ่นวิเศษ", nick: "วุฒิ" },
+  { id: "65030234", name: "นางสาวศศิกานต์ เจิรญพันธ์", nick: "แพร์" },
+  { id: "65030242", name: "นายศิวกร คู่โนรัมย์", nick: "โอเว่น" },
+  { id: "65030249", name: "นายศุภาวุฒิ ไขดอน", nick: "เบต" },
+  { id: "65030272", name: "นางสาวอชิรญา ทิพกันทา", nick: "แทมมี่" },
+  { id: "65030273", name: "นางสาวอติกานต์ เกษแก้ว", nick: "เตย" },
+  { id: "65030280", name: "นางสาวอภิญญา ภัคศิริกุลวัฒน์", nick: "ตัง" },
+  { id: "65030282", name: "นางสาวอรกัญญา ปัญญา", nick: "มิก" },
+  { id: "65030286", name: "นางสาวอริสา ประทีป ณ ถลาง", nick: "ฟิล์ม" },
+  { id: "65030288", name: "นางสาวอังคณา ใบตะเห", nick: "ดาว" },
+  { id: "65030290", name: "นายอัฟนาน สาเม๊าะ", nick: "อัฟ" },
+  { id: "65030292", name: "นางสาวอาทิตยาม พริกเอียด", nick: "ณัฐ" },
+  { id: "65030295", name: "นางสาวอารียา สุขเหลือง", nick: "อ๋อม" },
+  { id: "65030298", name: "นายนราวิชญ์ สมันตกุล", nick: "บอส" },
+];
+
+// --- Main App Component ---
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState('guest'); // guest, student, admin
+  const [studentId, setStudentId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [wordLimit, setWordLimit] = useState(50);
+  const [view, setView] = useState('home'); // home, record, inbox, admin
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        const email = u.email;
+        const prefix = email.split('@')[0];
+        setUser(u);
+        
+        // เช็คว่าเป็น Admin หรือไม่ (คุณสามารถเปลี่ยนเงื่อนไขนี้ได้)
+        if (email === "admin-song-siang@gmail.com" || email.includes("teacher")) {
+          setRole('admin');
+          setView('admin');
+        } else if (STUDENT_LIST.some(s => s.id === prefix)) {
+          setRole('student');
+          setStudentId(prefix);
+          setView('home');
+        } else {
+          setRole('guest');
+          setView('home');
+        }
+      } else {
+        setUser(null);
+        setRole('guest');
+        setView('home');
+      }
+      setLoading(false);
+    });
+
+    // ดึงค่าการตั้งค่าจาก Firebase
+    const settingsSub = onSnapshot(doc(db, "settings", "general"), (doc) => {
+      if (doc.exists()) setWordLimit(doc.data().wordLimit);
+    });
+
+    return () => {
+      unsubscribe();
+      settingsSub();
+    };
+  }, []);
+
+  const login = () => signInWithPopup(auth, googleProvider);
+  const logout = () => signOut(auth);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-indigo-50">กำลังโหลด...</div>;
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+      {/* Header */}
+      <header className="bg-white border-b sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+          <div className="bg-indigo-600 p-2 rounded-xl text-white">
+            <Music size={24} />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-indigo-900">Song Siang</h1>
+        </div>
+        {user ? (
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-semibold">{user.displayName}</p>
+              <p className="text-xs text-slate-500 uppercase tracking-tighter">{role} {studentId ? `| ${studentId}` : ''}</p>
+            </div>
+            <button onClick={logout} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+              <LogOut size={20} />
+            </button>
+          </div>
+        ) : (
+          <button onClick={login} className="bg-indigo-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
+            เข้าสู่ระบบ
+          </button>
+        )}
+      </header>
+
+      <main className="max-w-4xl mx-auto p-4 sm:p-8">
+        {view === 'home' && <HomeView role={role} setView={setView} studentId={studentId} />}
+        {view === 'record' && <RecorderView role={role} wordLimit={wordLimit} studentId={studentId} onFinish={() => setView('home')} />}
+        {view === 'inbox' && <InboxView studentId={studentId} />}
+        {view === 'admin' && <AdminView wordLimit={wordLimit} setWordLimit={setWordLimit} />}
+      </main>
+
+      {/* Navigation Bar for Logged in Students */}
+      {role === 'student' && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 shadow-lg">
+          <NavBtn active={view === 'home'} onClick={() => setView('home')} icon={<User size={20} />} label="หน้าแรก" />
+          <NavBtn active={view === 'record'} onClick={() => setView('record')} icon={<Mic size={20} />} label="ส่งงาน" />
+          <NavBtn active={view === 'inbox'} onClick={() => setView('inbox')} icon={<Inbox size={20} />} label="กล่องเสียง" />
+        </nav>
+      )}
+    </div>
+  );
+}
+
+function NavBtn({ active, onClick, icon, label }) {
+  return (
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600' : 'text-slate-400 hover:text-indigo-400'}`}>
+      {icon}
+      <span className="text-[10px] font-medium uppercase tracking-widest">{label}</span>
+    </button>
+  );
+}
+
+// --- Views ---
+
+function HomeView({ role, setView, studentId }) {
+  if (role === 'guest') {
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+            <div className="relative z-10">
+                <h2 className="text-3xl font-bold mb-2">ส่งเสียงของคุณถึงเพื่อน</h2>
+                <p className="text-indigo-100 opacity-90 max-w-sm">เลือกชื่อเพื่อนในห้องที่ต้องการส่งข้อความเสียงถึง แล้วกดอัดเสียงได้ทันที!</p>
+            </div>
+            <div className="absolute -bottom-10 -right-10 opacity-20 transform rotate-12">
+                <Music size={200} />
+            </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {STUDENT_LIST.map(student => (
+            <button 
+              key={student.id}
+              onClick={() => {
+                // เก็บค่า ID ปลายทางไว้ชั่วคราวแล้วไปหน้าอัดเสียง
+                window.targetStudent = student;
+                setView('record');
+              }}
+              className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-indigo-400 hover:shadow-xl transition-all text-left group"
+            >
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{student.id}</p>
+              <p className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{student.nick}</p>
+              <p className="text-xs text-slate-500 truncate mt-1">{student.name}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center">
+        <h2 className="text-2xl font-bold text-slate-800">ยินดีต้อนรับ, {studentId}</h2>
+        <p className="text-slate-500 mt-2 italic">พร้อมสำหรับการส่งงานคลิปเสียงหรือยัง?</p>
+      </div>
+      
+      <div className="grid gap-4">
+        <button onClick={() => setView('record')} className="bg-indigo-600 text-white p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-indigo-100 hover:scale-[1.02] transition-transform">
+          <div className="flex items-center gap-4">
+            <div className="bg-indigo-500 p-3 rounded-2xl"><Mic size={24} /></div>
+            <div className="text-left">
+              <p className="font-bold text-lg leading-tight">อัดเสียงส่งงาน</p>
+              <p className="text-xs text-indigo-100 opacity-80 uppercase tracking-widest mt-0.5">Project Classroom Video</p>
+            </div>
+          </div>
+          <ChevronRight />
+        </button>
+
+        <button onClick={() => setView('inbox')} className="bg-white border border-slate-200 p-6 rounded-3xl flex items-center justify-between hover:border-indigo-200 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="bg-slate-100 p-3 rounded-2xl text-slate-600"><Inbox size={24} /></div>
+            <div className="text-left">
+              <p className="font-bold text-lg text-slate-800 leading-tight text-left">กล่องเสียงจากเพื่อน</p>
+              <p className="text-xs text-slate-400 uppercase tracking-widest mt-0.5">Guest Messages</p>
+            </div>
+          </div>
+          <ChevronRight />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RecorderView({ role, wordLimit, studentId, onFinish }) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [transcript, setTranscript] = useState("");
+  const [wordCount, setWordCount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const mediaRecorder = useRef(null);
+  const audioChunks = useRef([]);
+  const recognition = useRef(null);
+  const target = window.targetStudent;
+
+  // Web Speech API Setup
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window) {
+      recognition.current = new window.webkitSpeechRecognition();
+      recognition.current.continuous = true;
+      recognition.current.interimResults = true;
+      recognition.current.lang = 'th-TH';
+
+      recognition.current.onresult = (event) => {
+        let text = "";
+        for (let i = 0; i < event.results.length; i++) {
+          text += event.results[i][0].transcript;
+        }
+        setTranscript(text);
+        setWordCount(text.trim().split(/\s+/).length);
+      };
+    }
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      audioChunks.current = [];
+      
+      mediaRecorder.current.ondataavailable = (e) => audioChunks.current.push(e.data);
+      mediaRecorder.current.onstop = () => {
+        const blob = new Blob(audioChunks.current, { type: 'audio/mpeg' });
+        setAudioUrl(URL.createObjectURL(blob));
+      };
+
+      mediaRecorder.current.start();
+      recognition.current?.start();
+      setIsRecording(true);
+      setTimer(0);
+    } catch (err) {
+      alert("ไม่สามารถใช้ไมโครโฟนได้: " + err.message);
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorder.current.stop();
+    recognition.current?.stop();
+    setIsRecording(false);
+  };
+
+  useEffect(() => {
+    let interval;
+    if (isRecording) {
+      interval = setInterval(() => setTimer(t => t + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const handleUpload = async () => {
+    setIsProcessing(true);
+    
+    // จำลองการอัปโหลดเข้า Google Drive (ตามไฟล์ JSON ของคุณ)
+    // ในโปรเจกต์จริง ส่วนนี้จะส่งผ่าน Firebase Cloud Functions
+    setTimeout(async () => {
+      try {
+        const payload = {
+          from: studentId || "Guest",
+          targetId: target ? target.id : "Admin",
+          timestamp: new Date().toISOString(),
+          wordCount: wordCount,
+          transcript: transcript,
+          driveUrl: "https://drive.google.com/drive/folders/1XlkXHCoxlWVDAsmDnPo0I32kiAjf6pUT", // ลิงก์โฟลเดอร์ปลายทาง
+          fileName: `voice_${Date.now()}.mp3`
+        };
+
+        if (role === 'student') {
+            await setDoc(doc(db, "submissions", studentId), payload);
+        } else {
+            await addDoc(collection(db, "messages"), payload);
+        }
+
+        setIsProcessing(false);
+        setIsDone(true);
+      } catch (e) {
+        console.error(e);
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      }
+    }, 2000);
+  };
+
+  if (isDone) return (
+    <div className="text-center py-20 animate-in zoom-in duration-500">
+      <div className="flex justify-center mb-6">
+        <div className="bg-green-100 p-6 rounded-full text-green-600">
+          <CheckCircle size={80} />
+        </div>
+      </div>
+      <h2 className="text-3xl font-bold text-slate-800">ส่งเสียงสำเร็จแล้ว!</h2>
+      <p className="text-slate-500 mt-2">ขอบคุณที่มีส่วนร่วมในโปรเจกต์ Song Siang</p>
+      <button onClick={onFinish} className="mt-8 bg-slate-100 px-8 py-3 rounded-2xl font-bold text-slate-600 hover:bg-slate-200 transition-all">กลับหน้าแรก</button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8 max-w-lg mx-auto">
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-bold text-indigo-900">
+          {target ? `ส่งถึง: ${target.nick}` : 'อัดเสียงส่งงาน'}
+        </h2>
+        <p className="text-slate-500 text-sm">
+          {target ? 'พูดสิ่งที่อยากบอกเพื่อนได้เลย' : `จำกัดจำนวนคำ: ไม่เกิน ${wordLimit} คำ`}
+        </p>
+      </div>
+
+      <div className="bg-white p-10 rounded-[40px] shadow-2xl border border-slate-100 flex flex-col items-center gap-8">
+        {/* Timer Display */}
+        <div className={`text-6xl font-mono font-bold transition-all ${isRecording ? 'text-red-500 scale-110' : 'text-slate-300'}`}>
+          {Math.floor(timer / 60).toString().padStart(2, '0')}:{(timer % 60).toString().padStart(2, '0')}
+        </div>
+
+        {/* Record Button */}
+        {!audioUrl ? (
+          <button 
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-xl active:scale-90 ${isRecording ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+          >
+            {isRecording ? <StopCircle size={48} color="white" /> : <Mic size={48} color="white" />}
+          </button>
+        ) : (
+          <div className="w-full space-y-4">
+            <audio src={audioUrl} controls className="w-full" />
+            <div className="flex gap-2">
+                <button onClick={() => setAudioUrl(null)} className="flex-1 bg-slate-100 py-4 rounded-2xl font-bold text-slate-500 flex items-center justify-center gap-2">
+                    <Trash2 size={20} /> อัดใหม่
+                </button>
+                <button 
+                    disabled={wordCount > wordLimit && !target}
+                    onClick={handleUpload} 
+                    className={`flex-1 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all ${wordCount > wordLimit && !target ? 'bg-slate-300' : 'bg-green-500 hover:bg-green-600 shadow-lg shadow-green-100'}`}
+                >
+                    {isProcessing ? "กำลังส่ง..." : <><Send size={20} /> ส่งเสียง</>}
+                </button>
+            </div>
+          </div>
+        )}
+
+        {/* AI Word Count Feedback */}
+        <div className="w-full bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200">
+            <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Transcript & Count</span>
+                <span className={`text-sm font-bold px-3 py-1 rounded-full ${wordCount > wordLimit && !target ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                    {wordCount} / {target ? '∞' : wordLimit} คำ
+                </span>
+            </div>
+            <p className="text-sm text-slate-600 italic leading-relaxed">
+                "{transcript || "รอรับเสียง..."}"
+            </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InboxView({ studentId }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "messages"), where("targetId", "==", studentId));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    });
+    return unsub;
+  }, [studentId]);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+        <Inbox className="text-indigo-600" /> ข้อความเสียงถึงคุณ
+      </h2>
+      {loading ? <p>กำลังโหลด...</p> : (
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="bg-white p-10 rounded-3xl text-center border border-slate-100">
+                <p className="text-slate-400">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
+            </div>
+          ) : (
+            messages.map(msg => (
+                <div key={msg.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">จาก: {msg.from}</p>
+                            <p className="text-[10px] text-slate-300">{new Date(msg.timestamp).toLocaleString('th-TH')}</p>
+                        </div>
+                        <div className="bg-indigo-50 px-2 py-1 rounded text-[10px] font-bold text-indigo-500 uppercase">Voice Message</div>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-2xl italic text-sm text-slate-600">
+                        "{msg.transcript}"
+                    </div>
+                    <button onClick={() => window.open(msg.driveUrl)} className="text-xs text-indigo-600 font-bold underline flex items-center gap-1">
+                        <Play size={14} /> ฟังต้นฉบับใน Drive
+                    </button>
+                </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminView({ wordLimit, setWordLimit }) {
+  const [submissions, setSubmissions] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "submissions"), (snapshot) => {
+      setSubmissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsub;
+  }, []);
+
+  const saveSettings = async () => {
+    setIsSaving(true);
+    await setDoc(doc(db, "settings", "general"), { wordLimit: parseInt(wordLimit) });
+    setIsSaving(false);
+    alert("บันทึกการตั้งค่าเรียบร้อย!");
+  };
+
+  return (
+    <div className="space-y-10">
+      {/* Settings Section */}
+      <section className="bg-white p-8 rounded-3xl shadow-xl border border-indigo-50 space-y-6">
+        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Settings className="text-indigo-600" /> แผงควบคุม Admin
+        </h2>
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex-1 space-y-1">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">จำกัดจำนวนคำของนักศึกษา</label>
+                <input 
+                    type="number" 
+                    value={wordLimit}
+                    onChange={(e) => setWordLimit(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold text-xl"
+                />
+            </div>
+            <button 
+                onClick={saveSettings}
+                className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+            >
+                {isSaving ? "กำลังบันทึก..." : "บันทึกค่า"}
+            </button>
+        </div>
+      </section>
+
+      {/* Submissions Section */}
+      <section className="space-y-4">
+        <h3 className="text-lg font-bold text-slate-700 ml-2 uppercase tracking-tighter">รายการส่งงานล่าสุด ({submissions.length})</h3>
+        <div className="grid gap-3">
+            {submissions.map(sub => (
+                <div key={sub.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+                            {sub.from.slice(-2)}
+                        </div>
+                        <div>
+                            <p className="font-bold text-slate-800">{STUDENT_LIST.find(s => s.id === sub.from)?.nick || sub.from}</p>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">คำที่นับได้: {sub.wordCount} คำ</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button onClick={() => window.open(sub.driveUrl)} className="flex-1 sm:flex-none bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-600 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                            ดูไฟล์ใน Drive
+                        </button>
+                    </div>
+                </div>
+            ))}
+        </div>
+      </section>
+    </div>
+  );
+}
