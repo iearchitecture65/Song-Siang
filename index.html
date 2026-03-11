@@ -183,7 +183,6 @@
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    // Try anonymous but catch the restricted error
                     await signInAnonymously(auth);
                 }
             } catch (error) {
@@ -201,7 +200,6 @@
                         กรุณาเพิ่มโดเมน <b>${domain}</b> ใน Firebase Console > Authentication > Settings > Authorized domains
                     `);
                 }
-                // Even if auth fails, we show the loading screen as hidden so user can at least see the UI
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('views').classList.remove('hidden');
             }
@@ -211,6 +209,18 @@
             user = u;
             if (u && !u.isAnonymous) {
                 const email = u.email || "";
+                
+                // Restriction Check: Only allow @kmitl.ac.th
+                if (!email.endsWith('@kmitl.ac.th')) {
+                    await signOut(auth);
+                    showAuthError(`
+                        <b>การเข้าถึงถูกจำกัด</b><br><br>
+                        ขออภัยครับ ระบบนี้อนุญาตให้เข้าใช้งานเฉพาะอีเมลของสถาบัน <b>@kmitl.ac.th</b> เท่านั้น<br>
+                        กรุณาตรวจสอบบัญชี Google ที่ใช้ล็อกอินอีกครั้งครับ
+                    `);
+                    return;
+                }
+
                 const prefix = email.split('@')[0];
                 if (email === "admin-song-siang@gmail.com" || email.includes("teacher")) {
                     role = 'admin';
@@ -235,13 +245,23 @@
         onSnapshot(doc(db, "settings", "general"), (doc) => {
             if (doc.exists()) wordLimit = doc.data().wordLimit;
         }, (err) => {
-            console.log("Settings listener error (Auth likely failed):", err);
+            console.log("Settings listener error:", err);
         });
 
         // --- Auth Actions ---
         window.login = async () => {
             try {
-                await signInWithPopup(auth, provider);
+                const result = await signInWithPopup(auth, provider);
+                const email = result.user.email;
+                
+                // Final Check after login popup
+                if (email && !email.endsWith('@kmitl.ac.th')) {
+                    await signOut(auth);
+                    showAuthError(`
+                        <b>โดเมนไม่ถูกต้อง</b><br><br>
+                        ระบบอนุญาตให้เข้าใช้เฉพาะอีเมล <b>@kmitl.ac.th</b> เท่านั้นครับ
+                    `);
+                }
             } catch (error) {
                 if (error.code === 'auth/unauthorized-domain') {
                     const domain = window.location.hostname;
@@ -344,20 +364,20 @@
             } else {
                 container.innerHTML = `
                     <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm text-center">
+                        <div class="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm text-center text-left">
                             <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl mx-auto flex items-center justify-center mb-4">
                                 <i data-lucide="sparkles" size="40"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-slate-800 tracking-tight">สวัสดี, ${studentId}</h2>
-                            <p class="text-slate-400 mt-1">วันนี้คุณพร้อมส่งคลิปเสียงสำหรับวิชานี้หรือยัง?</p>
+                            <h2 class="text-2xl font-bold text-slate-800 tracking-tight text-center">สวัสดี, ${studentId}</h2>
+                            <p class="text-slate-400 mt-1 text-center">วันนี้คุณพร้อมส่งคลิปเสียงสำหรับวิชานี้หรือยัง?</p>
                         </div>
                         <div class="grid gap-4">
                             <button onclick="renderView('record')" class="bg-indigo-600 text-white p-8 rounded-[32px] flex items-center justify-between shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-transform group">
                                 <div class="flex items-center gap-5">
                                     <div class="bg-indigo-500 p-4 rounded-2xl group-hover:rotate-12 transition-transform"><i data-lucide="mic-2"></i></div>
                                     <div class="text-left">
-                                        <p class="font-bold text-xl leading-none text-left">อัดเสียงส่งงาน</p>
-                                        <p class="text-xs text-indigo-100 opacity-80 mt-2 uppercase tracking-widest text-left">Project Classroom Video</p>
+                                        <p class="font-bold text-xl leading-none">อัดเสียงส่งงาน</p>
+                                        <p class="text-xs text-indigo-100 opacity-80 mt-2 uppercase tracking-widest">Project Classroom Video</p>
                                     </div>
                                 </div>
                                 <i data-lucide="chevron-right"></i>
@@ -405,7 +425,7 @@
                         <div id="status-text" class="text-slate-400 text-sm font-bold uppercase tracking-widest">กดเพื่อเริ่มพูด</div>
 
                         <div id="recording-feedback" class="w-full space-y-4 hidden">
-                             <div class="w-full bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200">
+                             <div class="w-full bg-slate-50 p-6 rounded-3xl border border-dashed border-slate-200 text-left">
                                 <div class="flex justify-between items-center mb-3">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Transcript & Count</span>
                                     <span id="word-count-badge" class="text-sm font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-600">0 / ${currentTarget ? '∞' : wordLimit} คำ</span>
@@ -499,7 +519,7 @@
         window.submitVoice = async () => {
             const btn = document.getElementById('submit-btn');
             if (!user) {
-                showAuthError("กรุณาเข้าสู่ระบบ หรือเปิดใช้งาน Anonymous Sign-in ใน Firebase Console ก่อนครับ");
+                showAuthError("กรุณาเข้าสู่ระบบด้วยอีเมล @kmitl.ac.th ก่อนส่งข้อมูลครับ");
                 return;
             }
             btn.disabled = true;
@@ -602,7 +622,7 @@
             if (role !== 'admin') { renderHome(); return; }
 
             container.innerHTML = `
-                <div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 text-left">
                     <div class="bg-white p-8 rounded-[40px] shadow-xl border border-indigo-50 space-y-6">
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3 tracking-tight">
                             <i data-lucide="settings" class="text-indigo-600"></i> แผงควบคุม Admin
@@ -616,7 +636,7 @@
                         </div>
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="space-y-4 text-left">
                         <h3 class="text-lg font-bold text-slate-700 uppercase tracking-tighter flex items-center gap-2 ml-2">
                              <i data-lucide="layout-list" size="20"></i> รายการส่งงานจากทุกคน
                         </h3>
@@ -636,7 +656,7 @@
                     const sub = d.data();
                     const sInfo = STUDENT_LIST.find(s => s.id === sub.from);
                     const item = document.createElement('div');
-                    item.className = "bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 hover:border-indigo-200 transition-all";
+                    item.className = "bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 hover:border-indigo-200 transition-all text-left";
                     item.innerHTML = `
                         <div class="flex items-center gap-4 w-full text-left">
                             <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-bold text-xs shadow-inner">${sub.from.slice(-2)}</div>
@@ -650,7 +670,7 @@
                     subList.appendChild(item);
                 });
                 lucide.createIcons();
-            }, (err) => console.log("Submissions admin error:", err));
+            }, (err) => console.log("Admin list error:", err));
             lucide.createIcons();
         }
 
