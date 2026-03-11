@@ -86,7 +86,7 @@
         const STUDENT_LIST = [
             { id: "65030001", name: "นางสาวกชกร ทรัพย์โคกสูง", nick: "กิ๊ฟ" },
             { id: "65030004", name: "นางสาวกนกวรรณ จันทร์มาเมือง", nick: "ฝ้าย" },
-            { id: "65030008", name: "นางสาวกมลเนตร ชัยชนะ", nick: "วิว" },
+            { id: "65030008", name: "นางสาวกนกเนตร ชัยชนะ", nick: "วิว" },
             { id: "65030009", name: "นางสาวกมลฤทัย สว่างแจ้ง", nick: "เฟิร์น" },
             { id: "65030022", name: "นางสาวกุลภัสสร์ ธีระเพ็ญแสง", nick: "ภัส" },
             { id: "65030030", name: "นางสาวจันทรัตน์ อ่อนละมูล", nick: "น้ำฝน" },
@@ -142,6 +142,7 @@
         let targetStudent = null;
         let mediaRecorder = null;
         let recordedBlob = null;
+        let audioChunks = []; // เพิ่มการประกาศตัวแปรที่นี่เพื่อแก้ไขข้อผิดพลาด
         let recognition = null;
         let transcript = "";
         let timer = 0;
@@ -346,9 +347,13 @@
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => { recordedBlob = new Blob(audioChunks, { type: 'audio/mp3' }); };
+                    audioChunks = []; // ล้างข้อมูลเดิมทุกครั้งที่เริ่มอัดใหม่
+                    mediaRecorder.ondataavailable = e => {
+                        if (e.data.size > 0) audioChunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = () => { 
+                        recordedBlob = new Blob(audioChunks, { type: 'audio/mp3' }); 
+                    };
                     mediaRecorder.start();
 
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -412,11 +417,6 @@
                 } else {
                     await addDoc(getPublicDataCollection('messages'), payload);
                 }
-
-                /* หมายเหตุสำหรับคุณ: การส่งไฟล์ Blob (recordedBlob) เข้า Google Drive โดยตรงจาก HTML
-                   ต้องใช้ Access Token จาก OAuth2 หรือทำผ่าน Cloud Function (แนะนำ)
-                   ในขั้นตอนนี้ ข้อมูลตัวหนังสือและลิงก์โฟลเดอร์จะถูกบันทึกสำเร็จแล้วครับ
-                */
 
                 document.getElementById('views').innerHTML = `
                     <div class="text-center py-20 animate-in zoom-in">
