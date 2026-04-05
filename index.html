@@ -51,14 +51,14 @@
             background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .glass-card {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.25);
         }
         .glass-input {
             background: rgba(255, 255, 255, 0.5);
@@ -72,7 +72,6 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
         
         .otp-input:focus { transform: translateY(-2px); }
         .user-avatar { transition: transform 0.2s ease-out; }
@@ -89,6 +88,12 @@
 
         .swal2-actions {
             gap: 1rem !important;
+        }
+
+        /* Fix for potential line artifacts in grids */
+        .grid {
+            column-gap: 0.5rem;
+            row-gap: 1.5rem;
         }
     </style>
 </head>
@@ -127,8 +132,8 @@
                     </div>
                     <span class="text-[10px] font-medium">ภาพรวม</span>
                 </button>
-                <!-- Standard Buttons -->
-                <button onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all">
+                <!-- Inbox Button - Hidden for non-predefined users -->
+                <button id="btnInboxDesk" onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
                         <i class="fa-solid fa-envelope text-xl"></i>
                         <span id="unreadBadgeDesk" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
@@ -158,7 +163,7 @@
                 <button id="btnFeedMob" onclick="app.showView('feed')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
                     <i class="fa-solid fa-earth-asia text-primary w-5 text-center"></i> ภาพรวม
                 </button>
-                <button onclick="app.showView('inbox')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm relative">
+                <button id="btnInboxMob" onclick="app.showView('inbox')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm relative">
                     <i class="fa-solid fa-envelope text-primary w-5 text-center"></i> กล่องจดหมาย
                 </button>
                 <div class="h-px bg-gray-200 my-1 mx-2"></div>
@@ -248,6 +253,7 @@
         const glassSwal = Swal.mixin({
             background: 'rgba(255, 255, 255, 0.95)',
             backdrop: 'rgba(0,0,0,0.5)',
+            reverseButtons: true,
             customClass: {
                 popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm sm:max-w-md',
                 title: 'text-primary font-extrabold text-xl md:text-2xl',
@@ -385,6 +391,7 @@
                     
                     const showAdmin = this.profile.isAdmin;
                     const showFeed = this.profile.isPredefined || this.profile.isAdmin;
+                    const showInbox = this.profile.isPredefined || this.profile.isAdmin;
 
                     document.getElementById('btnAdminDesk').classList.toggle('hidden', !showAdmin);
                     document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
@@ -393,6 +400,10 @@
                     
                     document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
                     document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
+
+                    // Inbox access logic
+                    document.getElementById('btnInboxDesk').classList.toggle('hidden', !showInbox);
+                    document.getElementById('btnInboxMob').classList.toggle('hidden', !showInbox);
                 } else {
                     navDesk.classList.add('md:hidden');
                     navDesk.classList.remove('md:flex');
@@ -404,6 +415,7 @@
                 else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
                 else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
                 else if(viewName === 'inbox') { 
+                    if (!(this.profile.isPredefined || this.profile.isAdmin)) { this.showView('home'); return; }
                     this.adminSearchQuery = ''; 
                     root.innerHTML = this.renderInbox(); 
                     this.updateFAB(); 
@@ -418,13 +430,11 @@
             },
 
             loginSuccess: async function(userProfile) {
-                // Check block before proceed
                 const isBlocked = await this.checkBlockStatus(userProfile.studentId);
                 if (isBlocked) {
                     return glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งาน', 'error');
                 }
 
-                // Register user status in Firestore if not exists
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', userProfile.studentId), {
                     name: userProfile.name,
                     fullName: userProfile.fullName || userProfile.name,
@@ -439,7 +449,7 @@
                 this.setupUsersListener();
                 
                 glassSwal.fire({
-                    iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>',
+                    iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>',
                     title: `ยินดีต้อนรับ ${userProfile.name}!`,
                     html: 'เข้าสู่ระบบเรียบร้อยแล้ว',
                     timer: 1500,
@@ -531,7 +541,6 @@
                 });
 
                 if (name) {
-                    // Generate a unique ID for guests
                     const guestId = 'G' + Math.random().toString(36).substring(2, 9).toUpperCase();
                     this.loginSuccess({ 
                         studentId: guestId, 
@@ -712,7 +721,7 @@
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { maxWords: w, maxAudioTime: a });
                         glassSwal.fire({ 
-                            iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
+                            iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', 
                             title: 'บันทึกสำเร็จ!', 
                             showConfirmButton: false, 
                             timer: 1500 
@@ -747,7 +756,6 @@
                     </div>
 
                     <div id="usersListContainer" class="space-y-3">
-                        <!-- Users will be rendered here -->
                     </div>
                 </div>`;
             },
@@ -762,8 +770,6 @@
                 if (!container) return;
 
                 const queryStr = this.memberSearchQuery.toLowerCase().trim();
-                
-                // Combine predefined with registered status
                 const allUsers = [...predefinedUsers];
                 this.registeredUsers.forEach(reg => {
                     if (!allUsers.find(u => u.studentId === reg.id)) {
@@ -821,15 +827,14 @@
                     text: currentlyBlocked ? 'สมาชิกจะสามารถกลับมาใช้งานระบบได้ปกติ' : 'สมาชิกจะไม่สามารถเข้าสู่ระบบและใช้งานได้',
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'ยืนยัน',
+                    confirmButtonText: action,
                     cancelButtonText: 'ยกเลิก'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid), {
                             isBlocked: !currentlyBlocked
                         }, { merge: true });
-                        
-                        glassSwal.fire({ icon: 'success', title: 'ดำเนินการสำเร็จ!', showConfirmButton: false, timer: 1000 });
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ดำเนินการสำเร็จ!', showConfirmButton: false, timer: 1000 });
                     }
                 });
             },
@@ -837,7 +842,7 @@
             deleteUserFromSystem: async function(uid) {
                 glassSwal.fire({
                     title: 'ลบข้อมูลสมาชิก?',
-                    text: 'ข้อมูลสถานะการเข้าสู่ระบบจะถูกลบ (หากเป็นนักศึกษาจะยังอยู่ในรายชื่อเลือกส่ง แต่ข้อมูลการล็อกอินจะถูกล้าง)',
+                    text: 'ข้อมูลสถานะการเข้าสู่ระบบจะถูกลบ ข้อมูลการล็อกอินจะถูกล้าง',
                     icon: 'error',
                     showCancelButton: true,
                     confirmButtonText: 'ลบข้อมูล',
@@ -845,7 +850,7 @@
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid));
-                        glassSwal.fire({ icon: 'success', title: 'ลบเรียบร้อย!', showConfirmButton: false, timer: 1000 });
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ลบเรียบร้อย!', showConfirmButton: false, timer: 1000 });
                     }
                 });
             },
@@ -860,7 +865,6 @@
                 if (this.profile.isAdmin && isAnonymous) {
                      const realSender = predefinedUsers.find(u => u.studentId === msg.from.id);
                      if(realSender) displayName += ` (${realSender.name})`;
-                     else displayName += ` (${msg.from.id})`;
                 }
 
                 if (msg.type === 'audio') {
@@ -937,12 +941,10 @@
                         <h2 class="text-2xl md:text-4xl font-bold text-white drop-shadow-md">ข้อความ</h2>
                         <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">กดที่ไอคอนเพื่อดูข้อความหรือฟังเสียง</p>
                     </div>
-                    
                     <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8 px-2 max-w-5xl mx-auto">
                         ${msgsHTML}
                     </div>
-                </div>
-                `;
+                </div>`;
             },
 
             toggleUser: function(id, btnElement) {
@@ -1000,16 +1002,14 @@
                         <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
                             <span class="truncate">ส่งข้อความหาเพื่อนๆ</span>
-                        </button>
-                    `;
+                        </button>`;
                 } 
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
                     container.innerHTML = `
                         <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
                             <span class="truncate">ส่งข้อความหา ${this.selectedIds.length} คน</span>
-                        </button>
-                    `;
+                        </button>`;
                 } 
                 else {
                     container.innerHTML = '';
@@ -1023,24 +1023,24 @@
                     const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
                     
                     gridHTML += `
-                    <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 10}ms">
+                    <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
                         <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
-                            class="relative rounded-full flex items-center justify-center text-primary font-bold user-avatar mb-1 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
+                            class="relative rounded-full flex items-center justify-center text-primary font-bold user-avatar mb-2 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
                             
-                            <div class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center shadow-inner">
                                 <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" 
                                      class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0" alt="${user.name}">
-                                <span class="relative z-10 hidden w-full h-full flex items-center justify-center text-[16px] md:text-[20px] font-bold text-primary">${user.name.substring(0, 2)}</span>
-                                <div class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
+                                <span class="relative z-10 hidden w-full h-full flex items-center justify-center text-[20px] md:text-[24px] font-bold text-primary">${user.name.substring(0, 2)}</span>
+                                <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
-                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full border-2 border-white items-center justify-center z-20 shadow-md">
-                                <i class="fa-solid fa-check text-[9px] text-white"></i>
+                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-primary rounded-full items-center justify-center z-20 shadow-lg border-2 border-white">
+                                <i class="fa-solid fa-check text-[10px] text-white"></i>
                             </div>
                         </button>
                         
                         <div class="w-full px-1 flex justify-center">
-                            <span class="text-white text-[10px] sm:text-[11px] font-medium bg-black/30 px-2 sm:px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm truncate max-w-[80px] md:max-w-[100px] inline-block text-center w-auto">
+                            <span class="text-white text-[11px] sm:text-[12px] font-medium bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm truncate max-w-[90px] md:max-w-[110px] inline-block text-center">
                                 ${user.name}
                             </span>
                         </div>
@@ -1049,23 +1049,22 @@
 
                 return `
                 <div class="animate-fade-in pb-32 relative h-full">
-                    <div class="flex flex-row justify-between items-center sm:items-end mb-6 text-white glass-panel p-4 sm:p-6 rounded-2xl border-t border-l border-white/30 gap-2">
+                    <div class="flex flex-row justify-between items-center sm:items-end mb-8 text-white glass-panel p-4 sm:p-6 rounded-3xl border border-white/10 gap-3 shadow-xl">
                         <div class="flex-1 min-w-0">
                             <h2 class="text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md truncate">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-1 animate-pulse text-lg md:text-2xl"></i></h2>
                             <p class="text-blue-100 mt-1 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกเพื่อนที่คุณต้องการส่งเสียงถึงได้เลย</p>
                         </div>
-                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 rounded-full text-[10px] sm:text-sm font-medium transition shadow-lg flex items-center whitespace-nowrap">
+                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 rounded-full text-[10px] sm:text-sm font-bold transition shadow-lg flex items-center whitespace-nowrap">
                             <i class="fa-solid fa-users sm:mr-2"></i> 
                             <span class="hidden sm:inline">${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิกทั้งหมด' : 'เลือกทุกคน'}</span>
                             <span class="sm:hidden ml-1">${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิก' : 'ทั้งหมด'}</span>
                         </button>
                     </div>
                     
-                    <div id="usersGrid" class="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-x-2 gap-y-4 md:gap-y-6">
+                    <div id="usersGrid" class="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
                         ${gridHTML}
                     </div>
-                </div>
-                `;
+                </div>`;
             },
 
             setComposeMode: function(mode) {
@@ -1078,13 +1077,12 @@
                 const isAudio = this.composeMode === 'audio';
                 const audioArea = this.audioBlob ? `
                     <div class="w-full space-y-4 flex flex-col items-center">
-                        <div class="bg-green-100 text-green-700 px-5 py-2 rounded-full font-bold text-xs md:text-sm flex items-center shadow-inner border border-green-200">
-                            <i class="fa-solid fa-circle-check text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
+                        <div class="text-primary font-extrabold text-xs md:text-sm flex items-center animate-fade-in">
+                            <i class="fa-solid fa-check text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
                         </div>
                         <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
                         <button onclick="app.resetAudio()" class="text-xs text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
-                    </div>
-                ` : `
+                    </div>` : `
                     <div class="flex flex-col items-center">
                         <div class="text-5xl md:text-6xl font-mono mb-6 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
                             00:${String(this.recordingTime).padStart(2, '0')}
@@ -1097,8 +1095,7 @@
                         <p class="text-xs text-gray-500 mt-6 bg-white/50 px-5 py-2 rounded-full font-bold shadow-sm border border-white/60 text-center">
                             ${this.isRecording ? '<i class="fa-solid fa-record-vinyl animate-spin text-red-500 mr-1"></i> กำลังบันทึก...' : `กดเพื่อเริ่มอัดเสียง (สูงสุด ${this.maxAudioTime} วิ)`}
                         </p>
-                    </div>
-                `;
+                    </div>`;
 
                 const textArea = `
                     <div class="w-full flex flex-col h-full animate-fade-in relative">
@@ -1106,8 +1103,7 @@
                         <div class="text-right text-xs mt-2 font-bold text-primary/60" id="wordCount">
                             จำกัด ${this.maxWords} คำ
                         </div>
-                    </div>
-                `;
+                    </div>`;
 
                 return `
                 <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up">
@@ -1122,7 +1118,6 @@
                             </p>
                         </div>
                     </div>
-
                     <div class="flex bg-white/30 p-1 rounded-2xl mb-6 shadow-inner relative border border-white/40">
                         <button onclick="app.setComposeMode('audio')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
                             <i class="fa-solid fa-microphone-lines text-base"></i> <span>ส่งเสียง</span>
@@ -1131,11 +1126,9 @@
                             <i class="fa-solid fa-keyboard text-base"></i> <span>พิมพ์ข้อความ</span>
                         </button>
                     </div>
-
                     <div class="min-h-[250px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-3xl p-6 bg-white/20 shadow-inner">
                         ${isAudio ? audioArea : textArea}
                     </div>
-
                     <div class="mt-8 flex flex-col sm:flex-row justify-end gap-3">
                         <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-user-secret"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
@@ -1157,8 +1150,6 @@
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         let options = {};
-                        
-                        // ปรับลำดับให้ตรวจสอบ MP4 ก่อนตามต้องการ
                         if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
                         else if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
                         
@@ -1234,12 +1225,12 @@
                     await addDoc(msgsRef, messageData);
                     
                     glassSwal.fire({ 
-                        iconHtml: isAnonymous ? '<i class="fa-solid fa-user-secret text-slate-700 text-5xl"></i>' : '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>',
+                        iconHtml: isAnonymous ? '<i class="fa-solid fa-user-secret text-slate-700 text-5xl"></i>' : '<i class="fa-solid fa-check text-primary text-5xl"></i>',
                         title: 'ส่งเรียบร้อย!', showConfirmButton: false, timer: 1500 
                     });
                     this.selectedIds = []; this.audioBlob = null; this.recordingTime = 0;
                     if(this.profile.isPredefined || this.profile.isAdmin) this.showView('feed');
-                    else this.showView('inbox');
+                    else this.showView('home');
                 } catch (e) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
                     btnNormal.disabled = false; btnAnon.disabled = false; activeBtn.innerHTML = originalHTML;
@@ -1255,12 +1246,7 @@
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', id));
-                        glassSwal.fire({ 
-                            iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
-                            title: 'ลบสำเร็จ!', 
-                            showConfirmButton: false, 
-                            timer: 1500 
-                        });
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ลบสำเร็จ!', showConfirmButton: false, timer: 1500 });
                     }
                 });
             },
@@ -1292,14 +1278,7 @@
                             batch.delete(ref);
                         });
                         await batch.commit();
-                        
-                        glassSwal.fire({ 
-                            iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
-                            title: 'ลบสำเร็จ!', 
-                            showConfirmButton: false, 
-                            timer: 1500 
-                        });
-                        
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ลบสำเร็จ!', showConfirmButton: false, timer: 1500 });
                         this.setAdminSearch('');
                         const searchInput = document.querySelector('input[placeholder*="แอดมิน: ค้นหา"]');
                         if(searchInput) searchInput.value = '';
@@ -1313,7 +1292,9 @@
                     html: 'ระบุรหัสแอดมินเพื่อยืนยันการล้างข้อมูลข้อความทั้งหมดในระบบ',
                     input: 'password',
                     inputPlaceholder: 'รหัสแอดมิน 8 หลัก',
-                    showCancelButton: true
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยัน',
+                    cancelButtonText: 'ยกเลิก'
                 });
 
                 if (password === '65030900') {
@@ -1323,19 +1304,14 @@
                         icon: 'error',
                         showCancelButton: true,
                         confirmButtonText: 'ล้างระบบทันที!',
-                        cancelButtonColor: '#d33'
+                        cancelButtonText: 'ยกเลิก'
                     }).then(async (result) => {
                         if (result.isConfirmed) {
                             const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages'));
                             const batch = writeBatch(db);
                             snap.forEach(d => batch.delete(d.ref));
                             await batch.commit();
-                            glassSwal.fire({ 
-                                iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
-                                title: 'ล้างระบบสำเร็จ!', 
-                                showConfirmButton: false, 
-                                timer: 1500 
-                            });
+                            glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ล้างระบบสำเร็จ!', showConfirmButton: false, timer: 1500 });
                         }
                     });
                 } else if (password) {
@@ -1373,8 +1349,7 @@
                         <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2">
                             <i class="fa-solid fa-trash-sweep"></i> ลบรายการที่ค้นหาทั้งหมด
                         </button>
-                    </div>
-                `;
+                    </div>`;
             },
 
             renderInboxMessagesList: function() {
@@ -1411,8 +1386,7 @@
                         const adminControls = this.profile.isAdmin ? `
                             <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 p-2 rounded-lg transition-all shadow-sm">
                                 <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        ` : '';
+                            </button>` : '';
                         
                         if (this.profile.isAdmin && isAnonymous) {
                              const realSender = predefinedUsers.find(u => u.studentId === msg.from.id);
@@ -1427,7 +1401,7 @@
                         }
 
                         msgsHTML += `
-                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col sm:flex-row gap-4 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 20}ms">
+                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col sm:flex-row gap-4 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 15}ms">
                             <div class="flex items-center justify-between sm:block">
                                 <div class="flex items-center gap-3">
                                     <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
@@ -1440,7 +1414,6 @@
                                 </div>
                                 <div class="sm:hidden">${adminControls}</div>
                             </div>
-                            
                             <div class="flex-1 w-full">
                                 <div class="hidden sm:flex justify-between items-start mb-2">
                                     <div>
@@ -1449,17 +1422,14 @@
                                     </div>
                                     <div class="opacity-0 group-hover:opacity-100 transition-opacity">${adminControls}</div>
                                 </div>
-                                
                                 ${isAudio ? `
                                     <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm">
                                         <audio src="${msg.content}" controls class="h-8 w-[200px]"></audio>
-                                    </div>
-                                ` : `
+                                    </div>` : `
                                     <div class="text-primary bg-white/80 border border-white/50 px-5 py-3 rounded-2xl shadow-sm text-sm relative font-medium w-fit max-w-full">
                                         <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl text-primary/20"></i>
                                         <div class="pl-6 pt-1 break-words">${msg.content.trim()}</div>
-                                    </div>
-                                `}
+                                    </div>`}
                             </div>
                         </div>`;
                     });
@@ -1481,8 +1451,7 @@
                             <div id="searchGroupHeader">
                                 ${this.renderSearchHeader()}
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 }
 
                 return `
@@ -1500,12 +1469,9 @@
                         ${this.profile.isAdmin ? `
                             <button onclick="app.factoryReset()" class="bg-red-500/80 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg transition-all">
                                 <i class="fa-solid fa-triangle-exclamation mr-1"></i> ล้างระบบ
-                            </button>
-                        ` : ''}
+                            </button>` : ''}
                     </div>
-                    
                     ${adminControlsHTML}
-
                     <div id="inboxMessageContainer" class="space-y-4 relative z-10">
                         ${this.renderInboxMessagesList()}
                     </div>
