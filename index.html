@@ -1307,6 +1307,8 @@
             renderCompose: function() {
                 const isAudio = this.composeMode === 'audio';
                 const label = this.getRelationshipLabel();
+                const sendBtnLabel = isAudio ? 'ส่งข้อความเสียง' : 'ส่งข้อความ';
+                
                 const audioArea = this.audioBlob ? `
                     <div class="w-full space-y-4 flex flex-col items-center">
                         <div class="text-primary font-extrabold text-xs md:text-sm flex items-center animate-fade-in">
@@ -1344,8 +1346,8 @@
                             <i class="fa-solid fa-arrow-left text-lg"></i>
                         </button>
                         <div class="overflow-hidden">
-                            <h2 class="text-xl font-extrabold text-primary truncate">สร้างข้อความใหม่</h2>
-                            <p class="text-xs text-primary/70 font-bold mt-1 truncate">
+                            <h2 class="text-xl font-extrabold text-white truncate">สร้างข้อความใหม่</h2>
+                            <p class="text-xs text-white/90 font-bold mt-1 truncate">
                                 ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} ${label}</span>
                             </p>
                         </div>
@@ -1361,12 +1363,14 @@
                     <div class="min-h-[250px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-3xl p-6 bg-white/20 shadow-inner">
                         ${isAudio ? audioArea : textArea}
                     </div>
-                    <div class="mt-8 flex flex-col sm:flex-row justify-end gap-3">
-                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
+                    <!-- Footer buttons: flex-col-reverse for mobile (Anon bottom), sm:flex-row for desktop -->
+                    <div class="mt-8 flex flex-col-reverse sm:flex-row justify-end gap-3">
+                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white border-2 border-dashed border-white bg-transparent hover:bg-white/10 transition-all shadow-lg text-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-user-secret"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
                         </button>
-                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-paper-plane"></i> <span>ส่งระบุตัวตน</span>
+                        <!-- Normal button: flex-grow (sm:flex-[2]) to be longer on desktop -->
+                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2 sm:flex-[2] sm:min-w-[200px]">
+                            <i class="fa-solid fa-paper-plane"></i> <span>${sendBtnLabel}</span>
                         </button>
                     </div>
                 </div>`;
