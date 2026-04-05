@@ -87,9 +87,9 @@
         /* อนิเมชันของกล่องข้อความลอยในหน้า Feed */
         @keyframes float-bubble {
             0% { transform: translateY(0); }
-            100% { transform: translateY(-8px); }
+            100% { transform: translateY(-12px); }
         }
-        .float-anim { animation: float-bubble 3s ease-in-out infinite alternate; }
+        .float-anim { animation: float-bubble 3.5s ease-in-out infinite alternate; }
     </style>
 </head>
 <body class="text-slate-800 antialiased font-sans relative">
@@ -104,42 +104,61 @@
     <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
         <!-- Header -->
-        <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative">
+        <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50">
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-wider mb-1 md:mb-2 drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
                 ส่งเสียง
             </h1>
             <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
-            <div id="navMenu" class="absolute top-4 right-3 md:top-8 md:right-6 flex items-start gap-1.5 sm:gap-3 hidden">
-                
-                <button id="btnAdmin" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2 md:p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-gear text-lg md:text-xl"></i>
+            <!-- เมนู Desktop (ซ่อนในมือถือ) -->
+            <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-start gap-3">
+                <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-gear text-xl"></i>
                     </div>
-                    <span class="text-[9px] md:text-[10px] font-medium">ตั้งค่า</span>
+                    <span class="text-[10px] font-medium">ตั้งค่า</span>
                 </button>
-
-                <!-- เพิ่มปุ่มกลับไปหน้า Feed รวม -->
-                <button id="btnFeed" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all">
-                    <div class="p-2 md:p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-earth-asia text-lg md:text-xl"></i>
+                <button id="btnFeedDesk" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-earth-asia text-xl"></i>
                     </div>
-                    <span class="text-[9px] md:text-[10px] font-medium">ภาพรวม</span>
+                    <span class="text-[10px] font-medium">ภาพรวม</span>
                 </button>
-
                 <button onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all">
-                    <div class="p-2 md:p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
-                        <i class="fa-solid fa-envelope text-lg md:text-xl"></i>
-                        <span id="unreadBadge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
+                        <i class="fa-solid fa-envelope text-xl"></i>
+                        <span id="unreadBadgeDesk" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
                     </div>
-                    <span class="text-[9px] md:text-[10px] font-medium">กล่องจดหมาย</span>
+                    <span class="text-[10px] font-medium">กล่องจดหมาย</span>
                 </button>
-
                 <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
-                    <div class="p-2 md:p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-right-from-bracket text-lg md:text-xl"></i>
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-xl"></i>
                     </div>
-                    <span class="text-[9px] md:text-[10px] font-medium">ออกระบบ</span>
+                    <span class="text-[10px] font-medium">ออกระบบ</span>
+                </button>
+            </div>
+
+            <!-- เมนู Hamburger สำหรับมือถือ (แสดงเฉพาะมือถือ) -->
+            <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-5 right-4 md:hidden text-white/90 hover:text-secondary hidden z-50 transition-transform">
+                <i class="fa-solid fa-bars text-2xl drop-shadow-md"></i>
+                <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
+            </button>
+            
+            <!-- Dropdown สำหรับมือถือ -->
+            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 p-2 flex flex-col gap-1 z-50 w-44 transform transition-all origin-top-right text-slate-800">
+                <button id="btnAdminMob" onclick="app.showView('settings')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
+                    <i class="fa-solid fa-gear text-primary w-5 text-center"></i> ตั้งค่า
+                </button>
+                <button id="btnFeedMob" onclick="app.showView('feed')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
+                    <i class="fa-solid fa-earth-asia text-primary w-5 text-center"></i> ภาพรวม
+                </button>
+                <button onclick="app.showView('inbox')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm relative">
+                    <i class="fa-solid fa-envelope text-primary w-5 text-center"></i> กล่องจดหมาย
+                </button>
+                <div class="h-px bg-gray-200 my-1 mx-2"></div>
+                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 transition-colors text-left font-medium text-sm">
+                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> ออกจากระบบ
                 </button>
             </div>
         </header>
@@ -259,10 +278,12 @@
             audioChunks: [],
             isRecording: false,
             recordingTime: 0,
+            lastRecordingTime: 0, // เก็บเวลาอัดล่าสุดสำหรับส่งไปกับข้อความ
             timerInterval: null,
             audioBlob: null,
             composeMode: 'audio',
             preloadedImages: false,
+            isMobileMenuOpen: false,
 
             init: async function() {
                 try {
@@ -272,13 +293,33 @@
                     if (savedProfile) {
                         this.profile = JSON.parse(savedProfile);
                         this.setupMessagesListener();
-                        // กำหนดหน้าแรก: 45 คนไปหน้า Feed ลอยๆ, รุ่นน้องไปหน้าเลือกรุ่นพี่ (Home)
-                        this.showView(this.profile.isPredefined ? 'feed' : 'home');
+                        this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
                     } else {
                         this.showView('login');
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
+                }
+            },
+
+            toggleMobileMenu: function() {
+                this.isMobileMenuOpen = !this.isMobileMenuOpen;
+                const menu = document.getElementById('mobileDropdown');
+                if (this.isMobileMenuOpen) {
+                    menu.classList.remove('hidden');
+                    menu.classList.add('flex');
+                } else {
+                    menu.classList.add('hidden');
+                    menu.classList.remove('flex');
+                }
+            },
+
+            closeMobileMenu: function() {
+                this.isMobileMenuOpen = false;
+                const menu = document.getElementById('mobileDropdown');
+                if(menu) {
+                    menu.classList.add('hidden');
+                    menu.classList.remove('flex');
                 }
             },
 
@@ -303,23 +344,30 @@
             },
 
             showView: function(viewName) {
+                this.closeMobileMenu();
                 this.currentView = viewName;
                 const root = document.getElementById('appRoot');
-                const nav = document.getElementById('navMenu');
-                const btnAdmin = document.getElementById('btnAdmin');
-                const btnFeed = document.getElementById('btnFeed');
+                const navDesk = document.getElementById('navMenuDesktop');
+                const navHam = document.getElementById('navHamburger');
                 
                 if(this.profile) {
-                    nav.classList.remove('hidden');
-                    if(this.profile.isAdmin) btnAdmin.classList.remove('hidden');
-                    else btnAdmin.classList.add('hidden');
+                    // ควบคุมการแสดงผลเมนู Desktop
+                    navDesk.classList.remove('md:hidden');
+                    navDesk.classList.add('md:flex');
+                    navHam.classList.remove('hidden');
                     
-                    // ซ่อนปุ่ม "ภาพรวม" ถ้าไม่ได้เป็น 1 ใน 45 คน
-                    if(!this.profile.isPredefined && !this.profile.isAdmin) btnFeed.classList.add('hidden');
-                    else btnFeed.classList.remove('hidden');
+                    const showAdmin = this.profile.isAdmin;
+                    const showFeed = this.profile.isPredefined || this.profile.isAdmin;
+
+                    document.getElementById('btnAdminDesk').classList.toggle('hidden', !showAdmin);
+                    document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
                     
+                    document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
+                    document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
                 } else {
-                    nav.classList.add('hidden');
+                    navDesk.classList.add('md:hidden');
+                    navDesk.classList.remove('md:flex');
+                    navHam.classList.add('hidden');
                 }
 
                 if(viewName === 'login') root.innerHTML = this.renderLogin1();
@@ -343,11 +391,11 @@
                     showConfirmButton: false
                 });
                 
-                // ถ้ารหัสอยู่ใน 45 คน ให้เด้งไปหน้า Feed ดูรวมๆ ถ้านอกนั้นให้ไปหน้าเลือกคนส่ง
                 this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
             },
 
             logout: function() {
+                this.closeMobileMenu();
                 glassSwal.fire({
                     title: 'ออกจากระบบ?',
                     iconHtml: '<i class="fa-solid fa-arrow-right-from-bracket text-red-400 text-5xl"></i>',
@@ -372,10 +420,10 @@
                 this.unsubscribeMsgs = onSnapshot(msgsRef, (snapshot) => {
                     const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     allMsgs.sort((a, b) => b.timestamp - a.timestamp);
-                    this.allMessages = allMsgs; // เก็บทุกข้อความสำหรับหน้า Feed รวม
+                    this.allMessages = allMsgs; 
                     
                     const myMsgs = allMsgs.filter(msg => this.profile.isAdmin || msg.to.includes(this.profile.studentId));
-                    this.messages = myMsgs; // เฉพาะข้อความของตัวเองสำหรับหน้า Inbox
+                    this.messages = myMsgs; 
                     
                     if(this.currentView === 'inbox') this.showView('inbox'); 
                     else if(this.currentView === 'feed') this.showView('feed');
@@ -383,7 +431,7 @@
             },
 
             // ==========================================
-            // LOGIN FLOW (ปรับ Input ตัวเลข, ไม่รีแป้นพิมพ์)
+            // LOGIN FLOW
             // ==========================================
             renderLogin1: function() {
                 return `
@@ -395,7 +443,6 @@
                     </div>
                     <div class="p-6 md:p-8 space-y-5 md:space-y-6">
                         <div>
-                            <!-- ใช้ inputmode="numeric" และ type="tel" เพื่อเด้งคีย์บอร์ดตัวเลขมือถือ -->
                             <input type="tel" inputmode="numeric" pattern="[0-9]*" id="inputId" placeholder="รหัสนักศึกษา 8 หลัก" maxlength="8"
                                 class="glass-input w-full px-4 md:px-5 py-3 md:py-4 rounded-2xl transition-all outline-none text-base sm:text-lg md:text-xl tracking-wider sm:tracking-widest text-center font-mono text-primary shadow-inner"
                                 onkeypress="if(event.key === 'Enter') app.requestOTP()">
@@ -451,7 +498,6 @@
             renderLogin2: function() {
                 let inputs = '';
                 for(let i=0; i<6; i++) {
-                    // ใช้ type="tel" เพื่อบังคับคีย์บอร์ดตัวเลข
                     inputs += `<input type="tel" inputmode="numeric" pattern="[0-9]*" id="otp-${i}" maxlength="1" 
                         oninput="app.onOtpInput(this, ${i})" onkeydown="app.onOtpKeydown(event, ${i})"
                         class="otp-input glass-input w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 text-center text-xl sm:text-2xl md:text-3xl font-bold rounded-xl text-primary transition-all outline-none shadow-inner p-0" />`;
@@ -480,7 +526,6 @@
 
             onOtpInput: function(el, index) {
                 if(isNaN(el.value) || el.value === " ") { el.value = ""; return; }
-                // ดันไปโฟกัสกล่องถัดไปโดยที่แป้นพิมพ์ไม่หุบ
                 if(el.value !== "" && index < 5) {
                     const nextEl = document.getElementById(`otp-${index+1}`);
                     if (nextEl) nextEl.focus();
@@ -594,54 +639,59 @@
                 let msgsHTML = '';
                 if(this.allMessages.length === 0) {
                     msgsHTML = `
-                        <div class="col-span-full text-center py-20 animate-fade-in">
-                            <i class="fa-regular fa-comments text-5xl text-white/30 mb-3"></i>
-                            <p class="text-white/70 font-medium">ยังไม่มีความเคลื่อนไหวในขณะนี้</p>
+                        <div class="w-full flex justify-center py-20 animate-fade-in">
+                            <div class="text-center">
+                                <i class="fa-regular fa-comments text-5xl text-white/30 mb-3"></i>
+                                <p class="text-white/70 font-medium">ยังไม่มีความเคลื่อนไหวในขณะนี้</p>
+                            </div>
                         </div>`;
                 } else {
                     this.allMessages.forEach((msg, idx) => {
                         const isAudio = msg.type === 'audio';
-                        const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full text-xs">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-xs">${msg.from.name.substring(0,1)}</span>`;
+                        const isAnonymous = msg.from.isAnonymous;
+                        let senderImg = '';
                         
-                        // แรนดอมความเร็วการลอยและดีเลย์นิดหน่อยให้ดูเป็นธรรมชาติ
+                        if (isAnonymous) {
+                            senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-3xl"></i></div>`;
+                        } else {
+                            const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full"><span class="absolute inset-0 flex text-primary items-center justify-center font-bold text-xl hidden bg-secondary">${msg.from.name.substring(0,2)}</span>` : `<div class="w-full h-full bg-secondary flex items-center justify-center text-primary font-bold text-xl">${msg.from.name.substring(0,2)}</div>`;
+                        }
+                        
                         const animDelay = (Math.random() * 2).toFixed(1);
-                        const animDuration = (3 + Math.random() * 2).toFixed(1);
+                        const animDuration = (3.5 + Math.random() * 2.5).toFixed(1);
+                        
+                        let badgeContent = '';
+                        if (isAudio) {
+                            const duration = msg.audioDuration || '?';
+                            badgeContent = `<i class="fa-solid fa-circle-play text-secondary text-sm"></i> <span class="text-[11px] font-bold text-white whitespace-nowrap">${duration} วิ</span>`;
+                        } else {
+                            badgeContent = `<i class="fa-solid fa-quote-left text-white/50 mr-1 text-[8px]"></i><span class="truncate text-[10px] font-bold text-white">${msg.content}</span>`;
+                        }
 
                         msgsHTML += `
-                        <div class="break-inside-avoid mb-4 glass-card rounded-[1.5rem] p-4 float-anim relative" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s;">
-                            <div class="flex items-center gap-2 mb-2 border-b border-white/20 pb-2">
-                                <div class="w-8 h-8 rounded-full bg-secondary flex-shrink-0 relative overflow-hidden border border-white/50">
-                                    ${senderImg}
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="text-primary font-bold text-sm truncate leading-tight">${msg.from.name}</div>
-                                    <div class="text-primary/60 text-[9px]"><i class="fa-solid fa-paper-plane mr-0.5"></i> ส่งถึง ${msg.to.length} คน</div>
+                        <div class="flex justify-center float-anim p-2" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s;">
+                            <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full shadow-xl border-4 ${isAnonymous ? 'border-slate-500' : 'border-white/90'} bg-white/20 overflow-hidden group transform transition hover:scale-110">
+                                ${senderImg}
+                                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                
+                                <!-- ป้ายข้อความ/เสียง ซ้อนทับล่างซ้าย -->
+                                <div class="absolute -bottom-1 -left-1 bg-black/70 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center justify-center shadow-lg border border-white/20 max-w-[110%] min-w-[60%]">
+                                    ${badgeContent}
                                 </div>
                             </div>
-                            
-                            ${isAudio ? `
-                                <div class="bg-white/50 rounded-xl p-2 shadow-sm border border-white/30">
-                                    <audio src="${msg.content}" controls class="w-full h-6"></audio>
-                                </div>
-                            ` : `
-                                <p class="text-gray-700 text-xs sm:text-sm leading-relaxed font-medium line-clamp-4 break-words">
-                                    <i class="fa-solid fa-quote-left text-primary/20 mr-1"></i>${msg.content}
-                                </p>
-                            `}
                         </div>`;
                     });
                 }
 
                 return `
                 <div class="animate-fade-in pb-32">
-                    <div class="text-center mb-6">
-                        <h2 class="text-2xl md:text-3xl font-bold text-white drop-shadow-md">ข้อความลอยฟ้า <i class="fa-solid fa-cloud text-secondary"></i></h2>
-                        <p class="text-blue-100 text-xs md:text-sm mt-1 opacity-80">แอบดูข้อความที่ส่งหากันในระบบ</p>
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl md:text-4xl font-bold text-white drop-shadow-md">ข้อความลอยฟ้า <i class="fa-solid fa-cloud text-secondary"></i></h2>
+                        <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">แอบดูข้อความที่ส่งหากันในระบบ</p>
                     </div>
                     
-                    <!-- โครงสร้างแบบ Masonry (สลับฟันปลา) -->
-                    <div class="columns-2 sm:columns-3 md:columns-4 gap-4 space-y-4">
+                    <div class="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 px-2 max-w-4xl mx-auto">
                         ${msgsHTML}
                     </div>
                 </div>
@@ -701,7 +751,6 @@
                 const container = document.getElementById('globalFabContainer');
                 if (!container) return;
 
-                // หน้า Feed ให้โชว์ปุ่มส่งข้อความใหม่
                 if (this.currentView === 'feed') {
                     container.innerHTML = `
                         <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
@@ -710,7 +759,6 @@
                         </button>
                     `;
                 } 
-                // หน้า Home (เลือกรูป) โชว์ก็ต่อเมื่อเลือกใครสักคนแล้ว
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
                     container.innerHTML = `
                         <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
@@ -781,6 +829,7 @@
             // ==========================================
             setComposeMode: function(mode) {
                 this.composeMode = mode;
+                if(mode === 'audio') { this.recordingTime = 0; this.audioBlob = null; this.isRecording = false; }
                 this.showView('compose'); 
             },
 
@@ -845,9 +894,12 @@
                         ${isAudio ? audioArea : textArea}
                     </div>
 
-                    <div class="mt-6 md:mt-8 flex justify-end">
-                        <button onclick="app.sendMessage()" id="btnSend" class="px-6 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-primary flex items-center space-x-2 sm:space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1 text-sm sm:text-base w-full sm:w-auto justify-center">
-                            <i class="fa-solid fa-paper-plane text-lg sm:text-xl"></i> <span>ส่งข้อความเลย!</span>
+                    <div class="mt-6 md:mt-8 flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
+                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-white flex items-center justify-center space-x-2 transition-all bg-slate-700 hover:bg-slate-800 shadow-[0_10px_20px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 text-sm sm:text-base w-full sm:w-auto">
+                            <i class="fa-solid fa-user-secret text-lg"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
+                        </button>
+                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-primary flex items-center justify-center space-x-2 sm:space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1 text-sm sm:text-base w-full sm:w-auto">
+                            <i class="fa-solid fa-paper-plane text-lg sm:text-xl"></i> <span>ส่งระบุตัวตน</span>
                         </button>
                     </div>
                 </div>`;
@@ -874,6 +926,7 @@
                         this.mediaRecorder.onstop = () => {
                             const type = this.mediaRecorder.mimeType || 'audio/mp4';
                             this.audioBlob = new Blob(this.audioChunks, { type: type });
+                            this.lastRecordingTime = this.recordingTime; // เก็บเวลาอัดไว้ตอนหยุด
                             stream.getTracks().forEach(track => track.stop());
                             this.showView('compose'); 
                         };
@@ -897,10 +950,18 @@
                     }
                 }
             },
-            resetAudio: function() { this.audioBlob = null; this.showView('compose'); },
+            resetAudio: function() { 
+                this.audioBlob = null; 
+                this.recordingTime = 0; 
+                this.showView('compose'); 
+            },
 
-            sendMessage: async function() {
-                const btn = document.getElementById('btnSend');
+            sendMessage: async function(isAnonymous = false) {
+                const btnNormal = document.getElementById('btnSendNormal');
+                const btnAnon = document.getElementById('btnSendAnon');
+                const activeBtn = isAnonymous ? btnAnon : btnNormal;
+                const originalHTML = activeBtn.innerHTML;
+
                 let content = '';
                 
                 if(this.composeMode === 'text') {
@@ -917,42 +978,46 @@
                     });
                 }
 
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-lg sm:text-xl"></i> <span>กำลังส่ง...</span>';
+                btnNormal.disabled = true;
+                btnAnon.disabled = true;
+                activeBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-lg sm:text-xl"></i> <span>กำลังส่ง...</span>';
 
                 try {
+                    const senderName = isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : this.profile.name;
                     const messageData = {
-                        from: { id: this.profile.studentId, name: this.profile.name },
+                        from: { id: this.profile.studentId, name: senderName, isAnonymous: isAnonymous },
                         to: this.selectedIds,
                         type: this.composeMode,
                         content: content,
+                        audioDuration: this.composeMode === 'audio' ? this.lastRecordingTime : null,
                         timestamp: Date.now()
                     };
                     const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
                     await addDoc(msgsRef, messageData);
                     
                     glassSwal.fire({ 
-                        iconHtml: '<i class="fa-solid fa-paper-plane text-secondary text-5xl"></i>',
+                        iconHtml: isAnonymous ? '<i class="fa-solid fa-user-secret text-slate-700 text-5xl"></i>' : '<i class="fa-solid fa-paper-plane text-secondary text-5xl"></i>',
                         title: 'ส่งเรียบร้อย!', 
                         showConfirmButton: false, 
                         timer: 1500 
                     });
                     this.selectedIds = [];
                     this.audioBlob = null;
+                    this.recordingTime = 0;
                     
-                    // กลับไปหน้า Feed ถ้าเป็นเจ้าของระบบ นอกนั้นไปหน้า Inbox
                     if(this.profile.isPredefined || this.profile.isAdmin) this.showView('feed');
                     else this.showView('inbox');
                     
                 } catch (e) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg sm:text-xl"></i> <span>ส่งข้อความเลย!</span>';
+                    btnNormal.disabled = false;
+                    btnAnon.disabled = false;
+                    activeBtn.innerHTML = originalHTML;
                 }
             },
 
             // ==========================================
-            // INBOX FLOW (ปรับให้บางลงในมือถือ)
+            // INBOX FLOW 
             // ==========================================
             deleteMsg: async function(id) {
                 glassSwal.fire({
@@ -983,6 +1048,10 @@
                     this.messages.forEach((msg, idx) => {
                         const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
                         const isAudio = msg.type === 'audio';
+                        const isAnonymous = msg.from.isAnonymous;
+                        let senderImg = '';
+                        let displayName = msg.from.name;
+                        
                         const adminControls = this.profile.isAdmin ? `
                             <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 backdrop-blur shadow hover:shadow-md p-1.5 md:p-2 rounded-lg transition-all" title="ลบข้อความ">
                                 <i class="fa-solid fa-trash-can text-sm md:text-base"></i>
@@ -991,19 +1060,27 @@
                         
                         const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-[9px] md:text-xs bg-primary/20 text-primary border border-primary/30 px-1.5 py-0.5 rounded-full font-bold shadow-sm whitespace-nowrap"><i class="fa-solid fa-users text-[8px] md:text-[10px]"></i> ${msg.to.length}</span>` : '';
 
-                        const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full text-base">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-base">${msg.from.name.substring(0,1)}</span>`;
+                        if (this.profile.isAdmin && isAnonymous) {
+                             const realSender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                             displayName += ` <span class="text-[9px] md:text-[10px] text-red-500 bg-red-50 px-1 rounded ml-1 border border-red-100">(${realSender ? realSender.name : msg.from.id})</span>`;
+                        }
 
-                        // ปรับให้กล่องข้อความบางลง (p-3 md:p-5 แทนที่จะเป็น p-4 md:p-6)
+                        if (isAnonymous) {
+                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg md:text-xl"></i></div>`;
+                        } else {
+                            const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full text-base">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-base">${msg.from.name.substring(0,1)}</span>`;
+                        }
+
                         msgsHTML += `
                         <div class="bg-white/60 backdrop-blur-md border border-white/60 p-3 md:p-5 rounded-xl md:rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-2 md:gap-4 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up w-full" style="animation-delay: ${idx * 50}ms">
                             <div class="flex flex-row sm:flex-col items-center justify-between w-full sm:w-auto gap-2 sm:gap-0 border-b border-gray-200/50 sm:border-0 pb-2 sm:pb-0">
                                 <div class="flex items-center gap-2.5">
-                                    <div class="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
+                                    <div class="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden ${isAnonymous ? 'border-2 border-slate-400' : 'border-2 border-white'}">
                                         ${senderImg}
                                     </div>
                                     <div class="sm:hidden">
-                                        <div class="font-extrabold text-primary text-sm break-words leading-tight">${msg.from.name} ${adminToLabel}</div>
+                                        <div class="font-extrabold ${isAnonymous ? 'text-slate-700' : 'text-primary'} text-sm break-words leading-tight">${displayName} ${adminToLabel}</div>
                                         <div class="text-[9px] text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
                                 </div>
@@ -1015,7 +1092,7 @@
                             <div class="flex-1 w-full min-w-0">
                                 <div class="hidden sm:flex justify-between items-start mb-1 md:mb-2">
                                     <div class="min-w-0">
-                                        <span class="font-extrabold text-primary text-base md:text-lg tracking-wide break-words">${msg.from.name}</span>
+                                        <span class="font-extrabold ${isAnonymous ? 'text-slate-700' : 'text-primary'} text-base md:text-lg tracking-wide break-words">${displayName}</span>
                                         ${adminToLabel}
                                         <div class="text-[10px] md:text-xs text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
@@ -1025,13 +1102,12 @@
                                 </div>
                                 
                                 ${isAudio ? `
-                                    <div class="bg-white/80 p-2 md:p-3 rounded-lg md:rounded-xl border border-white inline-block w-full max-w-sm shadow-sm mt-1 sm:mt-0">
-                                        <audio src="${msg.content}" controls class="w-full h-8"></audio>
+                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit max-w-full shadow-sm mt-2 sm:mt-0">
+                                        <audio src="${msg.content}" controls class="h-8 md:h-10 w-[200px] sm:w-[250px]"></audio>
                                     </div>
                                 ` : `
-                                    <div class="text-primary bg-white/70 p-3 md:p-4 rounded-lg md:rounded-xl border border-white whitespace-pre-wrap break-words leading-relaxed shadow-sm text-sm md:text-base relative font-medium mt-1 sm:mt-0 w-full overflow-hidden">
-                                        <i class="fa-solid fa-quote-left absolute top-1.5 left-1.5 md:top-2 md:left-2 text-lg md:text-2xl text-primary/10"></i>
-                                        <div class="relative z-10 pl-3 md:pl-4 break-words max-w-full">${msg.content}</div>
+                                    <div class="text-primary bg-white border border-white whitespace-pre-wrap break-words leading-normal shadow-sm text-sm md:text-base relative font-medium mt-2 sm:mt-0 w-fit max-w-full rounded-2xl px-4 py-3">
+                                        <div class="relative z-10 break-words max-w-full">${msg.content}</div>
                                     </div>
                                 `}
                             </div>
