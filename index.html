@@ -52,6 +52,10 @@
             word-wrap: break-word;
             touch-action: manipulation;
         }
+        /* Lock scroll when menu or swal is active */
+        body.lock-scroll {
+            overflow: hidden !important;
+        }
         .glass-panel {
             background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
@@ -155,59 +159,60 @@
 
     <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
-        <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50">
-            <!-- Website Logo - Top Left -->
-            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center h-full">
-                <img src="LOGO 65.png" alt="Logo" class="h-10 md:h-14 w-auto drop-shadow-lg cursor-pointer hover:scale-105 transition-transform active:scale-95" 
+        <header class="px-4 py-4 md:px-6 md:py-6 text-center text-white border-b border-white/10 relative z-50 flex items-center justify-between">
+            <!-- Left: Logo -->
+            <div class="w-12 h-12 flex items-center justify-start z-[60]">
+                <img src="LOGO 65.png" alt="Logo" class="h-10 w-auto drop-shadow-lg cursor-pointer hover:scale-105 transition-transform active:scale-95" 
                      onclick="app.handleLogoClick()"
                      onerror="this.style.display='none'">
             </div>
+
+            <!-- Center: App Title -->
+            <div class="flex-1 text-center">
+                <h1 class="text-3xl md:text-5xl font-extrabold tracking-wider drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary leading-none">
+                    ส่งเสียง
+                </h1>
+                <p class="text-[9px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase mt-1">Song Siang</p>
+            </div>
             
-            <h1 class="text-4xl md:text-5xl font-extrabold tracking-wider mb-1 md:mb-2 drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
-                ส่งเสียง
-            </h1>
-            <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
-            
-            <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-start gap-3">
-                <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+            <!-- Right: Desktop & Mobile Menu Buttons -->
+            <div class="w-12 h-12 flex items-center justify-end z-[60]">
+                <!-- Desktop Nav (Hidden on Mobile) -->
+                <div id="navMenuDesktop" class="hidden md:flex items-center gap-3">
+                    <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                         <i class="fa-solid fa-users-gear text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium">สมาชิก</span>
-                </button>
-                <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <span class="text-[9px] font-medium mt-1">สมาชิก</span>
+                    </button>
+                    <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                         <i class="fa-solid fa-gear text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium">ตั้งค่า</span>
-                </button>
-                <button id="btnFeedDesk" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <span class="text-[9px] font-medium mt-1">ตั้งค่า</span>
+                    </button>
+                    <button id="btnFeedDesk" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                         <i class="fa-solid fa-earth-asia text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium">ภาพรวม</span>
-                </button>
-                <button id="btnInboxDesk" onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
-                        <i class="fa-solid fa-envelope text-xl"></i>
-                        <span id="unreadBadgeDesk" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
-                    </div>
-                    <span class="text-[10px] font-medium">กล่องจดหมาย</span>
-                </button>
-                <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <span class="text-[9px] font-medium mt-1">ภาพรวม</span>
+                    </button>
+                    <button id="btnInboxDesk" onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
+                        <div class="relative">
+                            <i class="fa-solid fa-envelope text-xl"></i>
+                            <span id="unreadBadgeDesk" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden border border-white"></span>
+                        </div>
+                        <span class="text-[9px] font-medium mt-1">กล่องจดหมาย</span>
+                    </button>
+                    <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
                         <i class="fa-solid fa-right-from-bracket text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium">ออกระบบ</span>
+                        <span class="text-[9px] font-medium mt-1">ออกระบบ</span>
+                    </button>
+                </div>
+
+                <!-- Hamburger Button (Visible only on Mobile) -->
+                <button id="navHamburger" onclick="app.toggleMobileMenu()" class="md:hidden text-white/90 hover:text-secondary hidden transition-all duration-300 transform">
+                    <i class="fa-solid fa-bars text-2xl drop-shadow-md"></i>
+                    <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden border border-white"></span>
                 </button>
             </div>
-
-            <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-5 right-4 md:hidden text-white/90 hover:text-secondary hidden z-[60] transition-all duration-300 transform">
-                <i class="fa-solid fa-bars text-2xl drop-shadow-md"></i>
-                <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
-            </button>
             
-            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 p-2 flex flex-col gap-1 z-[60] w-48 transform transition-all origin-top-right">
+            <!-- Mobile Dropdown Menu -->
+            <div id="mobileDropdown" class="hidden absolute top-16 right-4 bg-white/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 p-2 flex flex-col gap-1 z-[60] w-48 transform transition-all origin-top-right">
                 <button id="btnUsersMob" onclick="app.showView('manage_users')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
                     <i class="fa-solid fa-users-gear w-5 text-center text-white"></i> จัดการสมาชิก
                 </button>
@@ -241,7 +246,9 @@
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
-        const GITHUB_IMG_BASE_URL = "65"; 
+        
+        // Correct path for images in folder 65/
+        const GITHUB_IMG_BASE_URL = "./65/"; 
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
@@ -317,7 +324,9 @@
                 confirmButton: 'bg-secondary text-primary rounded-xl px-6 md:px-8 py-2 md:py-3 font-bold shadow-lg transition hover:scale-105',
                 cancelButton: 'bg-gray-200 text-gray-600 rounded-xl px-5 md:px-6 py-2 md:py-3 font-bold shadow transition hover:bg-gray-300'
             },
-            buttonsStyling: false
+            buttonsStyling: false,
+            didOpen: () => { document.body.classList.add('lock-scroll'); },
+            didClose: () => { if (!window.app.isMobileMenuOpen) document.body.classList.remove('lock-scroll'); }
         });
 
         window.app = {
@@ -376,7 +385,6 @@
                 }
             },
 
-            // Helper for Consonant-only abbreviation (2 letters)
             getAbbr: function(name) {
                 if (!name) return "";
                 const consonants = name.replace(/[^ก-ฮ]/g, '');
@@ -417,6 +425,7 @@
                 const hamIcon = document.getElementById('navHamburger').querySelector('i');
                 const contentWrapper = document.getElementById('mainContentWrapper');
                 const fabContainer = document.getElementById('globalFabContainer');
+                const body = document.body;
                 
                 if (this.isMobileMenuOpen) {
                     menu.classList.remove('hidden');
@@ -425,6 +434,7 @@
                     hamIcon.classList.add('fa-xmark');
                     contentWrapper.classList.add('menu-open-blur');
                     if(fabContainer) fabContainer.classList.add('menu-open-blur');
+                    body.classList.add('lock-scroll');
                 } else {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
@@ -432,6 +442,7 @@
                     hamIcon.classList.remove('fa-xmark');
                     contentWrapper.classList.remove('menu-open-blur');
                     if(fabContainer) fabContainer.classList.remove('menu-open-blur');
+                    body.classList.remove('lock-scroll');
                 }
             },
 
@@ -441,6 +452,7 @@
                 const hamIcon = document.getElementById('navHamburger')?.querySelector('i');
                 const contentWrapper = document.getElementById('mainContentWrapper');
                 const fabContainer = document.getElementById('globalFabContainer');
+                const body = document.body;
 
                 if(menu) {
                     menu.classList.add('hidden');
@@ -456,6 +468,7 @@
                 if(fabContainer) {
                     fabContainer.classList.remove('menu-open-blur');
                 }
+                body.classList.remove('lock-scroll');
             },
 
             loadGlobalSettings: function() {
@@ -472,7 +485,7 @@
             preloadImages: function() {
                 if(this.preloadedImages) return;
                 predefinedUsers.forEach(u => {
-                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${u.id}.png`;
+                    const imgUrl = `${GITHUB_IMG_BASE_URL}${u.id}.png`;
                     const img = new Image();
                     img.src = imgUrl;
                     img.onload = () => { this.imageCache[imgUrl] = true; };
@@ -987,7 +1000,7 @@
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
                             <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${this.getAbbr(u.name)}</span>`)}
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${this.getAbbr(u.name)}</span>`)}
                                 <span class="fallback-name h-full w-full flex-center-all hidden absolute inset-0 z-10 bg-secondary">${this.getAbbr(u.name)}</span>
                             </div>
                             <div class="flex-1 text-center sm:text-left min-w-0 w-full">
@@ -1101,11 +1114,11 @@
                         let senderImg = '';
                         
                         if (isAnonymous) {
-                            senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
+                            senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary font-bold text-lg bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary font-bold text-lg bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
                                 `<div class="w-full h-full flex-center-all text-primary font-bold text-lg">${this.getAbbr(msg.from.name)}</div>`;
                         }
                         
@@ -1227,7 +1240,7 @@
                 let gridHTML = '';
                 predefinedUsers.forEach(user => {
                     const isSelected = this.selectedIds.includes(user.studentId);
-                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`; // Reverted to 65/ folder
+                    const imgUrl = `${GITHUB_IMG_BASE_URL}${user.id}.png`; 
                     
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
@@ -1617,7 +1630,7 @@
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
                                 `<span class="text-primary flex-center-all w-full h-full text-sm font-bold">${this.getAbbr(msg.from.name)}</span>`;
                         }
 
@@ -1701,12 +1714,10 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Force scroll to top on refresh
             if ('scrollRestoration' in history) {
                 history.scrollRestoration = 'manual';
             }
             window.scrollTo(0, 0);
-            
             app.init();
         });
     </script>
