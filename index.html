@@ -22,6 +22,7 @@
                         'blob': 'blob 10s infinite alternate',
                         'fade-in': 'fadeIn 0.3s ease-out forwards',
                         'slide-up': 'slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'spin-slow': 'spin 3s linear infinite',
                     },
                     keyframes: {
                         blob: {
@@ -90,10 +91,26 @@
             gap: 1rem !important;
         }
 
-        /* Fix for potential line artifacts in grids */
         .grid {
             column-gap: 0.5rem;
             row-gap: 1.5rem;
+        }
+
+        /* Image Loading Spinner & Transitions */
+        .img-loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #fddf31;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        .img-container img {
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .img-container img.loaded {
+            opacity: 1;
         }
     </style>
 </head>
@@ -113,7 +130,6 @@
             <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
             <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-start gap-3">
-                <!-- Admin Only Buttons -->
                 <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-users-gear text-xl"></i>
@@ -132,7 +148,6 @@
                     </div>
                     <span class="text-[10px] font-medium">ภาพรวม</span>
                 </button>
-                <!-- Inbox Button - Hidden for non-predefined users -->
                 <button id="btnInboxDesk" onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
                         <i class="fa-solid fa-envelope text-xl"></i>
@@ -153,21 +168,22 @@
                 <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
             </button>
             
-            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 p-2 flex flex-col gap-1 z-50 w-44 transform transition-all origin-top-right text-slate-800">
-                <button id="btnUsersMob" onclick="app.showView('manage_users')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
+            <!-- Mobile Dropdown - White Cloudy Style -->
+            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/40 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 p-2 flex flex-col gap-1 z-50 w-48 transform transition-all origin-top-right text-slate-800">
+                <button id="btnUsersMob" onclick="app.showView('manage_users')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/40 transition-colors text-left font-semibold text-sm">
                     <i class="fa-solid fa-users-gear text-primary w-5 text-center"></i> จัดการสมาชิก
                 </button>
-                <button id="btnAdminMob" onclick="app.showView('settings')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
+                <button id="btnAdminMob" onclick="app.showView('settings')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/40 transition-colors text-left font-semibold text-sm">
                     <i class="fa-solid fa-gear text-primary w-5 text-center"></i> ตั้งค่าระบบ
                 </button>
-                <button id="btnFeedMob" onclick="app.showView('feed')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
+                <button id="btnFeedMob" onclick="app.showView('feed')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/40 transition-colors text-left font-semibold text-sm">
                     <i class="fa-solid fa-earth-asia text-primary w-5 text-center"></i> ภาพรวม
                 </button>
-                <button id="btnInboxMob" onclick="app.showView('inbox')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm relative">
+                <button id="btnInboxMob" onclick="app.showView('inbox')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/40 transition-colors text-left font-semibold text-sm relative">
                     <i class="fa-solid fa-envelope text-primary w-5 text-center"></i> กล่องจดหมาย
                 </button>
-                <div class="h-px bg-gray-200 my-1 mx-2"></div>
-                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 transition-colors text-left font-medium text-sm">
+                <div class="h-px bg-white/30 my-1 mx-2"></div>
+                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/20 hover:text-red-600 text-red-500 transition-colors text-left font-semibold text-sm">
                     <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> ออกจากระบบ
                 </button>
             </div>
@@ -292,6 +308,7 @@
             composeMode: 'audio',
             preloadedImages: false,
             isMobileMenuOpen: false,
+            imageCache: {}, // For persistent image caching
 
             init: async function() {
                 try {
@@ -371,10 +388,46 @@
             preloadImages: function() {
                 if(this.preloadedImages) return;
                 predefinedUsers.forEach(u => {
+                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${u.id}.png`;
                     const img = new Image();
-                    img.src = `${GITHUB_IMG_BASE_URL}/${u.id}.png`;
+                    img.src = imgUrl;
+                    img.onload = () => { this.imageCache[imgUrl] = true; };
                 });
                 this.preloadedImages = true;
+            },
+
+            // Helper for rendering images with loader and cache
+            renderImage: function(src, altText, extraClass = "") {
+                const isLoaded = this.imageCache[src];
+                return `
+                    <div class="img-container relative w-full h-full flex items-center justify-center bg-secondary/50">
+                        <div id="loader-${btoa(src).substring(0,10)}" class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
+                        <img src="${src}" 
+                             alt="${altText}"
+                             class="w-full h-full object-cover relative z-0 ${isLoaded ? 'loaded' : ''} ${extraClass}"
+                             onload="app.onImageLoaded(this, '${src}')"
+                             onerror="app.onImageError(this)">
+                    </div>
+                `;
+            },
+
+            onImageLoaded: function(img, src) {
+                this.imageCache[src] = true;
+                img.classList.add('loaded');
+                const loaderId = `loader-${btoa(src).substring(0,10)}`;
+                const loader = document.getElementById(loaderId);
+                if (loader) loader.classList.add('hidden');
+            },
+
+            onImageError: function(img) {
+                const container = img.parentElement;
+                if (container) {
+                    const loader = container.querySelector('.img-loading-spinner');
+                    if (loader) loader.classList.add('hidden');
+                    const fallback = container.parentElement.querySelector('.fallback-name');
+                    if (fallback) fallback.classList.remove('hidden');
+                }
+                img.style.display = 'none';
             },
 
             showView: function(viewName) {
@@ -401,7 +454,6 @@
                     document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
                     document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
 
-                    // Inbox access logic
                     document.getElementById('btnInboxDesk').classList.toggle('hidden', !showInbox);
                     document.getElementById('btnInboxMob').classList.toggle('hidden', !showInbox);
                 } else {
@@ -795,8 +847,8 @@
                     
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
-                            <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold text-primary shadow-sm border border-white relative shrink-0">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag"></i>' : (u.id ? `<img src="${GITHUB_IMG_BASE_URL}/${u.id}.png" class="w-full h-full object-cover rounded-full" onerror="this.remove()">` : u.name[0])}
+                            <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : u.name[0])}
                             </div>
                             <div class="flex-1 text-center sm:text-left">
                                 <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2">
@@ -886,16 +938,26 @@
 
             renderFeed: function() {
                 let msgsHTML = '';
-                if(this.allMessages.length === 0) {
+                
+                // FILTER LOGIC: Show only to self, to everyone, or if Admin
+                const myStudentId = this.profile.studentId;
+                const filteredMessages = this.allMessages.filter(msg => {
+                    if (this.profile.isAdmin) return true; // Admin sees all
+                    const toMe = msg.to.includes(myStudentId);
+                    const toEveryone = msg.to.length >= predefinedUsers.length; // Assume Select All = Everyone
+                    return toMe || toEveryone;
+                });
+
+                if(filteredMessages.length === 0) {
                     msgsHTML = `
                         <div class="w-full flex justify-center py-20 animate-fade-in">
                             <div class="text-center">
                                 <i class="fa-regular fa-comments text-5xl text-white/30 mb-3"></i>
-                                <p class="text-white/70 font-medium">ยังไม่มีความเคลื่อนไหวในขณะนี้</p>
+                                <p class="text-white/70 font-medium">ยังไม่มีความเคลื่อนไหวถึงคุณในขณะนี้</p>
                             </div>
                         </div>`;
                 } else {
-                    this.allMessages.forEach((msg, idx) => {
+                    filteredMessages.forEach((msg, idx) => {
                         const isAudio = msg.type === 'audio';
                         const isAnonymous = msg.from.isAnonymous;
                         let senderImg = '';
@@ -904,7 +966,9 @@
                             senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden w-full h-full items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</span>` : `<div class="w-full h-full flex items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</div>`;
+                            senderImg = sender ? 
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden w-full h-full flex items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</span>` : 
+                                `<div class="w-full h-full flex items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</div>`;
                         }
                         
                         const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
@@ -939,7 +1003,7 @@
                 <div class="animate-fade-in pb-32">
                     <div class="text-center mb-8">
                         <h2 class="text-2xl md:text-4xl font-bold text-white drop-shadow-md">ข้อความ</h2>
-                        <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">กดที่ไอคอนเพื่อดูข้อความหรือฟังเสียง</p>
+                        <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">เฉพาะข้อความที่ส่งถึงคุณและข้อความสาธารณะ</p>
                     </div>
                     <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8 px-2 max-w-5xl mx-auto">
                         ${msgsHTML}
@@ -1028,9 +1092,8 @@
                             class="relative rounded-full flex items-center justify-center text-primary font-bold user-avatar mb-2 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
                             
                             <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center shadow-inner">
-                                <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" 
-                                     class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0" alt="${user.name}">
-                                <span class="relative z-10 hidden w-full h-full flex items-center justify-center text-[20px] md:text-[24px] font-bold text-primary">${user.name.substring(0, 2)}</span>
+                                ${app.renderImage(imgUrl, user.name)}
+                                <span class="fallback-name relative z-10 hidden w-full h-full flex items-center justify-center text-[20px] md:text-[24px] font-bold text-primary">${user.name.substring(0, 2)}</span>
                                 <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
@@ -1106,7 +1169,7 @@
                     </div>`;
 
                 return `
-                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up">
+                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-2xl mx-auto animate-slide-up">
                     <div class="flex items-center mb-6 pb-4 border-b border-white/40">
                         <button onclick="app.showView('home')" class="p-2.5 hover:bg-white/40 bg-white/20 rounded-full mr-4 transition text-primary shadow-sm flex-shrink-0">
                             <i class="fa-solid fa-arrow-left text-lg"></i>
@@ -1397,7 +1460,9 @@
                              senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>`;
+                            senderImg = sender ? 
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>` : 
+                                `<span class="text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>`;
                         }
 
                         msgsHTML += `
