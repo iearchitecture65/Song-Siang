@@ -168,37 +168,38 @@
             </h1>
             <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
-            <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-start gap-3">
+            <!-- Desktop Nav: Added flex-nowrap to prevent wrapping into 2 lines -->
+            <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-center gap-2 lg:gap-4 flex-nowrap">
                 <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-users-gear text-xl"></i>
                     </div>
-                    <span class="text-[10px] font-medium">สมาชิก</span>
+                    <span class="text-[10px] font-medium whitespace-nowrap">สมาชิก</span>
                 </button>
                 <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-gear text-xl"></i>
                     </div>
-                    <span class="text-[10px] font-medium">ตั้งค่า</span>
+                    <span class="text-[10px] font-medium whitespace-nowrap">ตั้งค่า</span>
                 </button>
                 <button id="btnFeedDesk" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-earth-asia text-xl"></i>
                     </div>
-                    <span class="text-[10px] font-medium">ภาพรวม</span>
+                    <span class="text-[10px] font-medium whitespace-nowrap">ภาพรวม</span>
                 </button>
                 <button id="btnInboxDesk" onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
                         <i class="fa-solid fa-envelope text-xl"></i>
                         <span id="unreadBadgeDesk" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
                     </div>
-                    <span class="text-[10px] font-medium">กล่องจดหมาย</span>
+                    <span class="text-[10px] font-medium whitespace-nowrap">กล่องจดหมาย</span>
                 </button>
                 <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-right-from-bracket text-xl"></i>
                     </div>
-                    <span class="text-[10px] font-medium">ออกระบบ</span>
+                    <span class="text-[10px] font-medium whitespace-nowrap">ออกระบบ</span>
                 </button>
             </div>
 
@@ -241,7 +242,8 @@
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
-        const GITHUB_IMG_BASE_URL = "65"; 
+        // Fixed folder path to ensure local resolution
+        const GITHUB_IMG_BASE_URL = "./65"; 
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
@@ -504,7 +506,7 @@
                         <div id="loader-${baseId}" class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
                         <img src="${src}" 
                              alt="${altText}"
-                             class="w-full h-full object-cover relative z-0 ${isLoaded ? 'loaded' : ''} ${extraClass}"
+                             class="w-full h-full object-cover relative z-20 ${isLoaded ? 'loaded' : ''} ${extraClass}"
                              onload="app.onImageLoaded(this, '${src}')"
                              onerror="app.onImageError(this)">
                     </div>
@@ -1129,7 +1131,7 @@
                                 <div class="w-full h-full rounded-full overflow-hidden relative">
                                     ${senderImg}
                                 </div>
-                                <div class="absolute -bottom-1 -right-2 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 flex items-center justify-center shadow-lg border border-white/50 z-20 min-w-fit whitespace-nowrap">
+                                <div class="absolute -bottom-1 -right-2 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 flex items-center justify-center shadow-lg border border-white/50 z-30 min-w-fit whitespace-nowrap">
                                     ${badgeContent}
                                 </div>
                             </div>
@@ -1227,7 +1229,7 @@
                 let gridHTML = '';
                 predefinedUsers.forEach(user => {
                     const isSelected = this.selectedIds.includes(user.studentId);
-                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`; // Reverted to 65/ folder
+                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
                     
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
@@ -1240,7 +1242,7 @@
                                 <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
-                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-primary rounded-full items-center justify-center z-20 shadow-lg border-2 border-white">
+                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-primary rounded-full items-center justify-center z-30 shadow-lg border-2 border-white">
                                 <i class="fa-solid fa-check text-[10px] text-white"></i>
                             </div>
                         </button>
