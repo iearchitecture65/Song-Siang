@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ส่งเสียง | Song Siang</title>
     
     <!-- Google Fonts -->
@@ -49,6 +49,7 @@
             background: linear-gradient(135deg, #1e5288 0%, #2b71b8 100%);
             min-height: 100vh;
             overflow-x: hidden;
+            word-wrap: break-word; /* ป้องกันคำล้นขอบจอภาพรวม */
         }
         .glass-panel {
             background: rgba(255, 255, 255, 0.08);
@@ -96,37 +97,40 @@
     </div>
 
     <!-- Main Container -->
-    <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col glass-panel shadow-2xl">
+    <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
         <!-- Header -->
-        <header class="px-6 py-8 text-center text-white border-b border-white/10 relative">
-            <h1 class="text-5xl font-extrabold tracking-wider mb-2 drop-shadow-lg bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
+        <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-wider mb-1 md:mb-2 drop-shadow-lg bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
                 ส่งเสียง
             </h1>
-            <p class="text-sm font-light tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
+            <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
-            <div id="navMenu" class="absolute top-8 right-6 flex items-center space-x-6 hidden">
+            <div id="navMenu" class="absolute top-4 right-4 md:top-8 md:right-6 flex items-center space-x-3 md:space-x-6 hidden">
                 <button onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all">
-                    <div class="p-2 rounded-full group-hover:bg-white/10 transition-colors relative">
-                        <i class="fa-solid fa-envelope text-xl"></i>
-                        <span id="unreadBadge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full hidden"></span>
+                    <div class="p-1.5 md:p-2 rounded-full group-hover:bg-white/10 transition-colors relative">
+                        <i class="fa-solid fa-envelope text-lg md:text-xl"></i>
+                        <span id="unreadBadge" class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
                     </div>
-                    <span class="text-[10px] font-medium tracking-wide">กล่องจดหมาย</span>
+                    <span class="text-[9px] md:text-[10px] font-medium tracking-wide">กล่องจดหมาย</span>
                 </button>
                 <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
-                    <div class="p-2 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-right-from-bracket text-xl"></i>
+                    <div class="p-1.5 md:p-2 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-lg md:text-xl"></i>
                     </div>
-                    <span class="text-[10px] font-medium tracking-wide">ออกระบบ</span>
+                    <span class="text-[9px] md:text-[10px] font-medium tracking-wide">ออกระบบ</span>
                 </button>
             </div>
         </header>
 
         <!-- Dynamic Content Area -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto relative" id="appRoot">
+        <main class="flex-1 p-3 sm:p-4 md:p-8 overflow-y-auto overflow-x-hidden relative" id="appRoot">
             <!-- Content gets injected here -->
         </main>
     </div>
+
+    <!-- Global FAB Container สำหรับปุ่มลอยขอบจอด้านล่าง (ย้ายมาไว้ข้างนอกสุด) -->
+    <div id="globalFabContainer" class="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm sm:max-w-md flex justify-center pointer-events-none"></div>
 
     <!-- Firebase SDKs -->
     <script type="module">
@@ -213,11 +217,11 @@
             background: 'rgba(255, 255, 255, 0.85)',
             backdrop: 'rgba(0,0,0,0.5)',
             customClass: {
-                popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl',
-                title: 'text-primary font-extrabold',
-                htmlContainer: 'text-gray-700 font-medium',
-                confirmButton: 'bg-secondary text-primary rounded-xl px-8 py-3 font-bold shadow-lg transition hover:scale-105',
-                cancelButton: 'bg-white text-gray-500 rounded-xl px-6 py-3 font-bold shadow transition hover:bg-gray-100'
+                popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm sm:max-w-md',
+                title: 'text-primary font-extrabold text-xl md:text-2xl',
+                htmlContainer: 'text-gray-700 font-medium text-sm md:text-base break-words',
+                confirmButton: 'bg-secondary text-primary rounded-xl px-6 md:px-8 py-2 md:py-3 font-bold shadow-lg transition hover:scale-105',
+                cancelButton: 'bg-white text-gray-500 rounded-xl px-5 md:px-6 py-2 md:py-3 font-bold shadow transition hover:bg-gray-100'
             },
             buttonsStyling: false
         });
@@ -274,6 +278,12 @@
                 }
                 else if(viewName === 'compose') root.innerHTML = this.renderCompose();
                 else if(viewName === 'inbox') root.innerHTML = this.renderInbox();
+                
+                // เคลียร์ปุ่มลอยทิ้งถ้าไม่ได้อยู่หน้าเลือกเพื่อน
+                if (viewName !== 'home') {
+                    const globalFab = document.getElementById('globalFabContainer');
+                    if (globalFab) globalFab.innerHTML = '';
+                }
             },
 
             loginSuccess: function(userProfile) {
@@ -330,20 +340,20 @@
             // ==========================================
             renderLogin1: function() {
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] overflow-hidden mt-10 animate-slide-up relative">
-                    <div class="p-10 text-center bg-white/30 border-b border-white/40 relative overflow-hidden">
-                        <i class="fa-solid fa-id-card-clip text-primary text-5xl mb-4 opacity-90 drop-shadow-md"></i>
-                        <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">เข้าสู่ระบบ</h2>
-                        <p class="text-primary/90 text-sm mt-2 relative z-10 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden mt-6 md:mt-10 animate-slide-up relative">
+                    <div class="p-6 md:p-10 text-center bg-white/30 border-b border-white/40 relative overflow-hidden">
+                        <i class="fa-solid fa-id-card-clip text-primary text-4xl md:text-5xl mb-3 md:mb-4 opacity-90 drop-shadow-md"></i>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">เข้าสู่ระบบ</h2>
+                        <p class="text-primary/90 text-xs md:text-sm mt-1 md:mt-2 relative z-10 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
                     </div>
-                    <div class="p-8 space-y-6">
+                    <div class="p-6 md:p-8 space-y-5 md:space-y-6">
                         <div>
-                            <input type="text" id="inputId" placeholder="รหัสนักศึกษา 8 หลัก (เช่น 65030xxx)" maxlength="8"
-                                class="glass-input w-full px-5 py-4 rounded-2xl transition-all outline-none text-xl tracking-widest text-center font-mono text-primary shadow-inner"
+                            <input type="text" id="inputId" placeholder="รหัสนักศึกษา 8 หลัก" maxlength="8"
+                                class="glass-input w-full px-4 md:px-5 py-3 md:py-4 rounded-2xl transition-all outline-none text-base sm:text-lg md:text-xl tracking-wider sm:tracking-widest text-center font-mono text-primary shadow-inner"
                                 onkeypress="if(event.key === 'Enter') app.requestOTP()">
                         </div>
                         <button onclick="app.requestOTP()" id="btnReqOTP"
-                            class="w-full py-4 rounded-2xl font-bold text-primary bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1">
+                            class="w-full py-3.5 md:py-4 rounded-2xl font-bold text-primary bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1 text-sm md:text-base">
                             รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>
                         </button>
                     </div>
@@ -390,27 +400,28 @@
 
             renderLogin2: function() {
                 let inputs = '';
+                // ปรับขนาด input ให้เล็กลงในมือถือ เพื่อให้ไม่ล้น 6 ช่อง
                 for(let i=0; i<6; i++) {
                     inputs += `<input type="text" id="otp-${i}" maxlength="1" 
                         oninput="app.onOtpInput(this, ${i})" onkeydown="app.onOtpKeydown(event, ${i})"
-                        class="otp-input glass-input w-12 h-14 md:w-14 md:h-16 text-center text-3xl font-bold rounded-xl text-primary transition-all outline-none shadow-inner" />`;
+                        class="otp-input glass-input w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 text-center text-xl sm:text-2xl md:text-3xl font-bold rounded-xl text-primary transition-all outline-none shadow-inner p-0" />`;
                 }
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] overflow-hidden mt-10 animate-slide-up relative">
-                    <div class="p-8 text-center bg-white/30 border-b border-white/40">
-                        <i class="fa-solid fa-shield-halved text-primary text-4xl mb-3 opacity-90"></i>
-                        <h2 class="text-3xl font-extrabold text-primary drop-shadow-sm">ยืนยันรหัส</h2>
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden mt-6 md:mt-10 animate-slide-up relative">
+                    <div class="p-6 md:p-8 text-center bg-white/30 border-b border-white/40">
+                        <i class="fa-solid fa-shield-halved text-primary text-3xl md:text-4xl mb-2 md:mb-3 opacity-90"></i>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-primary drop-shadow-sm">ยืนยันรหัส</h2>
                     </div>
-                    <div class="p-8 space-y-6">
+                    <div class="p-5 md:p-8 space-y-5 md:space-y-6">
                         <div class="text-center">
-                            <p class="text-sm text-gray-700 font-medium">ส่งรหัสไปยังอีเมลสถาบันแล้ว</p>
-                            <p class="font-extrabold text-xl text-primary mt-1 tracking-wide">${this.tempStudentId}@kmitl.ac.th</p>
-                            <div class="mt-3 mb-1 inline-block bg-white/50 border border-white/60 text-primary px-4 py-1.5 rounded-full text-xs font-bold tracking-wider shadow-sm">
+                            <p class="text-xs md:text-sm text-gray-700 font-medium">ส่งรหัสไปยังอีเมลสถาบันแล้ว</p>
+                            <p class="font-extrabold text-lg md:text-xl text-primary mt-1 tracking-wide">${this.tempStudentId}@kmitl.ac.th</p>
+                            <div class="mt-2 md:mt-3 mb-1 inline-block bg-white/50 border border-white/60 text-primary px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs font-bold tracking-wider shadow-sm">
                                 <i class="fa-solid fa-hashtag mr-1"></i> Ref: ${this.currentRef}
                             </div>
                         </div>
-                        <div class="flex justify-between gap-2 px-2" id="otpContainer">${inputs}</div>
-                        <button onclick="app.showView('login')" class="w-full py-3 text-sm font-medium text-gray-500 hover:text-primary transition-colors flex items-center justify-center">
+                        <div class="flex justify-center md:justify-between gap-1 sm:gap-2 px-1 md:px-2" id="otpContainer">${inputs}</div>
+                        <button onclick="app.showView('login')" class="w-full py-2 md:py-3 text-xs md:text-sm font-medium text-gray-500 hover:text-primary transition-colors flex items-center justify-center">
                             <i class="fa-solid fa-rotate-left mr-2"></i> เปลี่ยนรหัสนักศึกษา
                         </button>
                     </div>
@@ -449,23 +460,23 @@
 
             renderLogin3: function() {
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] overflow-hidden mt-10 animate-slide-up">
-                    <div class="p-8 text-center bg-white/30 border-b border-white/40">
-                        <i class="fa-solid fa-user-plus text-primary text-4xl mb-3 opacity-90"></i>
-                        <h2 class="text-3xl font-extrabold text-primary drop-shadow-sm">สร้างโปรไฟล์</h2>
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden mt-6 md:mt-10 animate-slide-up">
+                    <div class="p-6 md:p-8 text-center bg-white/30 border-b border-white/40">
+                        <i class="fa-solid fa-user-plus text-primary text-3xl md:text-4xl mb-2 md:mb-3 opacity-90"></i>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-primary drop-shadow-sm">สร้างโปรไฟล์</h2>
                     </div>
-                    <div class="p-8 space-y-6">
-                        <div class="bg-white/40 p-5 rounded-2xl text-sm text-primary text-center border border-white/50 shadow-inner">
-                            <i class="fa-solid fa-face-smile-wink text-4xl block mb-3 text-secondary drop-shadow animate-bounce"></i>
+                    <div class="p-6 md:p-8 space-y-5 md:space-y-6">
+                        <div class="bg-white/40 p-4 md:p-5 rounded-2xl text-xs md:text-sm text-primary text-center border border-white/50 shadow-inner break-words">
+                            <i class="fa-solid fa-face-smile-wink text-3xl md:text-4xl block mb-2 md:mb-3 text-secondary drop-shadow animate-bounce"></i>
                             ดูเหมือนคุณจะเป็นผู้ใช้ใหม่ <br/>แนะนำตัวให้พวกเราหน่อยครับ!
                         </div>
                         <div>
-                            <input type="text" id="inputNewName" placeholder="ชื่อเล่น / ชื่อเรียกของคุณ..." 
-                                class="glass-input w-full px-5 py-4 rounded-2xl transition-all outline-none text-lg text-primary text-center font-bold"
+                            <input type="text" id="inputNewName" placeholder="ชื่อเรียกของคุณ..." 
+                                class="glass-input w-full px-4 md:px-5 py-3 md:py-4 rounded-2xl transition-all outline-none text-base md:text-lg text-primary text-center font-bold"
                                 onkeypress="if(event.key === 'Enter') app.registerNewUser()">
                         </div>
                         <button onclick="app.registerNewUser()" 
-                            class="w-full py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-2xl font-bold text-lg shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1">
+                            class="w-full py-3.5 md:py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-2xl font-bold text-base md:text-lg shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1">
                             เริ่มต้นใช้งาน <i class="fa-solid fa-rocket ml-2"></i>
                         </button>
                     </div>
@@ -490,7 +501,6 @@
                     this.selectedIds.splice(idx, 1);
                 }
 
-                // Update DOM elements manually instead of re-rendering
                 if (btnElement) {
                     const checkIcon = btnElement.querySelector('.check-indicator');
                     if (isAdding) {
@@ -526,25 +536,23 @@
 
                 const btnSelectAll = document.getElementById('btnSelectAll');
                 if (btnSelectAll) {
-                    btnSelectAll.innerHTML = `<i class="fa-solid fa-users mr-2"></i> ${isSelectingAll ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}`;
+                    btnSelectAll.innerHTML = `<i class="fa-solid fa-users mr-2"></i> <span class="hidden sm:inline">${isSelectingAll ? 'ยกเลิกทั้งหมด' : 'เลือกทุกคน'}</span><span class="sm:hidden">${isSelectingAll ? 'ยกเลิก' : 'ทั้งหมด'}</span>`;
                 }
                 
                 this.updateFAB();
             },
 
             updateFAB: function() {
-                const container = document.getElementById('fabContainer');
+                const container = document.getElementById('globalFabContainer');
                 if (!container) return;
 
-                if (this.selectedIds.length > 0) {
-                    // Fixed to viewport center bottom
+                if (this.currentView === 'home' && this.selectedIds.length > 0) {
+                    // สร้างปุ่มใส่ใน Container กลาง ที่ลอยอยู่หน้าจอ
                     container.innerHTML = `
-                        <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-slide-up pointer-events-auto">
-                            <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-8 py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center space-x-3 text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 whitespace-nowrap">
-                                <i class="fa-solid fa-paper-plane text-2xl"></i>
-                                <span>ส่งข้อความหา ${this.selectedIds.length} คน</span>
-                            </button>
-                        </div>
+                        <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
+                            <i class="fa-solid fa-paper-plane text-xl sm:text-2xl"></i>
+                            <span class="truncate">ส่งข้อความหา ${this.selectedIds.length} คน</span>
+                        </button>
                     `;
                 } else {
                     container.innerHTML = '';
@@ -558,48 +566,52 @@
                     const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
                     
                     gridHTML += `
-                    <div class="flex flex-col items-center animate-fade-in user-card group" style="animation-delay: ${user.id * 10}ms">
+                    <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 10}ms">
                         <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
-                            class="relative rounded-full flex items-center justify-center text-primary font-bold text-xl user-avatar m-1 transition-all ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-[0_0_20px_rgba(253,223,49,0.7)]' : 'shadow-lg'}">
+                            class="relative rounded-full flex items-center justify-center text-primary font-bold text-xl user-avatar mb-1 transition-all ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-[0_0_20px_rgba(253,223,49,0.7)]' : 'shadow-lg'}">
                             
-                            <!-- รูปภาพปรับให้พอดีวงกลมเป๊ะไม่มีขอบเว้น -->
-                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative">
+                            <!-- ปรับขนาดรูปในมือถือให้เล็กลงนิดนึง -->
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative">
                                 <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
                                      class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0" alt="${user.name}">
-                                <span class="relative z-10 hidden w-full h-full items-center justify-center">${user.name.substring(0, 2)}</span>
+                                <span class="relative z-10 hidden w-full h-full items-center justify-center text-[14px] md:text-[18px]">${user.name.substring(0, 2)}</span>
                                 <div class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
                             <!-- เครื่องหมายถูก วงกลมเล็กๆ มุมขวาบน -->
-                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white items-center justify-center z-20 shadow-md">
-                                <i class="fa-solid fa-check text-[11px] text-white"></i>
+                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full border-2 border-white items-center justify-center z-20 shadow-md">
+                                <i class="fa-solid fa-check text-[9px] sm:text-[11px] text-white"></i>
                             </div>
                         </button>
-                        <span class="text-white text-[11px] mt-2 font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm whitespace-nowrap">
-                            ${user.name}
-                        </span>
+                        
+                        <!-- แก้ชื่อไม่ให้ล้น ใช้ truncate ซ่อนคำยาวๆ ลงไป -->
+                        <div class="w-full px-1 flex justify-center">
+                            <span class="text-white text-[10px] sm:text-[11px] font-medium bg-black/30 px-2 sm:px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm truncate max-w-[80px] md:max-w-[100px] inline-block text-center w-auto">
+                                ${user.name}
+                            </span>
+                        </div>
                     </div>`;
                 });
 
                 return `
                 <div class="animate-fade-in pb-32 relative h-full">
-                    <div class="flex justify-between items-end mb-8 text-white glass-panel p-6 rounded-[2rem] border-t border-l border-white/30">
-                        <div>
-                            <h2 class="text-3xl font-bold drop-shadow-md">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-2 animate-pulse text-2xl"></i></h2>
-                            <p class="text-blue-100 mt-2 opacity-90 font-light text-sm"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกคนที่คุณต้องการส่งเสียงถึงได้เลย</p>
+                    <div class="flex flex-row justify-between items-center sm:items-end mb-6 md:mb-8 text-white glass-panel p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border-t border-l border-white/30 gap-2">
+                        <div class="flex-1">
+                            <h2 class="text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md truncate">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-1 animate-pulse text-lg md:text-2xl"></i></h2>
+                            <p class="text-blue-100 mt-1 md:mt-2 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกเพื่อนที่คุณต้องการส่งเสียงถึงได้เลย</p>
                         </div>
-                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-5 py-2.5 rounded-full text-sm font-medium transition shadow-lg flex items-center">
-                            <i class="fa-solid fa-users mr-2"></i> 
-                            ${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-sm font-medium transition shadow-lg flex items-center whitespace-nowrap">
+                            <i class="fa-solid fa-users sm:mr-2"></i> 
+                            <span class="hidden sm:inline">${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิกทั้งหมด' : 'เลือกทุกคน'}</span>
+                            <span class="sm:hidden ml-1">${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิก' : 'ทั้งหมด'}</span>
                         </button>
                     </div>
                     
-                    <div id="usersGrid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-x-2 gap-y-6">
+                    <!-- ปรับ Grid ให้รองรับจอมือถือ (3-4 คนต่อแถว) -->
+                    <div id="usersGrid" class="grid grid-cols-3 min-[400px]:grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-x-2 gap-y-4 md:gap-y-6">
                         ${gridHTML}
                     </div>
                 </div>
-                <!-- Container สำหรับปุ่มลอยหน้าจอ -->
-                <div id="fabContainer"></div>
                 `;
             },
 
@@ -615,23 +627,23 @@
                 const isAudio = this.composeMode === 'audio';
                 const audioArea = this.audioBlob ? `
                     <div class="w-full space-y-4 flex flex-col items-center">
-                        <div class="bg-green-100 text-green-700 px-5 py-2 rounded-full font-bold text-sm flex items-center shadow-inner border border-green-200">
-                            <i class="fa-solid fa-circle-check text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
+                        <div class="bg-green-100 text-green-700 px-4 md:px-5 py-2 rounded-full font-bold text-xs md:text-sm flex items-center shadow-inner border border-green-200">
+                            <i class="fa-solid fa-circle-check text-base md:text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
                         </div>
-                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
-                        <button onclick="app.resetAudio()" class="text-sm text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
+                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-[250px] sm:max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
+                        <button onclick="app.resetAudio()" class="text-xs md:text-sm text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
                     </div>
                 ` : `
                     <div class="flex flex-col items-center">
-                        <div class="text-6xl font-mono mb-8 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
+                        <div class="text-5xl md:text-6xl font-mono mb-6 md:mb-8 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
                             00:${String(this.recordingTime).padStart(2, '0')}
                         </div>
-                        <button onclick="app.toggleRecord()" class="w-32 h-32 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
+                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
                             ${this.isRecording ? 
-                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-5xl relative z-10"></i>' : 
-                                '<i class="fa-solid fa-microphone text-6xl relative z-10"></i>'}
+                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl sm:text-5xl relative z-10"></i>' : 
+                                '<i class="fa-solid fa-microphone text-5xl sm:text-6xl relative z-10"></i>'}
                         </button>
-                        <p class="text-sm text-gray-500 mt-8 bg-white/50 px-5 py-2 rounded-full font-bold shadow-sm border border-white/60">
+                        <p class="text-xs sm:text-sm text-gray-500 mt-6 sm:mt-8 bg-white/50 px-4 sm:px-5 py-2 rounded-full font-bold shadow-sm border border-white/60 text-center">
                             ${this.isRecording ? '<i class="fa-solid fa-record-vinyl animate-spin text-red-500 mr-1"></i> กำลังบันทึก... กดเพื่อหยุด' : `<i class="fa-solid fa-microphone-lines mr-1"></i> กดเพื่อเริ่มอัดเสียง (สูงสุด ${MAX_AUDIO_TIME} วิ)`}
                         </p>
                     </div>
@@ -639,42 +651,42 @@
 
                 const textArea = `
                     <div class="w-full flex flex-col h-full animate-fade-in relative">
-                        <i class="fa-solid fa-pen-nib absolute top-5 right-5 text-gray-300 text-2xl"></i>
-                        <textarea id="txtMessage" class="glass-input w-full flex-1 p-6 rounded-[2rem] outline-none resize-none min-h-[220px] text-lg text-primary shadow-inner transition-all font-medium" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
-                        <div class="text-right text-sm mt-3 font-bold text-primary/60" id="wordCount">
+                        <i class="fa-solid fa-pen-nib absolute top-4 right-4 sm:top-5 sm:right-5 text-gray-300 text-xl sm:text-2xl"></i>
+                        <textarea id="txtMessage" class="glass-input w-full flex-1 p-4 sm:p-6 rounded-2xl md:rounded-[2rem] outline-none resize-none min-h-[180px] sm:min-h-[220px] text-base sm:text-lg text-primary shadow-inner transition-all font-medium break-words" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
+                        <div class="text-right text-xs sm:text-sm mt-2 sm:mt-3 font-bold text-primary/60" id="wordCount">
                             จำกัด ${MAX_WORDS} คำ
                         </div>
                     </div>
                 `;
 
                 return `
-                <div class="glass-card rounded-[2.5rem] p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up relative z-20">
-                    <div class="flex items-center mb-8 pb-4 border-b border-white/40">
-                        <button onclick="app.showView('home')" class="p-3 hover:bg-white/40 bg-white/20 rounded-full mr-4 transition text-primary shadow-sm">
-                            <i class="fa-solid fa-arrow-left text-xl"></i>
+                <div class="glass-card rounded-[2rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up relative z-20">
+                    <div class="flex items-center mb-6 md:mb-8 pb-3 md:pb-4 border-b border-white/40">
+                        <button onclick="app.showView('home')" class="p-2.5 sm:p-3 hover:bg-white/40 bg-white/20 rounded-full mr-3 sm:mr-4 transition text-primary shadow-sm flex-shrink-0">
+                            <i class="fa-solid fa-arrow-left text-lg sm:text-xl"></i>
                         </button>
-                        <div>
-                            <h2 class="text-2xl font-extrabold text-primary">สร้างข้อความใหม่</h2>
-                            <p class="text-sm text-primary/70 font-bold mt-1">ส่งถึง: <span class="bg-secondary/80 text-primary px-3 py-0.5 rounded-full shadow-sm ml-1"><i class="fa-solid fa-user-group text-xs mr-1"></i> ${this.selectedIds.length} คน</span></p>
+                        <div class="overflow-hidden">
+                            <h2 class="text-xl sm:text-2xl font-extrabold text-primary truncate">สร้างข้อความใหม่</h2>
+                            <p class="text-xs sm:text-sm text-primary/70 font-bold mt-1 truncate">ส่งถึง: <span class="bg-secondary/80 text-primary px-2 sm:px-3 py-0.5 rounded-full shadow-sm ml-1"><i class="fa-solid fa-user-group text-[10px] sm:text-xs mr-1"></i> ${this.selectedIds.length} คน</span></p>
                         </div>
                     </div>
 
-                    <div class="flex bg-white/30 p-1.5 rounded-2xl mb-8 shadow-inner relative border border-white/40">
-                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
-                            <i class="fa-solid fa-microphone-lines text-lg"></i> <span>ส่งเสียง</span>
+                    <div class="flex bg-white/30 p-1 md:p-1.5 rounded-xl md:rounded-2xl mb-6 md:mb-8 shadow-inner relative border border-white/40">
+                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold flex items-center justify-center space-x-1 sm:space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
+                            <i class="fa-solid fa-microphone-lines text-base sm:text-lg"></i> <span>ส่งเสียง</span>
                         </button>
-                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
-                            <i class="fa-solid fa-keyboard text-lg"></i> <span>พิมพ์ข้อความ</span>
+                        <button onclick="app.setComposeMode('text')" class="flex-1 py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold flex items-center justify-center space-x-1 sm:space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
+                            <i class="fa-solid fa-keyboard text-base sm:text-lg"></i> <span>พิมพ์ข้อความ</span>
                         </button>
                     </div>
 
-                    <div class="min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-[2.5rem] p-8 bg-white/20 relative overflow-hidden shadow-inner">
+                    <div class="min-h-[250px] sm:min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-2xl md:rounded-[2.5rem] p-4 sm:p-8 bg-white/20 relative overflow-hidden shadow-inner">
                         ${isAudio ? audioArea : textArea}
                     </div>
 
-                    <div class="mt-8 flex justify-end">
-                        <button onclick="app.sendMessage()" id="btnSend" class="px-10 py-4 rounded-2xl font-extrabold text-primary flex items-center space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1">
-                            <i class="fa-solid fa-paper-plane text-xl"></i> <span>ส่งข้อความเลย!</span>
+                    <div class="mt-6 md:mt-8 flex justify-end">
+                        <button onclick="app.sendMessage()" id="btnSend" class="px-6 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-primary flex items-center space-x-2 sm:space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1 text-sm sm:text-base w-full sm:w-auto justify-center">
+                            <i class="fa-solid fa-paper-plane text-lg sm:text-xl"></i> <span>ส่งข้อความเลย!</span>
                         </button>
                     </div>
                 </div>`;
@@ -709,7 +721,6 @@
                             this.recordingTime++;
                             if(this.recordingTime >= MAX_AUDIO_TIME) this.toggleRecord();
                             else {
-                                // อัปเดตเวลาโดยไม่ต้องโหลดหน้าทั้งหมดใหม่ (เพื่อไม่ให้กระตุก)
                                 const timeDisplay = document.querySelector('.font-mono');
                                 if (timeDisplay) timeDisplay.textContent = `00:${String(this.recordingTime).padStart(2, '0')}`;
                             }
@@ -740,7 +751,7 @@
                 }
 
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xl"></i> <span>กำลังส่ง...</span>';
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-lg sm:text-xl"></i> <span>กำลังส่ง...</span>';
 
                 try {
                     const messageData = {
@@ -765,7 +776,7 @@
                 } catch (e) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-paper-plane text-xl"></i> <span>ส่งข้อความเลย!</span>';
+                    btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg sm:text-xl"></i> <span>ส่งข้อความเลย!</span>';
                 }
             },
 
@@ -792,52 +803,64 @@
                 let msgsHTML = '';
                 if(this.messages.length === 0) {
                     msgsHTML = `
-                        <div class="text-center py-24 flex flex-col items-center justify-center animate-fade-in">
-                            <div class="w-32 h-32 bg-white/30 rounded-full flex items-center justify-center mb-6 shadow-inner border border-white/50">
-                                <i class="fa-solid fa-envelope-open text-5xl text-primary/40"></i>
+                        <div class="text-center py-16 md:py-24 flex flex-col items-center justify-center animate-fade-in">
+                            <div class="w-24 h-24 md:w-32 md:h-32 bg-white/30 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner border border-white/50">
+                                <i class="fa-solid fa-envelope-open text-4xl md:text-5xl text-primary/40"></i>
                             </div>
-                            <p class="text-primary/70 font-bold text-xl drop-shadow-sm">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
+                            <p class="text-primary/70 font-bold text-lg md:text-xl drop-shadow-sm text-center">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
                         </div>`;
                 } else {
                     this.messages.forEach((msg, idx) => {
                         const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
                         const isAudio = msg.type === 'audio';
                         const adminControls = this.profile.isAdmin ? `
-                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 backdrop-blur shadow hover:shadow-md p-2 rounded-lg transition-all" title="ลบข้อความ">
-                                <i class="fa-solid fa-trash-can"></i>
+                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 backdrop-blur shadow hover:shadow-md p-1.5 md:p-2 rounded-lg transition-all" title="ลบข้อความ">
+                                <i class="fa-solid fa-trash-can text-sm md:text-base"></i>
                             </button>
                         ` : '';
                         
-                        const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-xs bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold shadow-sm"><i class="fa-solid fa-users text-[10px]"></i> ${msg.to.length}</span>` : '';
+                        const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-[10px] md:text-xs bg-primary/20 text-primary border border-primary/30 px-1.5 md:px-2 py-0.5 rounded-full font-bold shadow-sm whitespace-nowrap"><i class="fa-solid fa-users text-[8px] md:text-[10px]"></i> ${msg.to.length}</span>` : '';
 
                         const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full">${msg.from.name.substring(0,1)}</span>`;
+                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full text-lg">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-lg">${msg.from.name.substring(0,1)}</span>`;
 
                         msgsHTML += `
-                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-6 rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up" style="animation-delay: ${idx * 50}ms">
-                            <div class="flex-shrink-0 w-16 h-16 bg-secondary rounded-full flex items-center justify-center font-bold text-3xl shadow-md relative overflow-hidden border-2 border-white">
-                                ${senderImg}
-                            </div>
-                            <div class="flex-1 w-full">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div>
-                                        <span class="font-extrabold text-primary text-xl tracking-wide">${msg.from.name}</span>
-                                        ${adminToLabel}
-                                        <div class="text-xs text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 md:p-6 rounded-2xl md:rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-3 md:gap-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up w-full" style="animation-delay: ${idx * 50}ms">
+                            <div class="flex flex-row sm:flex-col items-center justify-between w-full sm:w-auto gap-3 sm:gap-0 border-b border-gray-200/50 sm:border-0 pb-3 sm:pb-0">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-shrink-0 w-12 h-12 md:w-16 md:h-16 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
+                                        ${senderImg}
                                     </div>
-                                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div class="sm:hidden">
+                                        <div class="font-extrabold text-primary text-base break-words leading-tight">${msg.from.name} ${adminToLabel}</div>
+                                        <div class="text-[10px] text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                    </div>
+                                </div>
+                                <div class="sm:hidden flex items-center">
+                                    ${adminControls}
+                                </div>
+                            </div>
+                            
+                            <div class="flex-1 w-full min-w-0">
+                                <div class="hidden sm:flex justify-between items-start mb-2 md:mb-3">
+                                    <div class="min-w-0">
+                                        <span class="font-extrabold text-primary text-lg md:text-xl tracking-wide break-words">${msg.from.name}</span>
+                                        ${adminToLabel}
+                                        <div class="text-[10px] md:text-xs text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
                                         ${adminControls}
                                     </div>
                                 </div>
                                 
                                 ${isAudio ? `
-                                    <div class="bg-white/80 p-4 rounded-2xl border border-white inline-block w-full max-w-md shadow-sm">
-                                        <audio src="${msg.content}" controls class="w-full h-10"></audio>
+                                    <div class="bg-white/80 p-3 md:p-4 rounded-xl md:rounded-2xl border border-white inline-block w-full max-w-sm shadow-sm mt-2 sm:mt-0">
+                                        <audio src="${msg.content}" controls class="w-full h-8 md:h-10"></audio>
                                     </div>
                                 ` : `
-                                    <div class="text-primary bg-white/70 p-5 rounded-2xl border border-white whitespace-pre-wrap leading-relaxed shadow-sm text-lg relative font-medium">
-                                        <i class="fa-solid fa-quote-left absolute top-3 left-3 text-3xl text-primary/10"></i>
-                                        <div class="relative z-10 pl-5">${msg.content}</div>
+                                    <div class="text-primary bg-white/70 p-4 md:p-5 rounded-xl md:rounded-2xl border border-white whitespace-pre-wrap break-words leading-relaxed shadow-sm text-sm md:text-lg relative font-medium mt-2 sm:mt-0 w-full overflow-hidden">
+                                        <i class="fa-solid fa-quote-left absolute top-2 left-2 md:top-3 md:left-3 text-xl md:text-3xl text-primary/10"></i>
+                                        <div class="relative z-10 pl-4 md:pl-5 break-words max-w-full">${msg.content}</div>
                                     </div>
                                 `}
                             </div>
@@ -846,23 +869,23 @@
                 }
 
                 return `
-                <div class="glass-card rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative z-20">
-                    <div class="flex items-center justify-between mb-10 border-b border-white/40 pb-6">
-                        <div class="flex items-center">
-                            <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 hover:shadow-md rounded-2xl mr-5 transition-all text-primary shadow-sm">
-                                <i class="fa-solid fa-arrow-left text-xl"></i>
+                <div class="glass-card rounded-[2rem] md:rounded-[2.5rem] p-4 sm:p-6 md:p-10 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative z-20">
+                    <div class="flex items-center justify-between mb-6 md:mb-10 border-b border-white/40 pb-4 md:pb-6">
+                        <div class="flex items-center w-full">
+                            <button onclick="app.showView('home')" class="p-2 sm:p-3 bg-white/20 hover:bg-white/40 hover:shadow-md rounded-xl md:rounded-2xl mr-3 sm:mr-5 transition-all text-primary shadow-sm flex-shrink-0">
+                                <i class="fa-solid fa-arrow-left text-lg md:text-xl"></i>
                             </button>
-                            <div>
-                                <h2 class="text-3xl font-extrabold text-primary flex items-center tracking-wide">
-                                    <i class="fa-solid fa-envelope-open-text mr-3"></i> กล่องจดหมาย
+                            <div class="min-w-0">
+                                <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-primary flex items-center tracking-wide truncate">
+                                    <i class="fa-solid fa-envelope-open-text mr-2 md:mr-3 hidden sm:inline-block"></i> กล่องจดหมาย
                                 </h2>
-                                <p class="text-primary/70 mt-1 font-bold">
-                                    ${this.profile.isAdmin ? '<span class="text-red-500 bg-red-50 px-2 py-0.5 rounded-md"><i class="fa-solid fa-shield-halved mr-1"></i> โหมดผู้ดูแลระบบ: เห็นข้อความทั้งหมด</span>' : 'ข้อความจากเพื่อนและรุ่นน้องที่ส่งถึงคุณ'}
+                                <p class="text-primary/70 mt-1 font-bold text-xs md:text-sm truncate">
+                                    ${this.profile.isAdmin ? '<span class="text-red-500 bg-red-50 px-2 py-0.5 rounded-md"><i class="fa-solid fa-shield-halved mr-1"></i> โหมดผู้ดูแลระบบ</span>' : 'ข้อความจากเพื่อนและรุ่นน้อง'}
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div class="space-y-6 relative z-10">
+                    <div class="space-y-4 md:space-y-6 relative z-10">
                         ${msgsHTML}
                     </div>
                 </div>`;
