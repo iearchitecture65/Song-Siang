@@ -270,6 +270,7 @@
             actualOtp: '',
             tempStudentId: '',
             currentRef: '',
+            adminSearchQuery: '', // เพิ่ม State สำหรับการค้นหาของแอดมิน
             
             maxWords: 200,
             maxAudioTime: 30,
@@ -278,7 +279,7 @@
             audioChunks: [],
             isRecording: false,
             recordingTime: 0,
-            lastRecordingTime: 0, // เก็บเวลาอัดล่าสุดสำหรับส่งไปกับข้อความ
+            lastRecordingTime: 0,
             timerInterval: null,
             audioBlob: null,
             composeMode: 'audio',
@@ -351,7 +352,6 @@
                 const navHam = document.getElementById('navHamburger');
                 
                 if(this.profile) {
-                    // ควบคุมการแสดงผลเมนู Desktop
                     navDesk.classList.remove('md:hidden');
                     navDesk.classList.add('md:flex');
                     navHam.classList.remove('hidden');
@@ -374,8 +374,18 @@
                 else if(viewName === 'feed') { root.innerHTML = this.renderFeed(); this.updateFAB(); }
                 else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
                 else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
-                else if(viewName === 'inbox') { root.innerHTML = this.renderInbox(); this.updateFAB(); }
+                else if(viewName === 'inbox') { 
+                    // รีเซ็ตคำค้นหาเวลาเข้าหน้า Inbox ใหม่
+                    this.adminSearchQuery = ''; 
+                    root.innerHTML = this.renderInbox(); 
+                    this.updateFAB(); 
+                }
                 else if(viewName === 'settings') { root.innerHTML = this.renderSettings(); this.updateFAB(); }
+                
+                if (viewName !== 'home' && viewName !== 'feed') {
+                    const globalFab = document.getElementById('globalFabContainer');
+                    if (globalFab) globalFab.innerHTML = '';
+                }
             },
 
             loginSuccess: function(userProfile) {
@@ -425,7 +435,11 @@
                     const myMsgs = allMsgs.filter(msg => this.profile.isAdmin || msg.to.includes(this.profile.studentId));
                     this.messages = myMsgs; 
                     
-                    if(this.currentView === 'inbox') this.showView('inbox'); 
+                    // ถ้ากำลังอยู่หน้า Inbox ให้ดึงข้อมูลมาวาดใหม่เฉพาะส่วนรายชื่อ (ไม่ดึงทั้งหมดเดี๋ยว Input หลุดโฟกัส)
+                    if(this.currentView === 'inbox') {
+                        const container = document.getElementById('inboxMessageContainer');
+                        if(container) container.innerHTML = this.renderInboxMessagesList();
+                    } 
                     else if(this.currentView === 'feed') this.showView('feed');
                 });
             },
@@ -652,31 +666,38 @@
                         let senderImg = '';
                         
                         if (isAnonymous) {
-                            senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-3xl"></i></div>`;
+                            senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl md:text-3xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full"><span class="absolute inset-0 flex text-primary items-center justify-center font-bold text-xl hidden bg-secondary">${msg.from.name.substring(0,2)}</span>` : `<div class="w-full h-full bg-secondary flex items-center justify-center text-primary font-bold text-xl">${msg.from.name.substring(0,2)}</div>`;
+                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden w-full h-full items-center justify-center text-primary font-bold text-lg md:text-xl bg-secondary">${msg.from.name.substring(0,2)}</span>` : `<div class="w-full h-full bg-secondary flex items-center justify-center text-primary font-bold text-lg md:text-xl">${msg.from.name.substring(0,2)}</div>`;
                         }
                         
+                        // แรนดอมขนาดวงกลม (ระหว่าง 70px ถึง 120px) เพื่อให้ดูลอยๆ แตกต่างกัน
+                        const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
                         const animDelay = (Math.random() * 2).toFixed(1);
                         const animDuration = (3.5 + Math.random() * 2.5).toFixed(1);
                         
+                        // ป้ายข้อความ/เสียง
                         let badgeContent = '';
                         if (isAudio) {
                             const duration = msg.audioDuration || '?';
-                            badgeContent = `<i class="fa-solid fa-circle-play text-secondary text-sm"></i> <span class="text-[11px] font-bold text-white whitespace-nowrap">${duration} วิ</span>`;
+                            badgeContent = `<i class="fa-solid fa-play text-secondary text-[10px]"></i> <span class="text-[10px] font-bold text-white ml-1">${duration} วิ</span>`;
                         } else {
-                            badgeContent = `<i class="fa-solid fa-quote-left text-white/50 mr-1 text-[8px]"></i><span class="truncate text-[10px] font-bold text-white">${msg.content}</span>`;
+                            badgeContent = `<span class="truncate text-[10px] font-bold text-white max-w-[80px]">${msg.content}</span>`;
                         }
 
                         msgsHTML += `
-                        <div class="flex justify-center float-anim p-2" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s;">
-                            <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full shadow-xl border-4 ${isAnonymous ? 'border-slate-500' : 'border-white/90'} bg-white/20 overflow-hidden group transform transition hover:scale-110">
-                                ${senderImg}
-                                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="flex justify-center float-anim p-3" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s;">
+                            <!-- วงกลมหลัก -->
+                            <div class="relative rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.15)] border-4 ${isAnonymous ? 'border-slate-500' : 'border-white'} bg-white/20 group transform transition-transform hover:scale-110 cursor-pointer" style="width: ${baseSize}px; height: ${baseSize}px;">
                                 
-                                <!-- ป้ายข้อความ/เสียง ซ้อนทับล่างซ้าย -->
-                                <div class="absolute -bottom-1 -left-1 bg-black/70 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center justify-center shadow-lg border border-white/20 max-w-[110%] min-w-[60%]">
+                                <div class="w-full h-full rounded-full overflow-hidden relative">
+                                    ${senderImg}
+                                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity z-10"></div>
+                                </div>
+                                
+                                <!-- ป้ายข้อความ/เสียง ซ้อนทับล่างขวา -->
+                                <div class="absolute -bottom-2 -right-2 bg-black/80 backdrop-blur-md rounded-full px-3 py-1 flex items-center justify-center shadow-lg border border-white/30 z-20 min-w-fit whitespace-nowrap">
                                     ${badgeContent}
                                 </div>
                             </div>
@@ -691,7 +712,7 @@
                         <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">แอบดูข้อความที่ส่งหากันในระบบ</p>
                     </div>
                     
-                    <div class="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 px-2 max-w-4xl mx-auto">
+                    <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8 px-2 max-w-5xl mx-auto">
                         ${msgsHTML}
                     </div>
                 </div>
@@ -926,7 +947,7 @@
                         this.mediaRecorder.onstop = () => {
                             const type = this.mediaRecorder.mimeType || 'audio/mp4';
                             this.audioBlob = new Blob(this.audioChunks, { type: type });
-                            this.lastRecordingTime = this.recordingTime; // เก็บเวลาอัดไว้ตอนหยุด
+                            this.lastRecordingTime = this.recordingTime; 
                             stream.getTracks().forEach(track => track.stop());
                             this.showView('compose'); 
                         };
@@ -1034,18 +1055,48 @@
                 });
             },
 
-            renderInbox: function() {
+            setAdminSearch: function(val) {
+                this.adminSearchQuery = val;
+                const container = document.getElementById('inboxMessageContainer');
+                if (container) {
+                    container.innerHTML = this.renderInboxMessagesList();
+                }
+            },
+
+            renderInboxMessagesList: function() {
+                let displayMessages = this.messages;
+                
+                // สำหรับ Admin กรองข้อความตามคำค้นหา
+                if (this.profile.isAdmin && this.adminSearchQuery.trim() !== '') {
+                    const query = this.adminSearchQuery.toLowerCase().trim();
+                    displayMessages = this.messages.filter(msg => {
+                        // ค้นหาจากคนส่ง
+                        if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
+                        
+                        // ค้นหาจากคนรับ
+                        let foundInTo = false;
+                        msg.to.forEach(toId => {
+                            if (toId.toLowerCase().includes(query)) foundInTo = true;
+                            const preUser = predefinedUsers.find(u => u.studentId === toId);
+                            if (preUser && (preUser.name.toLowerCase().includes(query) || preUser.fullName.toLowerCase().includes(query))) foundInTo = true;
+                        });
+                        return foundInTo;
+                    });
+                }
+
                 let msgsHTML = '';
-                if(this.messages.length === 0) {
+                if(displayMessages.length === 0) {
                     msgsHTML = `
                         <div class="text-center py-16 md:py-24 flex flex-col items-center justify-center animate-fade-in">
                             <div class="w-20 h-20 md:w-32 md:h-32 bg-white/30 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner border border-white/50">
                                 <i class="fa-solid fa-envelope-open text-3xl md:text-5xl text-primary/40"></i>
                             </div>
-                            <p class="text-primary/70 font-bold text-base md:text-xl drop-shadow-sm text-center">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
+                            <p class="text-primary/70 font-bold text-base md:text-xl drop-shadow-sm text-center">
+                                ${this.profile.isAdmin && this.adminSearchQuery ? 'ไม่พบข้อความที่ค้นหา' : 'ยังไม่มีข้อความถึงคุณในขณะนี้'}
+                            </p>
                         </div>`;
                 } else {
-                    this.messages.forEach((msg, idx) => {
+                    displayMessages.forEach((msg, idx) => {
                         const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
                         const isAudio = msg.type === 'audio';
                         const isAnonymous = msg.from.isAnonymous;
@@ -1073,7 +1124,7 @@
                         }
 
                         msgsHTML += `
-                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-3 md:p-5 rounded-xl md:rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-2 md:gap-4 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up w-full" style="animation-delay: ${idx * 50}ms">
+                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-3 md:p-5 rounded-xl md:rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-2 md:gap-4 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up w-full" style="animation-delay: ${idx * 20}ms">
                             <div class="flex flex-row sm:flex-col items-center justify-between w-full sm:w-auto gap-2 sm:gap-0 border-b border-gray-200/50 sm:border-0 pb-2 sm:pb-0">
                                 <div class="flex items-center gap-2.5">
                                     <div class="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden ${isAnonymous ? 'border-2 border-slate-400' : 'border-2 border-white'}">
@@ -1114,10 +1165,26 @@
                         </div>`;
                     });
                 }
+                return msgsHTML;
+            },
+
+            renderInbox: function() {
+                // แถบค้นหาสำหรับ Admin
+                let adminSearchHTML = '';
+                if (this.profile.isAdmin) {
+                    adminSearchHTML = `
+                        <div class="mb-4 md:mb-6 relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-sm md:text-base"></i>
+                            <input type="text" placeholder="แอดมิน: ค้นหาด้วยชื่อ, รหัสผู้ส่งหรือผู้รับ..." 
+                                class="w-full pl-10 pr-4 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl bg-white/40 border border-white/50 focus:bg-white/70 focus:border-secondary focus:ring-2 focus:ring-secondary/30 outline-none transition-all text-xs md:text-sm font-medium text-primary placeholder-primary/60 shadow-inner"
+                                onkeyup="app.setAdminSearch(this.value)" value="${this.adminSearchQuery}">
+                        </div>
+                    `;
+                }
 
                 return `
                 <div class="glass-card rounded-[1.5rem] md:rounded-[2.5rem] p-3 sm:p-5 md:p-8 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative z-20">
-                    <div class="flex items-center justify-between mb-4 md:mb-8 border-b border-white/40 pb-3 md:pb-5">
+                    <div class="flex items-center justify-between mb-4 md:mb-6 border-b border-white/40 pb-3 md:pb-5">
                         <div class="flex items-center w-full">
                             <button onclick="app.showView(app.profile.isPredefined ? 'feed' : 'home')" class="p-2 md:p-3 bg-white/20 hover:bg-white/40 hover:shadow-md rounded-xl md:rounded-2xl mr-2 sm:mr-4 transition-all text-primary shadow-sm flex-shrink-0">
                                 <i class="fa-solid fa-arrow-left text-base md:text-xl"></i>
@@ -1127,13 +1194,16 @@
                                     <i class="fa-solid fa-envelope-open-text mr-2 hidden sm:inline-block"></i> กล่องจดหมาย
                                 </h2>
                                 <p class="text-primary/70 mt-0.5 font-bold text-[10px] md:text-xs truncate">
-                                    ${this.profile.isAdmin ? '<span class="text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md"><i class="fa-solid fa-shield-halved mr-1"></i> โหมดแอดมิน</span>' : 'ข้อความที่ส่งถึงคุณ'}
+                                    ${this.profile.isAdmin ? '<span class="text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md"><i class="fa-solid fa-shield-halved mr-1"></i> โหมดจัดการของแอดมิน</span>' : 'ข้อความที่ส่งถึงคุณ'}
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div class="space-y-3 md:space-y-5 relative z-10">
-                        ${msgsHTML}
+                    
+                    ${adminSearchHTML}
+
+                    <div id="inboxMessageContainer" class="space-y-3 md:space-y-5 relative z-10">
+                        ${this.renderInboxMessagesList()}
                     </div>
                 </div>`;
             }
