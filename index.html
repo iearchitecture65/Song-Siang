@@ -123,9 +123,9 @@
             opacity: 1;
         }
 
-        /* Helper for Centering Initial Letters - Fixed for perfect centering */
+        /* Fixed: Removed !important from display to allow 'hidden' class to work */
         .flex-center-all {
-            display: flex !important;
+            display: flex;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
@@ -242,7 +242,6 @@
         import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
-        // Fixed folder path to ensure local resolution
         const GITHUB_IMG_BASE_URL = "./65"; 
 
         const firebaseConfig = {
@@ -519,6 +518,16 @@
                 const baseId = btoa(src).substring(0,10);
                 const loader = document.getElementById(`loader-${baseId}`);
                 if (loader) loader.classList.add('hidden');
+                
+                // Fixed: Ensure fallback is hidden if image loaded successfully
+                const container = img.parentElement;
+                if (container) {
+                    const fallback = container.parentElement.querySelector('.fallback-name');
+                    if (fallback) {
+                        fallback.classList.add('hidden');
+                        fallback.classList.remove('flex');
+                    }
+                }
             },
 
             onImageError: function(img) {
@@ -1106,7 +1115,7 @@
                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            // Fixed: Ensure abbreviation appears if image is not available in feed
+                            // Fixed: Ensure abbreviation is hidden when image exists by correctly using 'hidden' class
                             senderImg = sender ? 
                                 `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary font-bold text-[1.5rem] bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
                                 `<div class="w-full h-full flex-center-all text-primary font-bold text-lg">${this.getAbbr(msg.from.name)}</div>`;
@@ -1619,7 +1628,7 @@
                              senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            // Fixed: Fallback name logic for inbox
+                            // Fixed: Abr text z-index and hidden logic
                             senderImg = sender ? 
                                 `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
                                 `<span class="text-primary flex-center-all w-full h-full text-sm font-bold">${this.getAbbr(msg.from.name)}</span>`;
