@@ -22,7 +22,6 @@
                         'blob': 'blob 10s infinite alternate',
                         'fade-in': 'fadeIn 0.3s ease-out forwards',
                         'slide-up': 'slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                        'spin-slow': 'spin 3s linear infinite',
                     },
                     keyframes: {
                         blob: {
@@ -47,6 +46,8 @@
             min-height: 100vh;
             overflow-x: hidden;
             word-wrap: break-word;
+            /* Disable double-tap zoom on mobile devices */
+            touch-action: manipulation;
         }
         .glass-panel {
             background: rgba(255, 255, 255, 0.08);
@@ -97,6 +98,11 @@
         }
 
         /* Image Loading Spinner & Transitions */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         .img-loading-spinner {
             border: 3px solid rgba(255, 255, 255, 0.3);
             border-top: 3px solid #fddf31;
@@ -111,6 +117,14 @@
         }
         .img-container img.loaded {
             opacity: 1;
+        }
+
+        /* Helper for Centering Initial Letters */
+        .flex-center-all {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
     </style>
 </head>
@@ -242,7 +256,7 @@
             { id: 21, studentId: "65030115", fullName: "นายนนทวัฒน์ ชีพอุบัติ", name: "เฟรม" },
             { id: 22, studentId: "65030123", fullName: "นางสาวนันทกานต์ ชูจันทร์", name: "จิ๊บ" },
             { id: 23, studentId: "65030138", fullName: "นายปฏิภาณ บำเรอจิต", name: "ปลั๊ก" },
-            { id: 24, studentId: "65030140", fullName: "นางสาวปณิตา พงษ์เรือง", name: "ปิ่น" },
+            { id: 24, studentId: "65030140", fullName: "นางสาวปณิตตา พงษ์เรือง", name: "ปิ่น" },
             { id: 25, studentId: "65030145", fullName: "นางสาวปรียากร สายสิม", name: "ปาล์มมี่" },
             { id: 26, studentId: "65030173", fullName: "นางสาวพุธิตา ปันฟอง", name: "ใบเตย" },
             { id: 27, studentId: "65030193", fullName: "นายภูวิศ ชินทองเปลว", name: "โบ๊ท" },
@@ -251,7 +265,7 @@
             { id: 30, studentId: "65030221", fullName: "นางสาววรัญญา ประสิทธิ์พิชิต", name: "เมอ" },
             { id: 31, studentId: "65030225", fullName: "นางสาววริษา อุ่นวิเศษ", name: "หมีพู" },
             { id: 32, studentId: "65030231", fullName: "นางสาววุฒิชัย อุ่นวิเศษ", name: "วุฒิ" },
-            { id: 33, studentId: "65030234", fullName: "นางสาวศศิกานต์ เจิรญพันธ์", name: "แพร์" },
+            { id: 33, studentId: "65030234", fullName: "นางสาวศศิกานต์ เจริญพันธ์", name: "แพร์" },
             { id: 34, studentId: "65030242", fullName: "นายศิวกร คู่โนรัมย์", name: "โอเว่น" },
             { id: 35, studentId: "65030249", fullName: "นายศุภาวุฒิ ไขดอน", name: "เบต" },
             { id: 36, studentId: "65030272", fullName: "นางสาวอชิรญา ทิพกันทา", name: "แทมมี่" },
@@ -295,7 +309,7 @@
             memberSearchQuery: '',
             registeredUsers: [],
             
-            maxWords: 200,
+            maxChars: 500,
             maxAudioTime: 30,
             
             mediaRecorder: null,
@@ -308,7 +322,7 @@
             composeMode: 'audio',
             preloadedImages: false,
             isMobileMenuOpen: false,
-            imageCache: {}, // For persistent image caching
+            imageCache: {},
 
             init: async function() {
                 try {
@@ -379,7 +393,7 @@
                 onSnapshot(settingsRef, (docSnap) => {
                     if(docSnap.exists()) {
                         const data = docSnap.data();
-                        this.maxWords = data.maxWords || 200;
+                        this.maxChars = data.maxChars || 500;
                         this.maxAudioTime = data.maxAudioTime || 30;
                     }
                 });
@@ -396,12 +410,12 @@
                 this.preloadedImages = true;
             },
 
-            // Helper for rendering images with loader and cache
             renderImage: function(src, altText, extraClass = "") {
                 const isLoaded = this.imageCache[src];
+                const baseId = btoa(src).substring(0,10);
                 return `
-                    <div class="img-container relative w-full h-full flex items-center justify-center bg-secondary/50">
-                        <div id="loader-${btoa(src).substring(0,10)}" class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
+                    <div class="img-container relative w-full h-full flex items-center justify-center bg-secondary/50 overflow-hidden">
+                        <div id="loader-${baseId}" class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
                         <img src="${src}" 
                              alt="${altText}"
                              class="w-full h-full object-cover relative z-0 ${isLoaded ? 'loaded' : ''} ${extraClass}"
@@ -414,8 +428,8 @@
             onImageLoaded: function(img, src) {
                 this.imageCache[src] = true;
                 img.classList.add('loaded');
-                const loaderId = `loader-${btoa(src).substring(0,10)}`;
-                const loader = document.getElementById(loaderId);
+                const baseId = btoa(src).substring(0,10);
+                const loader = document.getElementById(`loader-${baseId}`);
                 if (loader) loader.classList.add('hidden');
             },
 
@@ -425,7 +439,10 @@
                     const loader = container.querySelector('.img-loading-spinner');
                     if (loader) loader.classList.add('hidden');
                     const fallback = container.parentElement.querySelector('.fallback-name');
-                    if (fallback) fallback.classList.remove('hidden');
+                    if (fallback) {
+                        fallback.classList.remove('hidden');
+                        fallback.classList.add('flex');
+                    }
                 }
                 img.style.display = 'none';
             },
@@ -752,8 +769,8 @@
                     </div>
                     <div class="space-y-6">
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
-                            <label class="block text-sm font-bold text-white mb-2">จำกัดจำนวนคำต่อข้อความ (คำ)</label>
-                            <input type="number" id="inpMaxWords" value="${this.maxWords}" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
+                            <label class="block text-sm font-bold text-white mb-2">จำกัดจำนวนตัวอักษรต่อข้อความ (ตัว)</label>
+                            <input type="number" id="inpMaxChars" value="${this.maxChars}" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
                         </div>
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
                             <label class="block text-sm font-bold text-white mb-2">เวลาอัดเสียงสูงสุด (วินาที)</label>
@@ -767,11 +784,13 @@
             },
             
             saveAdminSettings: async function() {
-                const w = parseInt(document.getElementById('inpMaxWords').value);
+                const c = parseInt(document.getElementById('inpMaxChars').value);
                 const a = parseInt(document.getElementById('inpMaxAudio').value);
-                if (w > 0 && a > 0) {
+                if (c > 0 && a > 0) {
                     try {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { maxWords: w, maxAudioTime: a });
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { maxChars: c, maxAudioTime: a });
+                        this.maxChars = c;
+                        this.maxAudioTime = a;
                         glassSwal.fire({ 
                             iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', 
                             title: 'บันทึกสำเร็จ!', 
@@ -847,8 +866,9 @@
                     
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
-                            <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : u.name[0])}
+                            <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all leading-none">${u.name[0]}</span>`)}
+                                <span class="fallback-name h-full w-full flex-center-all leading-none hidden absolute inset-0 z-10 bg-secondary">${u.name[0]}</span>
                             </div>
                             <div class="flex-1 text-center sm:text-left">
                                 <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2">
@@ -870,41 +890,6 @@
                         </div>
                     `;
                 }).join('');
-            },
-
-            toggleUserBlock: async function(uid, currentlyBlocked) {
-                const action = currentlyBlocked ? 'ปลดบล็อก' : 'บล็อก';
-                glassSwal.fire({
-                    title: `${action}สมาชิก?`,
-                    text: currentlyBlocked ? 'สมาชิกจะสามารถกลับมาใช้งานระบบได้ปกติ' : 'สมาชิกจะไม่สามารถเข้าสู่ระบบและใช้งานได้',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: action,
-                    cancelButtonText: 'ยกเลิก'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid), {
-                            isBlocked: !currentlyBlocked
-                        }, { merge: true });
-                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ดำเนินการสำเร็จ!', showConfirmButton: false, timer: 1000 });
-                    }
-                });
-            },
-
-            deleteUserFromSystem: async function(uid) {
-                glassSwal.fire({
-                    title: 'ลบข้อมูลสมาชิก?',
-                    text: 'ข้อมูลสถานะการเข้าสู่ระบบจะถูกลบ ข้อมูลการล็อกอินจะถูกล้าง',
-                    icon: 'error',
-                    showCancelButton: true,
-                    confirmButtonText: 'ลบข้อมูล',
-                    cancelButtonText: 'ยกเลิก'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid));
-                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ลบเรียบร้อย!', showConfirmButton: false, timer: 1000 });
-                    }
-                });
             },
 
             viewFeedMessage: function(msgId) {
@@ -938,13 +923,11 @@
 
             renderFeed: function() {
                 let msgsHTML = '';
-                
-                // FILTER LOGIC: Show only to self, to everyone, or if Admin
                 const myStudentId = this.profile.studentId;
                 const filteredMessages = this.allMessages.filter(msg => {
-                    if (this.profile.isAdmin) return true; // Admin sees all
+                    if (this.profile.isAdmin) return true;
                     const toMe = msg.to.includes(myStudentId);
-                    const toEveryone = msg.to.length >= predefinedUsers.length; // Assume Select All = Everyone
+                    const toEveryone = msg.to.length >= predefinedUsers.length;
                     return toMe || toEveryone;
                 });
 
@@ -963,12 +946,12 @@
                         let senderImg = '';
                         
                         if (isAnonymous) {
-                            senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
+                            senderImg = `<div class="w-full h-full flex-center-all text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden w-full h-full flex items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</span>` : 
-                                `<div class="w-full h-full flex items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</div>`;
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden w-full h-full flex-center-all leading-none text-primary font-bold text-lg bg-secondary">${msg.from.name.substring(0,2)}</span>` : 
+                                `<div class="w-full h-full flex-center-all leading-none text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</div>`;
                         }
                         
                         const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
@@ -1089,11 +1072,11 @@
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
                         <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
-                            class="relative rounded-full flex items-center justify-center text-primary font-bold user-avatar mb-2 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
+                            class="relative rounded-full flex-center-all text-primary font-bold user-avatar mb-2 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
                             
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center shadow-inner">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex-center-all shadow-inner">
                                 ${app.renderImage(imgUrl, user.name)}
-                                <span class="fallback-name relative z-10 hidden w-full h-full flex items-center justify-center text-[20px] md:text-[24px] font-bold text-primary">${user.name.substring(0, 2)}</span>
+                                <span class="fallback-name relative z-10 hidden w-full h-full flex-center-all leading-none text-[20px] md:text-[24px] font-bold text-primary bg-secondary">${user.name.substring(0, 2)}</span>
                                 <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
@@ -1136,6 +1119,17 @@
                 this.showView('compose'); 
             },
 
+            updateCharCount: function() {
+                const txt = document.getElementById('txtMessage');
+                const display = document.getElementById('charCountDisplay');
+                if (txt && display) {
+                    const count = txt.value.length;
+                    display.innerText = `${count} / ${this.maxChars} ตัวอักษร`;
+                    if (count > this.maxChars) display.classList.add('text-red-500');
+                    else display.classList.remove('text-red-500');
+                }
+            },
+
             renderCompose: function() {
                 const isAudio = this.composeMode === 'audio';
                 const audioArea = this.audioBlob ? `
@@ -1150,7 +1144,7 @@
                         <div class="text-5xl md:text-6xl font-mono mb-6 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
                             00:${String(this.recordingTime).padStart(2, '0')}
                         </div>
-                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
+                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 rounded-full flex-center-all text-white shadow-xl transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
                             ${this.isRecording ? 
                                 '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl relative z-10"></i>' : 
                                 '<i class="fa-solid fa-microphone text-5xl relative z-10"></i>'}
@@ -1162,9 +1156,9 @@
 
                 const textArea = `
                     <div class="w-full flex flex-col h-full animate-fade-in relative">
-                        <textarea id="txtMessage" class="glass-input w-full flex-1 p-4 rounded-2xl outline-none resize-none min-h-[180px] text-base text-primary shadow-inner font-medium break-words" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
-                        <div class="text-right text-xs mt-2 font-bold text-primary/60" id="wordCount">
-                            จำกัด ${this.maxWords} คำ
+                        <textarea id="txtMessage" oninput="app.updateCharCount()" class="glass-input w-full flex-1 p-4 rounded-2xl outline-none resize-none min-h-[180px] text-base text-primary shadow-inner font-medium break-words" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
+                        <div class="text-right text-xs mt-2 font-bold text-primary/60" id="charCountDisplay">
+                            0 / ${this.maxChars} ตัวอักษร
                         </div>
                     </div>`;
 
@@ -1182,10 +1176,10 @@
                         </div>
                     </div>
                     <div class="flex bg-white/30 p-1 rounded-2xl mb-6 shadow-inner relative border border-white/40">
-                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
+                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3 rounded-xl text-sm font-bold flex-center-all space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
                             <i class="fa-solid fa-microphone-lines text-base"></i> <span>ส่งเสียง</span>
                         </button>
-                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
+                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3 rounded-xl text-sm font-bold flex-center-all space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
                             <i class="fa-solid fa-keyboard text-base"></i> <span>พิมพ์ข้อความ</span>
                         </button>
                     </div>
@@ -1193,10 +1187,10 @@
                         ${isAudio ? audioArea : textArea}
                     </div>
                     <div class="mt-8 flex flex-col sm:flex-row justify-end gap-3">
-                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
+                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex-center-all gap-2">
                             <i class="fa-solid fa-user-secret"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
                         </button>
-                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
+                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex-center-all gap-2">
                             <i class="fa-solid fa-paper-plane"></i> <span>ส่งระบุตัวตน</span>
                         </button>
                     </div>
@@ -1260,8 +1254,7 @@
                 if(this.composeMode === 'text') {
                     content = document.getElementById('txtMessage').value.trim();
                     if(!content) return glassSwal.fire('แจ้งเตือน', 'กรุณาพิมพ์ข้อความ', 'warning');
-                    const wc = content.split(/\s+/).filter(w=>w.length>0).length;
-                    if(wc > this.maxWords) return glassSwal.fire('แจ้งเตือน', `จำกัดไม่เกิน ${this.maxWords} คำ`, 'warning');
+                    if(content.length > this.maxChars) return glassSwal.fire('แจ้งเตือน', `จำกัดไม่เกิน ${this.maxChars} ตัวอักษร`, 'warning');
                 } else {
                     if(!this.audioBlob) return glassSwal.fire('แจ้งเตือน', 'กรุณาอัดเสียงก่อนส่ง', 'warning');
                     content = await new Promise((res) => {
@@ -1409,7 +1402,7 @@
                         <div class="text-primary font-bold text-sm">
                             พบ <span class="text-lg">${count}</span> รายการที่ตรงกับ "${this.adminSearchQuery}"
                         </div>
-                        <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2">
+                        <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex-center-all gap-2">
                             <i class="fa-solid fa-trash-sweep"></i> ลบรายการที่ค้นหาทั้งหมด
                         </button>
                     </div>`;
@@ -1457,19 +1450,19 @@
                         }
 
                         if (isAnonymous) {
-                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
+                             senderImg = `<div class="w-full h-full flex-center-all bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>` : 
-                                `<span class="text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>`;
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all leading-none text-primary w-full h-full text-sm font-bold bg-secondary">${msg.from.name.substring(0,2)}</span>` : 
+                                `<span class="text-primary flex-center-all leading-none w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>`;
                         }
 
                         msgsHTML += `
                         <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col sm:flex-row gap-4 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 15}ms">
                             <div class="flex items-center justify-between sm:block">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
+                                    <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold shadow-md relative overflow-hidden border-2 border-white">
                                         ${senderImg}
                                     </div>
                                     <div class="sm:hidden">
