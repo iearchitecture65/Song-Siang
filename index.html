@@ -101,7 +101,6 @@
             row-gap: 1.5rem;
         }
 
-        /* Image Loading Spinner & Transitions */
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -123,7 +122,6 @@
             opacity: 1;
         }
 
-        /* Fixed: Removed !important from display to allow 'hidden' class to work */
         .flex-center-all {
             display: flex;
             align-items: center !important;
@@ -134,7 +132,6 @@
             line-height: normal !important;
         }
 
-        /* Mobile Menu Transitions & Blurring */
         #mainContentWrapper {
             transition: filter 0.3s ease, transform 0.3s ease;
         }
@@ -156,7 +153,6 @@
     <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
         <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50">
-            <!-- Website Logo - Top Left -->
             <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center h-full">
                 <img src="LOGO 65.png" alt="Logo" class="h-10 md:h-14 w-auto drop-shadow-lg cursor-pointer hover:scale-105 transition-transform active:scale-95" 
                      onclick="app.handleLogoClick()"
@@ -168,7 +164,6 @@
             </h1>
             <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
-            <!-- Desktop Nav: Added flex-nowrap to prevent wrapping into 2 lines -->
             <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-center gap-2 lg:gap-4 flex-nowrap">
                 <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
@@ -244,7 +239,6 @@
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         const GITHUB_IMG_BASE_URL = "./65"; 
 
-        // API Key Obfuscation System
         const _kP = ["AIzaSyDLKlp8", "mLuPsw0zyxy5", "cead2n0vPDGP2Kw"];
         const _gk = () => _kP.join('');
 
@@ -381,7 +375,6 @@
                 }
             },
 
-            // Helper for Consonant-only abbreviation (2 letters)
             getAbbr: function(name) {
                 if (!name) return "";
                 const consonants = name.replace(/[^ก-ฮ]/g, '');
@@ -434,7 +427,7 @@
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
                     hamIcon.classList.add('fa-bars');
-                    hamIcon.classList.remove('fa-xmark');
+                    hamIcon.classList.add('fa-xmark');
                     contentWrapper.classList.remove('menu-open-blur');
                     if(fabContainer) fabContainer.classList.remove('menu-open-blur');
                 }
@@ -523,7 +516,6 @@
                 const loader = document.getElementById(`loader-${baseId}`);
                 if (loader) loader.classList.add('hidden');
                 
-                // Fixed: Ensure fallback is hidden if image loaded successfully
                 const container = img.parentElement;
                 if (container) {
                     const fallback = container.parentElement.querySelector('.fallback-name');
@@ -542,7 +534,7 @@
                     const fallback = container.parentElement.querySelector('.fallback-name');
                     if (fallback) {
                         fallback.classList.remove('hidden');
-                        fallback.classList.add('flex');
+                        fallback.classList.add('flex-center-all');
                     }
                 }
                 img.style.display = 'none';
@@ -591,7 +583,11 @@
                     this.updateFAB(); 
                 }
                 else if(viewName === 'settings') { root.innerHTML = this.renderSettings(); this.updateFAB(); }
-                else if(viewName === 'manage_users') { root.innerHTML = this.renderUserManagement(); this.setupUsersListener(); }
+                else if(viewName === 'manage_users') { 
+                    this.memberSearchQuery = '';
+                    root.innerHTML = this.renderUserManagement(); 
+                    this.setupUsersListener(); 
+                }
                 
                 if (viewName !== 'home' && viewName !== 'feed') {
                     const globalFab = document.getElementById('globalFabContainer');
@@ -955,9 +951,13 @@
                                 class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/30 border border-white/40 outline-none transition-all text-sm font-medium text-white placeholder:text-white/80 shadow-inner"
                                 onkeyup="app.setMemberSearch(this.value)">
                         </div>
+                        <div id="memberSearchHeader" class="mt-6 mb-4">
+                            ${this.renderMemberSearchHeader()}
+                        </div>
                     </div>
 
                     <div id="usersListContainer" class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar" style="max-height: 50vh;">
+                        ${this.renderUserManagementList()}
                     </div>
                     
                     <div class="mt-2 pt-2 border-t border-white/10 text-center">
@@ -972,9 +972,28 @@
             },
 
             renderUserManagementUI: function() {
-                const container = document.getElementById('usersListContainer');
-                if (!container) return;
+                const listContainer = document.getElementById('usersListContainer');
+                const headerContainer = document.getElementById('memberSearchHeader');
+                if (listContainer) listContainer.innerHTML = this.renderUserManagementList();
+                if (headerContainer) headerContainer.innerHTML = this.renderMemberSearchHeader();
+            },
 
+            renderMemberSearchHeader: function() {
+                if (this.memberSearchQuery.trim() === '') return '';
+                
+                const filteredCount = this.getFilteredUsers().length;
+                return `
+                    <div class="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center animate-fadeIn gap-3">
+                        <div class="text-white font-bold text-sm">
+                            พบ <span class="text-lg">${filteredCount}</span> รายการที่ตรงกับ "${this.memberSearchQuery}"
+                        </div>
+                        <button onclick="app.deleteAllFilteredMembers()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-trash-sweep"></i> ลบรายการที่ค้นหาทั้งหมด
+                        </button>
+                    </div>`;
+            },
+
+            getFilteredUsers: function() {
                 const queryStr = this.memberSearchQuery.toLowerCase().trim();
                 const allUsers = [...predefinedUsers];
                 this.registeredUsers.forEach(reg => {
@@ -983,27 +1002,31 @@
                     }
                 });
 
-                const filtered = allUsers.filter(u => 
+                return allUsers.filter(u => 
                     u.name.toLowerCase().includes(queryStr) || 
                     u.studentId.toLowerCase().includes(queryStr) ||
                     (u.fullName && u.fullName.toLowerCase().includes(queryStr))
                 );
+            },
+
+            renderUserManagementList: function() {
+                const filtered = this.getFilteredUsers();
 
                 if (filtered.length === 0) {
-                    container.innerHTML = '<p class="text-center py-10 text-white/60">ไม่พบสมาชิกที่ตรงตามเงื่อนไข</p>';
-                    return;
+                    return '<p class="text-center py-10 text-white/60">ไม่พบสมาชิกที่ตรงตามเงื่อนไข</p>';
                 }
 
-                container.innerHTML = filtered.map(u => {
+                return filtered.map(u => {
                     const regData = this.registeredUsers.find(r => r.id === u.studentId) || {};
                     const isBlocked = regData.isBlocked === true;
                     const lastLogin = regData.lastLogin ? new Date(regData.lastLogin).toLocaleString('th-TH') : 'ยังไม่เคยเข้าสู่ระบบ';
+                    const abbr = this.getAbbr(u.name);
                     
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
                             <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${this.getAbbr(u.name)}</span>`)}
-                                <span class="fallback-name h-full w-full flex-center-all hidden absolute inset-0 z-10 bg-secondary">${this.getAbbr(u.name)}</span>
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${abbr}</span>`)}
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-sm h-full w-full">${abbr}</span>
                             </div>
                             <div class="flex-1 text-center sm:text-left min-w-0 w-full">
                                 <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2 truncate">
@@ -1025,6 +1048,35 @@
                         </div>
                     `;
                 }).join('');
+            },
+
+            deleteAllFilteredMembers: async function() {
+                const filtered = this.getFilteredUsers();
+                if (filtered.length === 0) return;
+
+                glassSwal.fire({
+                    title: `ลบข้อมูล ${filtered.length} สมาชิก?`,
+                    html: `การดำเนินการนี้จะลบข้อมูลสถานะสมาชิกที่ค้นหาทั้งหมด (เฉพาะสมาชิกที่เคยเข้าระบบ)`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบข้อมูลทั้งหมด',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        const batch = writeBatch(db);
+                        filtered.forEach(u => {
+                            // Only delete if they actually exist in registeredUsers (predefined but not registered can't be deleted)
+                            if (this.registeredUsers.some(r => r.id === u.studentId)) {
+                                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', u.studentId);
+                                batch.delete(ref);
+                            }
+                        });
+                        await batch.commit();
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ดำเนินการสำเร็จ!', showConfirmButton: false, timer: 1000 });
+                        this.memberSearchQuery = '';
+                        this.renderUserManagementUI();
+                    }
+                });
             },
 
             toggleUserBlock: async function(uid, currentlyBlocked) {
@@ -1114,15 +1166,15 @@
                         const isAudio = msg.type === 'audio';
                         const isAnonymous = msg.from.isAnonymous;
                         let senderImg = '';
+                        const abbr = this.getAbbr(msg.from.name);
                         
                         if (isAnonymous) {
                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            // Fixed: Ensure abbreviation is hidden when image exists by correctly using 'hidden' class
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary font-bold text-[1.5rem] bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
-                                `<div class="w-full h-full flex-center-all text-primary font-bold text-lg">${this.getAbbr(msg.from.name)}</div>`;
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary font-bold text-[1.5rem] bg-secondary">${abbr}</span>` : 
+                                `<div class="w-full h-full flex-center-all text-primary font-bold text-lg bg-secondary">${abbr}</div>`;
                         }
                         
                         const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
@@ -1244,6 +1296,7 @@
                 predefinedUsers.forEach(user => {
                     const isSelected = this.selectedIds.includes(user.studentId);
                     const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
+                    const abbr = this.getAbbr(user.name);
                     
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
@@ -1252,7 +1305,7 @@
                             
                             <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center shadow-inner">
                                 ${app.renderImage(imgUrl, user.name)}
-                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-[20px] md:text-[24px] font-bold text-primary bg-secondary">${this.getAbbr(user.name)}</span>
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-[20px] md:text-[24px] font-bold text-primary bg-secondary">${abbr}</span>
                                 <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
@@ -1367,12 +1420,10 @@
                     <div class="min-h-[250px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-3xl p-6 bg-white/20 shadow-inner">
                         ${isAudio ? audioArea : textArea}
                     </div>
-                    <!-- Footer buttons: flex-col-reverse for mobile (Anon bottom), sm:flex-row for desktop -->
                     <div class="mt-8 flex flex-col-reverse sm:flex-row justify-end gap-3">
                         <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white border-2 border-dashed border-white bg-transparent hover:bg-white/10 transition-all shadow-lg text-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-user-secret"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
                         </button>
-                        <!-- Normal button: flex-grow (sm:flex-[2]) to be longer on desktop -->
                         <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2 sm:flex-[2] sm:min-w-[200px]">
                             <i class="fa-solid fa-paper-plane"></i> <span>${sendBtnLabel}</span>
                         </button>
@@ -1581,14 +1632,98 @@
                 }).length;
 
                 return `
-                    <div class="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center mb-6 animate-fadeIn gap-3">
-                        <div class="text-primary font-bold text-sm">
+                    <div class="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center mt-6 mb-8 animate-fadeIn gap-3">
+                        <div class="text-white font-bold text-sm">
                             พบ <span class="text-lg">${count}</span> รายการที่ตรงกับ "${this.adminSearchQuery}"
                         </div>
                         <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2">
                             <i class="fa-solid fa-trash-sweep"></i> ลบรายการที่ค้นหาทั้งหมด
                         </button>
                     </div>`;
+            },
+
+            renderRecipientDisplay: function(msg) {
+                if (!msg.to || msg.to.length === 0) return `<span class="text-xs text-primary/40 italic">ไม่ระบุผู้รับ</span>`;
+                
+                const count = msg.to.length;
+                const isEveryone = count >= predefinedUsers.length;
+                
+                if (isEveryone) {
+                    return `
+                        <div class="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm cursor-pointer hover:bg-primary/20 transition-all" onclick="app.showRecipientList('${msg.id}')">
+                            <i class="fa-solid fa-users text-primary text-xs"></i>
+                            <span class="text-[10px] font-bold text-primary">ทุกคนในรุ่น</span>
+                            <span class="bg-primary text-white text-[9px] px-1.5 rounded-full">${count}</span>
+                        </div>`;
+                }
+
+                if (count === 1) {
+                    const recipientId = msg.to[0];
+                    const user = predefinedUsers.find(u => u.studentId === recipientId);
+                    const abbr = user ? this.getAbbr(user.name) : "??";
+                    return `
+                        <div class="flex items-center gap-2 bg-secondary/20 px-3 py-1 rounded-full border border-secondary/40 shadow-sm transition-all">
+                             <div class="w-5 h-5 rounded-full overflow-hidden bg-secondary border border-white flex-shrink-0 relative flex-center-all">
+                                ${user ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-[10px] flex-center-all h-full w-full"></i>`}
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-[8px] h-full w-full">${abbr}</span>
+                             </div>
+                             <span class="text-[10px] font-bold text-primary truncate max-w-[80px]">${user ? user.name : recipientId}</span>
+                        </div>`;
+                }
+
+                let stackedAvatars = '';
+                const displayLimit = 2;
+                for (let i = 0; i < Math.min(count, displayLimit); i++) {
+                    const user = predefinedUsers.find(u => u.studentId === msg.to[i]);
+                    const abbr = user ? this.getAbbr(user.name) : "??";
+                    stackedAvatars += `
+                        <div class="w-6 h-6 rounded-full overflow-hidden bg-secondary border border-white -ml-2 first:ml-0 relative shadow-sm flex-center-all">
+                            ${user ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-[8px] flex-center-all h-full w-full"></i>`}
+                            <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-[8px] h-full w-full">${abbr}</span>
+                        </div>`;
+                }
+
+                return `
+                    <div class="flex items-center gap-1 group cursor-pointer" onclick="app.showRecipientList('${msg.id}')">
+                        <div class="flex items-center">
+                            ${stackedAvatars}
+                            ${count > displayLimit ? `<div class="w-6 h-6 rounded-full bg-primary/80 text-white text-[8px] flex items-center justify-center -ml-2 border border-white shadow-sm font-bold z-10">+${count - displayLimit}</div>` : ''}
+                        </div>
+                        <div class="bg-primary text-white text-[9px] px-2 py-0.5 rounded-full font-extrabold shadow-sm group-hover:scale-105 transition-transform">
+                            ${count} คน
+                        </div>
+                    </div>`;
+            },
+
+            showRecipientList: function(msgId) {
+                const msg = this.messages.find(m => m.id === msgId);
+                if (!msg) return;
+
+                const count = msg.to.length;
+                let listHTML = `<div class="grid grid-cols-1 gap-2 mt-4 max-h-[300px] overflow-y-auto px-2 custom-scrollbar">`;
+                
+                msg.to.forEach(tid => {
+                    const user = predefinedUsers.find(u => u.studentId === tid);
+                    const abbr = user ? this.getAbbr(user.name) : "??";
+                    listHTML += `
+                        <div class="flex items-center gap-3 p-2 bg-white/60 rounded-xl border border-white/50">
+                            <div class="w-10 h-10 rounded-full overflow-hidden bg-secondary border border-white shrink-0 relative flex-center-all">
+                                ${user ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-xs flex-center-all h-full w-full"></i>`}
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-xs h-full w-full">${abbr}</span>
+                            </div>
+                            <div class="text-left min-w-0">
+                                <div class="font-bold text-primary text-sm truncate">${user ? user.name : 'ไม่พบชื่อ'}</div>
+                                <div class="text-[10px] text-primary/60 font-medium">${tid}</div>
+                            </div>
+                        </div>`;
+                });
+                listHTML += `</div>`;
+
+                glassSwal.fire({
+                    title: `ผู้รับทั้งหมด (${count} ท่าน)`,
+                    html: listHTML,
+                    confirmButtonText: 'รับทราบ'
+                });
             },
 
             renderInboxMessagesList: function() {
@@ -1621,6 +1756,7 @@
                         const isAnonymous = msg.from.isAnonymous;
                         let senderImg = '';
                         let displayName = msg.from.name;
+                        const abbr = this.getAbbr(msg.from.name);
                         
                         const adminControls = this.profile.isAdmin ? `
                             <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 p-2 rounded-lg transition-all shadow-sm">
@@ -1636,42 +1772,64 @@
                              senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            // Fixed: Abr text z-index and hidden logic
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
-                                `<span class="text-primary flex-center-all w-full h-full text-sm font-bold">${this.getAbbr(msg.from.name)}</span>`;
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-sm h-full w-full">${abbr}</span>` : 
+                                `<span class="text-primary flex-center-all w-full h-full text-sm font-bold bg-secondary">${abbr}</span>`;
                         }
 
-                        msgsHTML += `
-                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col sm:flex-row gap-4 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 15}ms">
-                            <div class="flex items-center justify-between sm:block">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
+                        const adminJourneyHTML = this.profile.isAdmin ? `
+                            <div class="flex items-center gap-3 mb-3 pb-3 border-b border-white/40 overflow-x-auto no-scrollbar">
+                                <div class="flex flex-col items-center shrink-0">
+                                    <div class="w-8 h-8 rounded-full overflow-hidden border border-white bg-secondary relative shadow-sm flex-center-all">
                                         ${senderImg}
                                     </div>
-                                    <div class="sm:hidden min-w-0 flex-1">
-                                        <div class="font-extrabold text-primary text-sm truncate">${displayName}</div>
-                                        <div class="text-[9px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
-                                    </div>
+                                    <span class="text-[8px] font-bold text-primary mt-1 opacity-70">จาก</span>
                                 </div>
-                                <div class="sm:hidden">${adminControls}</div>
+                                <div class="text-primary/40 animate-pulse">
+                                    <i class="fa-solid fa-arrow-right-long text-sm"></i>
+                                </div>
+                                <div class="flex flex-col items-start shrink-0">
+                                    ${this.renderRecipientDisplay(msg)}
+                                    <span class="text-[8px] font-bold text-primary mt-1 opacity-70">ถึง</span>
+                                </div>
                             </div>
-                            <div class="flex-1 w-full min-w-0">
-                                <div class="hidden sm:flex justify-between items-start mb-2">
-                                    <div class="min-w-0 flex-1">
-                                        <span class="font-extrabold text-primary text-base truncate block">${displayName}</span>
-                                        <div class="text-[10px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                        ` : '';
+
+                        msgsHTML += `
+                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col gap-1 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 15}ms">
+                            
+                            ${adminJourneyHTML}
+                            
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="flex items-center justify-between sm:block">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold shadow-md relative overflow-hidden border-2 border-white">
+                                            ${senderImg}
+                                        </div>
+                                        <div class="sm:hidden min-w-0 flex-1">
+                                            <div class="font-extrabold text-primary text-sm truncate">${displayName}</div>
+                                            <div class="text-[9px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                        </div>
                                     </div>
-                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">${adminControls}</div>
+                                    <div class="sm:hidden">${adminControls}</div>
                                 </div>
-                                ${isAudio ? `
-                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm max-w-full">
-                                        <audio src="${msg.content}" controls class="h-8 w-[200px] max-w-full"></audio>
-                                    </div>` : `
-                                    <div class="text-primary bg-white/80 border border-white/50 px-5 py-3 rounded-2xl shadow-sm text-sm relative font-medium w-fit max-w-full">
-                                        <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl text-primary/20"></i>
-                                        <div class="pl-6 pt-1 break-words">${msg.content.trim()}</div>
-                                    </div>`}
+                                <div class="flex-1 w-full min-w-0">
+                                    <div class="hidden sm:flex justify-between items-start mb-2">
+                                        <div class="min-w-0 flex-1">
+                                            <span class="font-extrabold text-primary text-base truncate block">${displayName}</span>
+                                            <div class="text-[10px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                        </div>
+                                        <div class="opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">${adminControls}</div>
+                                    </div>
+                                    ${isAudio ? `
+                                        <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm max-w-full">
+                                            <audio src="${msg.content}" controls class="h-8 w-[200px] max-w-full"></audio>
+                                        </div>` : `
+                                        <div class="text-primary bg-white/80 border border-white/50 px-5 py-3 rounded-2xl shadow-sm text-sm relative font-medium w-fit max-w-full">
+                                            <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl text-primary/20"></i>
+                                            <div class="pl-6 pt-1 break-words">${msg.content.trim()}</div>
+                                        </div>`}
+                                </div>
                             </div>
                         </div>`;
                     });
@@ -1722,12 +1880,10 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Force scroll to top on refresh
             if ('scrollRestoration' in history) {
                 history.scrollRestoration = 'manual';
             }
             window.scrollTo(0, 0);
-            
             app.init();
         });
     </script>
