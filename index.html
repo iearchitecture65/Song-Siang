@@ -108,6 +108,13 @@
             <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
             <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-start gap-3">
+                <!-- Admin Only Buttons -->
+                <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-users-gear text-xl"></i>
+                    </div>
+                    <span class="text-[10px] font-medium">สมาชิก</span>
+                </button>
                 <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-gear text-xl"></i>
@@ -120,6 +127,7 @@
                     </div>
                     <span class="text-[10px] font-medium">ภาพรวม</span>
                 </button>
+                <!-- Standard Buttons -->
                 <button onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
                         <i class="fa-solid fa-envelope text-xl"></i>
@@ -141,8 +149,11 @@
             </button>
             
             <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 p-2 flex flex-col gap-1 z-50 w-44 transform transition-all origin-top-right text-slate-800">
+                <button id="btnUsersMob" onclick="app.showView('manage_users')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
+                    <i class="fa-solid fa-users-gear text-primary w-5 text-center"></i> จัดการสมาชิก
+                </button>
                 <button id="btnAdminMob" onclick="app.showView('settings')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
-                    <i class="fa-solid fa-gear text-primary w-5 text-center"></i> ตั้งค่า
+                    <i class="fa-solid fa-gear text-primary w-5 text-center"></i> ตั้งค่าระบบ
                 </button>
                 <button id="btnFeedMob" onclick="app.showView('feed')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
                     <i class="fa-solid fa-earth-asia text-primary w-5 text-center"></i> ภาพรวม
@@ -166,7 +177,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         const GITHUB_IMG_BASE_URL = "65"; 
@@ -254,10 +265,13 @@
             allMessages: [],
             messages: [],
             unsubscribeMsgs: null,
+            unsubscribeUsers: null,
             actualOtp: '',
             tempStudentId: '',
             currentRef: '',
             adminSearchQuery: '',
+            memberSearchQuery: '',
+            registeredUsers: [],
             
             maxWords: 200,
             maxAudioTime: 30,
@@ -280,14 +294,40 @@
                     const savedProfile = localStorage.getItem('songSiangProfile');
                     if (savedProfile) {
                         this.profile = JSON.parse(savedProfile);
-                        this.setupMessagesListener();
-                        this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
+                        const isBlocked = await this.checkBlockStatus(this.profile.studentId);
+                        if (isBlocked) {
+                            this.profile = null;
+                            localStorage.removeItem('songSiangProfile');
+                            glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งานกรุณาติดต่อผู้ดูแลระบบ', 'error');
+                            this.showView('login');
+                        } else {
+                            this.setupMessagesListener();
+                            this.setupUsersListener();
+                            this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
+                        }
                     } else {
                         this.showView('login');
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
                 }
+            },
+
+            checkBlockStatus: async function(uid) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid);
+                const snap = await getDoc(docRef);
+                return snap.exists() && snap.data().isBlocked === true;
+            },
+
+            setupUsersListener: function() {
+                if(this.unsubscribeUsers) this.unsubscribeUsers();
+                if(!this.profile || !this.profile.isAdmin) return;
+
+                const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status');
+                this.unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
+                    this.registeredUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (this.currentView === 'manage_users') this.renderUserManagementUI();
+                });
             },
 
             toggleMobileMenu: function() {
@@ -348,6 +388,8 @@
 
                     document.getElementById('btnAdminDesk').classList.toggle('hidden', !showAdmin);
                     document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
+                    document.getElementById('btnUsersDesk').classList.toggle('hidden', !showAdmin);
+                    document.getElementById('btnUsersMob').classList.toggle('hidden', !showAdmin);
                     
                     document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
                     document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
@@ -367,6 +409,7 @@
                     this.updateFAB(); 
                 }
                 else if(viewName === 'settings') { root.innerHTML = this.renderSettings(); this.updateFAB(); }
+                else if(viewName === 'manage_users') { root.innerHTML = this.renderUserManagement(); this.setupUsersListener(); }
                 
                 if (viewName !== 'home' && viewName !== 'feed') {
                     const globalFab = document.getElementById('globalFabContainer');
@@ -374,10 +417,26 @@
                 }
             },
 
-            loginSuccess: function(userProfile) {
+            loginSuccess: async function(userProfile) {
+                // Check block before proceed
+                const isBlocked = await this.checkBlockStatus(userProfile.studentId);
+                if (isBlocked) {
+                    return glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งาน', 'error');
+                }
+
+                // Register user status in Firestore if not exists
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', userProfile.studentId), {
+                    name: userProfile.name,
+                    fullName: userProfile.fullName || userProfile.name,
+                    lastLogin: Date.now(),
+                    isPredefined: !!userProfile.isPredefined,
+                    isBlocked: false
+                }, { merge: true });
+
                 this.profile = userProfile;
                 localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
                 this.setupMessagesListener();
+                this.setupUsersListener();
                 
                 glassSwal.fire({
                     iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>',
@@ -403,6 +462,7 @@
                         this.profile = null;
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
+                        if(this.unsubscribeUsers) this.unsubscribeUsers();
                         this.showView('login');
                     }
                 });
@@ -448,7 +508,39 @@
                             รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>
                         </button>
                     </div>
+                    <div class="pb-6 text-center">
+                        <button onclick="app.loginAsGuestPrompt()" class="text-[10px] text-white/70 hover:text-white underline font-medium">
+                            บุคคลทั่วไป/กรณีไม่ใช่นักศึกษา คลิกที่นี่
+                        </button>
+                    </div>
                 </div>`;
+            },
+
+            loginAsGuestPrompt: async function() {
+                const { value: name } = await glassSwal.fire({
+                    title: 'บุคคลทั่วไป',
+                    text: 'กรุณากรอกชื่อเรียกของคุณเพื่อใช้งานระบบ',
+                    input: 'text',
+                    inputPlaceholder: 'ชื่อของคุณ...',
+                    showCancelButton: true,
+                    confirmButtonText: 'เข้าใช้งาน',
+                    cancelButtonText: 'ยกเลิก',
+                    inputValidator: (value) => {
+                        if (!value) return 'กรุณากรอกชื่อก่อนเข้าใช้งาน'
+                    }
+                });
+
+                if (name) {
+                    // Generate a unique ID for guests
+                    const guestId = 'G' + Math.random().toString(36).substring(2, 9).toUpperCase();
+                    this.loginSuccess({ 
+                        studentId: guestId, 
+                        name: name, 
+                        fullName: name + ' (บุคคลทั่วไป)', 
+                        isPredefined: false,
+                        isGuest: true 
+                    });
+                }
             },
 
             requestOTP: async function() {
@@ -630,6 +722,134 @@
                 }
             },
 
+            renderUserManagement: function() {
+                return `
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[75vh] animate-slide-up">
+                    <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
+                        <div class="flex items-center">
+                            <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
+                                <i class="fa-solid fa-arrow-left text-xl"></i>
+                            </button>
+                            <div>
+                                <h2 class="text-xl font-extrabold text-white drop-shadow-md">จัดการสมาชิก</h2>
+                                <p class="text-blue-100 text-xs font-bold">ควบคุมการเข้าถึงระบบ</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-sm"></i>
+                            <input type="text" placeholder="ค้นหาชื่อ หรือรหัส..." 
+                                class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/40 border border-white/50 outline-none transition-all text-sm font-medium text-primary shadow-inner"
+                                onkeyup="app.setMemberSearch(this.value)">
+                        </div>
+                    </div>
+
+                    <div id="usersListContainer" class="space-y-3">
+                        <!-- Users will be rendered here -->
+                    </div>
+                </div>`;
+            },
+
+            setMemberSearch: function(val) {
+                this.memberSearchQuery = val;
+                this.renderUserManagementUI();
+            },
+
+            renderUserManagementUI: function() {
+                const container = document.getElementById('usersListContainer');
+                if (!container) return;
+
+                const query = this.memberSearchQuery.toLowerCase().trim();
+                
+                // Combine predefined with registered status
+                const allUsers = [...predefinedUsers];
+                this.registeredUsers.forEach(reg => {
+                    if (!allUsers.find(u => u.studentId === reg.id)) {
+                        allUsers.push({ studentId: reg.id, name: reg.name, fullName: reg.fullName, isPredefined: false });
+                    }
+                });
+
+                const filtered = allUsers.filter(u => 
+                    u.name.toLowerCase().includes(query) || 
+                    u.studentId.toLowerCase().includes(query) ||
+                    (u.fullName && u.fullName.toLowerCase().includes(query))
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<p class="text-center py-10 text-white/60">ไม่พบสมาชิกที่ตรงตามเงื่อนไข</p>';
+                    return;
+                }
+
+                container.innerHTML = filtered.map(u => {
+                    const regData = this.registeredUsers.find(r => r.id === u.studentId) || {};
+                    const isBlocked = regData.isBlocked === true;
+                    const lastLogin = regData.lastLogin ? new Date(regData.lastLogin).toLocaleString('th-TH') : 'ยังไม่เคยเข้าสู่ระบบ';
+                    
+                    return `
+                        <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
+                            <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold text-primary shadow-sm border border-white relative shrink-0">
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag"></i>' : (u.id ? `<img src="${GITHUB_IMG_BASE_URL}/${u.id}.png" class="w-full h-full object-cover rounded-full" onerror="this.remove()">` : u.name[0])}
+                            </div>
+                            <div class="flex-1 text-center sm:text-left">
+                                <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2">
+                                    ${u.name} 
+                                    ${u.studentId.startsWith('G') ? '<span class="text-[9px] bg-blue-500 text-white px-1.5 rounded-full font-medium">Guest</span>' : ''}
+                                    ${isBlocked ? '<span class="text-[9px] bg-red-500 text-white px-1.5 rounded-full font-medium">Blocked</span>' : ''}
+                                </div>
+                                <div class="text-[10px] text-primary/70 font-medium">${u.studentId} | ${u.fullName || ''}</div>
+                                <div class="text-[9px] text-primary/50 mt-1 italic">ล่าสุด: ${lastLogin}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="app.toggleUserBlock('${u.studentId}', ${isBlocked})" class="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all ${isBlocked ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}">
+                                    ${isBlocked ? '<i class="fa-solid fa-unlock mr-1"></i> ปลดบล็อก' : '<i class="fa-solid fa-ban mr-1"></i> บล็อก'}
+                                </button>
+                                <button onclick="app.deleteUserFromSystem('${u.studentId}')" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all">
+                                    <i class="fa-solid fa-trash-can mr-1"></i> ลบ
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            toggleUserBlock: async function(uid, currentlyBlocked) {
+                const action = currentlyBlocked ? 'ปลดบล็อก' : 'บล็อก';
+                glassSwal.fire({
+                    title: `${action}สมาชิก?`,
+                    text: currentlyBlocked ? 'สมาชิกจะสามารถกลับมาใช้งานระบบได้ปกติ' : 'สมาชิกจะไม่สามารถเข้าสู่ระบบและใช้งานได้',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยัน',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid), {
+                            isBlocked: !currentlyBlocked
+                        }, { merge: true });
+                        
+                        glassSwal.fire({ icon: 'success', title: 'ดำเนินการสำเร็จ!', showConfirmButton: false, timer: 1000 });
+                    }
+                });
+            },
+
+            deleteUserFromSystem: async function(uid) {
+                glassSwal.fire({
+                    title: 'ลบข้อมูลสมาชิก?',
+                    text: 'ข้อมูลสถานะการเข้าสู่ระบบจะถูกลบ (หากเป็นนักศึกษาจะยังอยู่ในรายชื่อเลือกส่ง แต่ข้อมูลการล็อกอินจะถูกล้าง)',
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบข้อมูล',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid));
+                        glassSwal.fire({ icon: 'success', title: 'ลบเรียบร้อย!', showConfirmButton: false, timer: 1000 });
+                    }
+                });
+            },
+
             viewFeedMessage: function(msgId) {
                 const msg = this.allMessages.find(m => m.id === msgId);
                 if(!msg) return;
@@ -640,6 +860,7 @@
                 if (this.profile.isAdmin && isAnonymous) {
                      const realSender = predefinedUsers.find(u => u.studentId === msg.from.id);
                      if(realSender) displayName += ` (${realSender.name})`;
+                     else displayName += ` (${msg.from.id})`;
                 }
 
                 if (msg.type === 'audio') {
@@ -1041,14 +1262,14 @@
             },
 
             deleteAllFiltered: async function() {
-                const query = this.adminSearchQuery.toLowerCase().trim();
+                const queryStr = this.adminSearchQuery.toLowerCase().trim();
                 const toDelete = this.messages.filter(msg => {
-                    if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
+                    if (msg.from.name.toLowerCase().includes(queryStr) || msg.from.id.toLowerCase().includes(queryStr)) return true;
                     let foundInTo = false;
                     msg.to.forEach(toId => {
-                        if (toId.toLowerCase().includes(query)) foundInTo = true;
+                        if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
                         const preUser = predefinedUsers.find(u => u.studentId === toId);
-                        if (preUser && (preUser.name.toLowerCase().includes(query) || preUser.fullName.toLowerCase().includes(query))) foundInTo = true;
+                        if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
                     });
                     return foundInTo;
                 });
@@ -1057,7 +1278,7 @@
 
                 glassSwal.fire({
                     title: `ลบทั้งหมด ${toDelete.length} รายการ?`,
-                    html: `การดำเนินการนี้จะลบข้อความทั้งหมดที่แสดงอยู่จากการค้นหา: <b>"${query}"</b>`,
+                    html: `การดำเนินการนี้จะลบข้อความทั้งหมดที่แสดงอยู่จากการค้นหา: <b>"${queryStr}"</b>`,
                     icon: 'warning', showCancelButton: true, confirmButtonText: 'ลบทั้งหมด', cancelButtonText: 'ยกเลิก'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
@@ -1075,7 +1296,6 @@
                             timer: 1500 
                         });
                         
-                        // ล้างช่องค้นหาทันที
                         this.setAdminSearch('');
                         const searchInput = document.querySelector('input[placeholder*="แอดมิน: ค้นหา"]');
                         if(searchInput) searchInput.value = '';
@@ -1129,14 +1349,14 @@
 
             renderSearchHeader: function() {
                 if (!this.profile.isAdmin || this.adminSearchQuery.trim() === '') return '';
-                const query = this.adminSearchQuery.toLowerCase().trim();
+                const queryStr = this.adminSearchQuery.toLowerCase().trim();
                 const count = this.messages.filter(msg => {
-                    if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
+                    if (msg.from.name.toLowerCase().includes(queryStr) || msg.from.id.toLowerCase().includes(queryStr)) return true;
                     let foundInTo = false;
                     msg.to.forEach(toId => {
-                        if (toId.toLowerCase().includes(query)) foundInTo = true;
+                        if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
                         const preUser = predefinedUsers.find(u => u.studentId === toId);
-                        if (preUser && (preUser.name.toLowerCase().includes(query) || preUser.fullName.toLowerCase().includes(query))) foundInTo = true;
+                        if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
                     });
                     return foundInTo;
                 }).length;
@@ -1156,14 +1376,14 @@
             renderInboxMessagesList: function() {
                 let displayMessages = this.messages;
                 if (this.profile.isAdmin && this.adminSearchQuery.trim() !== '') {
-                    const query = this.adminSearchQuery.toLowerCase().trim();
+                    const queryStr = this.adminSearchQuery.toLowerCase().trim();
                     displayMessages = this.messages.filter(msg => {
-                        if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
+                        if (msg.from.name.toLowerCase().includes(queryStr) || msg.from.id.toLowerCase().includes(queryStr)) return true;
                         let foundInTo = false;
                         msg.to.forEach(toId => {
-                            if (toId.toLowerCase().includes(query)) foundInTo = true;
+                            if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
                             const preUser = predefinedUsers.find(u => u.studentId === toId);
-                            if (preUser && (preUser.name.toLowerCase().includes(query) || preUser.fullName.toLowerCase().includes(query))) foundInTo = true;
+                            if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
                         });
                         return foundInTo;
                     });
