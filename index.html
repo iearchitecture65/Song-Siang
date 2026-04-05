@@ -761,7 +761,7 @@
                 const container = document.getElementById('usersListContainer');
                 if (!container) return;
 
-                const query = this.memberSearchQuery.toLowerCase().trim();
+                const queryStr = this.memberSearchQuery.toLowerCase().trim();
                 
                 // Combine predefined with registered status
                 const allUsers = [...predefinedUsers];
@@ -772,9 +772,9 @@
                 });
 
                 const filtered = allUsers.filter(u => 
-                    u.name.toLowerCase().includes(query) || 
-                    u.studentId.toLowerCase().includes(query) ||
-                    (u.fullName && u.fullName.toLowerCase().includes(query))
+                    u.name.toLowerCase().includes(queryStr) || 
+                    u.studentId.toLowerCase().includes(queryStr) ||
+                    (u.fullName && u.fullName.toLowerCase().includes(queryStr))
                 );
 
                 if (filtered.length === 0) {
@@ -1117,7 +1117,9 @@
                         </button>
                         <div class="overflow-hidden">
                             <h2 class="text-xl font-extrabold text-primary truncate">สร้างข้อความใหม่</h2>
-                            <p class="text-xs text-primary/70 font-bold mt-1 truncate">ส่งถึง: <span class="bg-secondary text-primary px-3 py-0.5 rounded-full shadow-sm ml-1">${this.selectedIds.length} คน</span></p>
+                            <p class="text-xs text-primary/70 font-bold mt-1 truncate">
+                                ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} คน</span>
+                            </p>
                         </div>
                     </div>
 
@@ -1155,8 +1157,10 @@
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         let options = {};
-                        if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
-                        else if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
+                        
+                        // ปรับลำดับให้ตรวจสอบ MP4 ก่อนตามต้องการ
+                        if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
+                        else if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
                         
                         this.mediaRecorder = new MediaRecorder(stream, options);
                         this.audioChunks = [];
