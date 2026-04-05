@@ -47,7 +47,6 @@
             overflow-x: hidden;
             word-wrap: break-word;
         }
-        /* Optimized Glassmorphism */
         .glass-panel {
             background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
@@ -70,7 +69,6 @@
             border-color: #fddf31;
         }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
@@ -80,37 +78,35 @@
         .user-avatar { transition: transform 0.2s ease-out; }
         .user-avatar:hover { transform: scale(1.05); }
         
-        /* แก้ปัญหากระตุกจาก Background */
         .bg-blob-1 { background: radial-gradient(circle, rgba(96,165,250,0.4) 0%, rgba(96,165,250,0) 70%); }
         .bg-blob-2 { background: radial-gradient(circle, rgba(253,223,49,0.3) 0%, rgba(253,223,49,0) 70%); }
 
-        /* อนิเมชันของกล่องข้อความลอยในหน้า Feed */
         @keyframes float-bubble {
             0% { transform: translateY(0); }
             100% { transform: translateY(-15px); }
         }
         .float-anim { animation: float-bubble 3.5s ease-in-out infinite alternate; }
+
+        .swal2-actions {
+            gap: 1rem !important;
+        }
     </style>
 </head>
 <body class="text-slate-800 antialiased font-sans relative">
     
-    <!-- Background Animated Blobs -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div class="absolute -top-20 -left-20 w-[500px] h-[500px] bg-blob-1 animate-blob"></div>
         <div class="absolute top-40 -right-20 w-[400px] h-[400px] bg-blob-2 animate-blob" style="animation-delay: 2s; animation-direction: alternate-reverse;"></div>
     </div>
 
-    <!-- Main Container -->
     <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
-        <!-- Header -->
         <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50">
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-wider mb-1 md:mb-2 drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
                 ส่งเสียง
             </h1>
             <p class="text-[10px] md:text-sm font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             
-            <!-- เมนู Desktop (ซ่อนในมือถือ) -->
             <div id="navMenuDesktop" class="absolute top-8 right-6 hidden md:flex items-start gap-3">
                 <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
@@ -139,13 +135,11 @@
                 </button>
             </div>
 
-            <!-- เมนู Hamburger สำหรับมือถือ (แสดงเฉพาะมือถือ) -->
             <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-5 right-4 md:hidden text-white/90 hover:text-secondary hidden z-50 transition-transform">
                 <i class="fa-solid fa-bars text-2xl drop-shadow-md"></i>
                 <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
             </button>
             
-            <!-- Dropdown สำหรับมือถือ -->
             <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 p-2 flex flex-col gap-1 z-50 w-44 transform transition-all origin-top-right text-slate-800">
                 <button id="btnAdminMob" onclick="app.showView('settings')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition-colors text-left font-medium text-sm">
                     <i class="fa-solid fa-gear text-primary w-5 text-center"></i> ตั้งค่า
@@ -163,24 +157,17 @@
             </div>
         </header>
 
-        <!-- Dynamic Content Area -->
         <main class="flex-1 p-3 sm:p-4 md:p-8 overflow-y-auto overflow-x-hidden relative" id="appRoot">
-            <!-- Content gets injected here -->
         </main>
     </div>
 
-    <!-- Global FAB Container -->
     <div id="globalFabContainer" class="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm sm:max-w-md flex justify-center pointer-events-none"></div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc, setDoc, getDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ==========================================
-        // 1. การตั้งค่าระบบ
-        // ==========================================
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         const GITHUB_IMG_BASE_URL = "65"; 
 
@@ -393,7 +380,7 @@
                 this.setupMessagesListener();
                 
                 glassSwal.fire({
-                    iconHtml: '<i class="fa-solid fa-circle-check text-green-500 text-5xl drop-shadow-md"></i>',
+                    iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>',
                     title: `ยินดีต้อนรับ ${userProfile.name}!`,
                     html: 'เข้าสู่ระบบเรียบร้อยแล้ว',
                     timer: 1500,
@@ -442,25 +429,22 @@
                 });
             },
 
-            // ==========================================
-            // LOGIN FLOW
-            // ==========================================
             renderLogin1: function() {
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden mt-6 md:mt-10 animate-slide-up relative">
-                    <div class="p-6 md:p-10 text-center bg-white/30 border-b border-white/40 relative overflow-hidden">
-                        <i class="fa-solid fa-id-card-clip text-primary text-4xl md:text-5xl mb-3 md:mb-4 opacity-90 drop-shadow-md"></i>
-                        <h2 class="text-2xl md:text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">เข้าสู่ระบบ</h2>
-                        <p class="text-primary/90 text-xs md:text-sm mt-1 md:mt-2 relative z-10 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
+                <div class="max-w-sm mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-slide-up relative">
+                    <div class="p-6 md:p-8 text-center bg-white/30 border-b border-white/40">
+                        <i class="fa-solid fa-id-card-clip text-primary text-4xl mb-3 opacity-90 drop-shadow-md"></i>
+                        <h2 class="text-2xl font-extrabold text-primary drop-shadow-sm">เข้าสู่ระบบ</h2>
+                        <p class="text-primary/90 text-xs mt-1 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
                     </div>
-                    <div class="p-6 md:p-8 space-y-5 md:space-y-6">
+                    <div class="p-6 md:p-8 space-y-5">
                         <div>
                             <input type="tel" inputmode="numeric" pattern="[0-9]*" id="inputId" placeholder="รหัสนักศึกษา 8 หลัก" maxlength="8"
-                                class="glass-input w-full px-4 md:px-5 py-3 md:py-4 rounded-2xl transition-all outline-none text-base sm:text-lg md:text-xl tracking-wider sm:tracking-widest text-center font-mono text-primary shadow-inner"
+                                class="glass-input w-full px-4 py-3 rounded-xl transition-all outline-none text-center font-bold text-primary shadow-inner"
                                 onkeypress="if(event.key === 'Enter') app.requestOTP()">
                         </div>
                         <button onclick="app.requestOTP()" id="btnReqOTP"
-                            class="w-full py-3.5 md:py-4 rounded-2xl font-bold text-primary bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1 text-sm md:text-base">
+                            class="w-full py-3.5 rounded-xl font-bold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transition-all transform hover:-translate-y-1 text-sm">
                             รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>
                         </button>
                     </div>
@@ -512,24 +496,24 @@
                 for(let i=0; i<6; i++) {
                     inputs += `<input type="tel" inputmode="numeric" pattern="[0-9]*" id="otp-${i}" maxlength="1" 
                         oninput="app.onOtpInput(this, ${i})" onkeydown="app.onOtpKeydown(event, ${i})"
-                        class="otp-input glass-input w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 text-center text-xl sm:text-2xl md:text-3xl font-bold rounded-xl text-primary transition-all outline-none shadow-inner p-0" />`;
+                        class="otp-input glass-input w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold rounded-xl text-primary outline-none shadow-inner p-0" />`;
                 }
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden mt-6 md:mt-10 animate-slide-up relative">
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-slide-up relative">
                     <div class="p-6 md:p-8 text-center bg-white/30 border-b border-white/40">
-                        <i class="fa-solid fa-shield-halved text-primary text-3xl md:text-4xl mb-2 md:mb-3 opacity-90"></i>
-                        <h2 class="text-2xl md:text-3xl font-extrabold text-primary drop-shadow-sm">ยืนยันรหัส</h2>
+                        <i class="fa-solid fa-shield-halved text-primary text-3xl mb-3 opacity-90"></i>
+                        <h2 class="text-2xl font-extrabold text-primary drop-shadow-sm">ยืนยันรหัส</h2>
                     </div>
-                    <div class="p-5 md:p-8 space-y-5 md:space-y-6">
+                    <div class="p-6 md:p-8 space-y-6">
                         <div class="text-center">
-                            <p class="text-xs md:text-sm text-gray-700 font-medium">ส่งรหัสไปยังอีเมลสถาบันแล้ว</p>
-                            <p class="font-extrabold text-lg md:text-xl text-primary mt-1 tracking-wide">${this.tempStudentId}@kmitl.ac.th</p>
-                            <div class="mt-2 md:mt-3 mb-1 inline-block bg-white/50 border border-white/60 text-primary px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs font-bold tracking-wider shadow-sm">
-                                <i class="fa-solid fa-hashtag mr-1"></i> Ref: ${this.currentRef}
+                            <p class="text-xs text-white/90 font-medium">ส่งรหัสไปยังอีเมลสถาบันแล้ว</p>
+                            <p class="font-extrabold text-lg text-white mt-1 tracking-wide">${this.tempStudentId}@kmitl.ac.th</p>
+                            <div class="mt-3 bg-white/20 border border-white/30 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wider shadow-sm inline-block">
+                                Ref: ${this.currentRef}
                             </div>
                         </div>
-                        <div class="flex justify-center md:justify-between gap-1 sm:gap-2 px-1 md:px-2" id="otpContainer">${inputs}</div>
-                        <button onclick="app.showView('login')" class="w-full py-2 md:py-3 text-xs md:text-sm font-medium text-gray-500 hover:text-primary transition-colors flex items-center justify-center">
+                        <div class="flex justify-center gap-2" id="otpContainer">${inputs}</div>
+                        <button onclick="app.showView('login')" class="w-full py-2 text-xs font-bold text-white hover:text-secondary transition-colors flex items-center justify-center underline">
                             <i class="fa-solid fa-rotate-left mr-2"></i> เปลี่ยนรหัสนักศึกษา
                         </button>
                     </div>
@@ -576,23 +560,23 @@
 
             renderLogin3: function() {
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2rem] md:rounded-[2.5rem] overflow-hidden mt-6 md:mt-10 animate-slide-up">
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-slide-up">
                     <div class="p-6 md:p-8 text-center bg-white/30 border-b border-white/40">
-                        <i class="fa-solid fa-user-plus text-primary text-3xl md:text-4xl mb-2 md:mb-3 opacity-90"></i>
-                        <h2 class="text-2xl md:text-3xl font-extrabold text-primary drop-shadow-sm">สร้างโปรไฟล์</h2>
+                        <i class="fa-solid fa-user-plus text-primary text-3xl mb-3 opacity-90"></i>
+                        <h2 class="text-2xl font-extrabold text-primary drop-shadow-sm">สร้างโปรไฟล์</h2>
                     </div>
-                    <div class="p-6 md:p-8 space-y-5 md:space-y-6">
-                        <div class="bg-white/40 p-4 md:p-5 rounded-2xl text-xs md:text-sm text-primary text-center border border-white/50 shadow-inner break-words">
-                            <i class="fa-solid fa-face-smile-wink text-3xl md:text-4xl block mb-2 md:mb-3 text-secondary drop-shadow animate-bounce"></i>
+                    <div class="p-6 md:p-8 space-y-6">
+                        <div class="bg-white/40 p-5 rounded-2xl text-xs md:text-sm text-primary text-center border border-white/50 shadow-inner">
+                            <i class="fa-solid fa-face-smile-wink text-3xl block mb-2 text-secondary animate-bounce"></i>
                             ดูเหมือนคุณจะเป็นผู้ใช้ใหม่ <br/>แนะนำตัวให้พวกเราหน่อยครับ!
                         </div>
                         <div>
                             <input type="text" id="inputNewName" placeholder="ชื่อเรียกของคุณ..." 
-                                class="glass-input w-full px-4 md:px-5 py-3 md:py-4 rounded-2xl transition-all outline-none text-base md:text-lg text-primary text-center font-bold"
+                                class="glass-input w-full px-5 py-4 rounded-xl transition-all outline-none text-center font-bold text-primary"
                                 onkeypress="if(event.key === 'Enter') app.registerNewUser()">
                         </div>
                         <button onclick="app.registerNewUser()" 
-                            class="w-full py-3.5 md:py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-2xl font-bold text-base md:text-lg shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1">
+                            class="w-full py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-xl font-bold text-lg shadow-lg transition-all transform hover:-translate-y-1">
                             เริ่มต้นใช้งาน <i class="fa-solid fa-rocket ml-2"></i>
                         </button>
                     </div>
@@ -604,28 +588,25 @@
                 this.loginSuccess({ studentId: this.tempStudentId, name: name, isPredefined: false });
             },
 
-            // ==========================================
-            // ADMIN SETTINGS
-            // ==========================================
             renderSettings: function() {
                 return `
-                <div class="glass-card rounded-[2rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-2xl max-w-md mx-auto animate-slide-up relative z-20 mt-6">
+                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-w-md mx-auto animate-slide-up mt-6">
                     <div class="flex items-center mb-6 pb-3 border-b border-white/40">
-                        <button onclick="app.showView('home')" class="p-2 bg-white/20 hover:bg-white/40 rounded-full mr-3 transition text-primary shadow-sm flex-shrink-0">
+                        <button onclick="app.showView('home')" class="p-2 bg-white/20 hover:bg-white/40 rounded-full mr-3 transition text-white shadow-sm flex-shrink-0">
                             <i class="fa-solid fa-arrow-left"></i>
                         </button>
-                        <h2 class="text-xl sm:text-2xl font-extrabold text-primary truncate"><i class="fa-solid fa-gear mr-2"></i> ตั้งค่าระบบ</h2>
+                        <h2 class="text-xl font-extrabold text-white truncate"><i class="fa-solid fa-gear mr-2"></i> ตั้งค่าระบบ</h2>
                     </div>
                     <div class="space-y-6">
-                        <div class="bg-white/30 p-5 rounded-2xl border border-white/50 shadow-inner">
-                            <label class="block text-sm font-bold text-primary mb-2">จำกัดจำนวนคำต่อข้อความ (คำ)</label>
+                        <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
+                            <label class="block text-sm font-bold text-white mb-2">จำกัดจำนวนคำต่อข้อความ (คำ)</label>
                             <input type="number" id="inpMaxWords" value="${this.maxWords}" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
                         </div>
-                        <div class="bg-white/30 p-5 rounded-2xl border border-white/50 shadow-inner">
-                            <label class="block text-sm font-bold text-primary mb-2">เวลาอัดเสียงสูงสุด (วินาที)</label>
+                        <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
+                            <label class="block text-sm font-bold text-white mb-2">เวลาอัดเสียงสูงสุด (วินาที)</label>
                             <input type="number" id="inpMaxAudio" value="${this.maxAudioTime}" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
                         </div>
-                        <button onclick="app.saveAdminSettings()" class="w-full py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-2xl font-extrabold text-lg shadow-lg transition-transform hover:-translate-y-1">
+                        <button onclick="app.saveAdminSettings()" class="w-full py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-xl font-extrabold text-lg shadow-lg transition-transform hover:-translate-y-1">
                             <i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกการตั้งค่า
                         </button>
                     </div>
@@ -638,15 +619,17 @@
                 if (w > 0 && a > 0) {
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { maxWords: w, maxAudioTime: a });
-                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-green-500 text-5xl"></i>', title: 'บันทึกสำเร็จ!', showConfirmButton: false, timer: 1500 });
+                        glassSwal.fire({ 
+                            iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
+                            title: 'บันทึกสำเร็จ!', 
+                            showConfirmButton: false, 
+                            timer: 1500 
+                        });
                         this.showView('home');
                     } catch(e) { glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกได้', 'error'); }
                 }
             },
 
-            // ==========================================
-            // FEED FLOW (หน้าลอยๆ ข้อความรวม สำหรับ 45 คน)
-            // ==========================================
             viewFeedMessage: function(msgId) {
                 const msg = this.allMessages.find(m => m.id === msgId);
                 if(!msg) return;
@@ -664,22 +647,14 @@
                         title: `เสียงจาก ${displayName}`,
                         html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>`,
                         showConfirmButton: true,
-                        confirmButtonText: 'ปิดหน้าต่าง',
-                        customClass: {
-                            confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-2 font-bold shadow-lg',
-                            popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm'
-                        }
+                        confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 } else {
                     glassSwal.fire({
                         title: `ข้อความจาก ${displayName}`,
                         html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>`,
                         showConfirmButton: true,
-                        confirmButtonText: 'ปิดหน้าต่าง',
-                        customClass: {
-                            confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-2 font-bold shadow-lg',
-                            popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm'
-                        }
+                        confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 }
             },
@@ -701,25 +676,21 @@
                         let senderImg = '';
                         
                         if (isAnonymous) {
-                            senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl md:text-3xl"></i></div>`;
+                            senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden w-full h-full items-center justify-center text-primary font-bold text-lg md:text-xl bg-secondary">${msg.from.name.substring(0,2)}</span>` : `<div class="w-full h-full bg-secondary flex items-center justify-center text-primary font-bold text-lg md:text-xl">${msg.from.name.substring(0,2)}</div>`;
+                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden w-full h-full items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</span>` : `<div class="w-full h-full flex items-center justify-center text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</div>`;
                         }
                         
-                        // แรนดอมขนาดวงกลม (ระหว่าง 70px ถึง 120px) 
                         const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
                         const animDelay = (Math.random() * 2).toFixed(1);
                         const animDuration = (3.5 + Math.random() * 2.5).toFixed(1);
-                        
-                        // สุ่มขยับตำแหน่งเพื่อให้ดูเป็นธรรมชาติ (ไม่ตรงแหน่วเกินไป)
                         const randomX = (Math.random() * 20 - 10).toFixed(1);
                         const randomY = (Math.random() * 20 - 10).toFixed(1);
                         
-                        // ป้ายข้อความ/เสียง (พื้นหลังสีขาว ตัวอักษรสีน้ำเงิน)
                         let badgeContent = '';
                         if (isAudio) {
-                            const duration = msg.audioDuration || '?';
+                            const duration = msg.audioDuration != null ? msg.audioDuration : '?';
                             badgeContent = `<i class="fa-solid fa-play text-primary text-[10px]"></i> <span class="text-[10px] font-bold text-primary ml-1">${duration} วิ</span>`;
                         } else {
                             badgeContent = `<span class="truncate text-[10px] font-bold text-primary max-w-[80px]">${msg.content.trim()}</span>`;
@@ -727,15 +698,10 @@
 
                         msgsHTML += `
                         <div class="flex justify-center float-anim p-3" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s; transform: translate(${randomX}px, ${randomY}px);">
-                            <!-- วงกลมหลัก เปลี่ยนกรอบเป็นสีเหลืองเมื่อไม่ระบุตัวตน -->
-                            <div onclick="app.viewFeedMessage('${msg.id}')" class="relative rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.15)] border-4 ${isAnonymous ? 'border-slate-500' : 'border-secondary'} bg-white/20 group transform transition-transform hover:scale-110 cursor-pointer" style="width: ${baseSize}px; height: ${baseSize}px;">
-                                
+                            <div onclick="app.viewFeedMessage('${msg.id}')" class="relative rounded-full shadow-xl border-2 border-white/60 ${isAnonymous ? 'bg-slate-700' : 'bg-secondary'} group transform transition-transform hover:scale-110 cursor-pointer" style="width: ${baseSize}px; height: ${baseSize}px;">
                                 <div class="w-full h-full rounded-full overflow-hidden relative">
                                     ${senderImg}
-                                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity z-10"></div>
                                 </div>
-                                
-                                <!-- ป้ายข้อความ/เสียง ซ้อนทับล่างขวา -->
                                 <div class="absolute -bottom-1 -right-2 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 flex items-center justify-center shadow-lg border border-white/50 z-20 min-w-fit whitespace-nowrap">
                                     ${badgeContent}
                                 </div>
@@ -747,20 +713,17 @@
                 return `
                 <div class="animate-fade-in pb-32">
                     <div class="text-center mb-8">
-                        <h2 class="text-2xl md:text-4xl font-bold text-white drop-shadow-md">ข้อความลอยฟ้า <i class="fa-solid fa-cloud text-secondary"></i></h2>
+                        <h2 class="text-2xl md:text-4xl font-bold text-white drop-shadow-md">ข้อความ</h2>
                         <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">กดที่ไอคอนเพื่อดูข้อความหรือฟังเสียง</p>
                     </div>
                     
-                    <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8 px-2 max-w-5xl mx-auto">
+                    <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8 px-2 max-w-5xl mx-auto">
                         ${msgsHTML}
                     </div>
                 </div>
                 `;
             },
 
-            // ==========================================
-            // HOME / GRID FLOW 
-            // ==========================================
             toggleUser: function(id, btnElement) {
                 const idx = this.selectedIds.indexOf(id);
                 const isAdding = idx === -1;
@@ -813,16 +776,16 @@
 
                 if (this.currentView === 'feed') {
                     container.innerHTML = `
-                        <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
-                            <i class="fa-solid fa-paper-plane text-xl sm:text-2xl"></i>
+                        <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
+                            <i class="fa-solid fa-paper-plane text-xl"></i>
                             <span class="truncate">ส่งข้อความหาเพื่อนๆ</span>
                         </button>
                     `;
                 } 
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
                     container.innerHTML = `
-                        <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
-                            <i class="fa-solid fa-paper-plane text-xl sm:text-2xl"></i>
+                        <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
+                            <i class="fa-solid fa-paper-plane text-xl"></i>
                             <span class="truncate">ส่งข้อความหา ${this.selectedIds.length} คน</span>
                         </button>
                     `;
@@ -841,18 +804,17 @@
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 10}ms">
                         <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
-                            class="relative rounded-full flex items-center justify-center text-primary font-bold text-xl user-avatar mb-1 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-[0_0_20px_rgba(253,223,49,0.7)]' : 'shadow-lg'}">
+                            class="relative rounded-full flex items-center justify-center text-primary font-bold user-avatar mb-1 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
                             
-                            <!-- เพิ่มขอบสีขาวบางๆ ให้รูปภาพ (border-2 border-white/60) -->
-                            <div class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60">
-                                <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center">
+                                <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" 
                                      class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0" alt="${user.name}">
-                                <span class="relative z-10 hidden w-full h-full items-center justify-center text-[14px] md:text-[18px]">${user.name.substring(0, 2)}</span>
+                                <span class="relative z-10 hidden w-full h-full flex items-center justify-center text-[16px] md:text-[20px] font-bold text-primary">${user.name.substring(0, 2)}</span>
                                 <div class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
                             <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full border-2 border-white items-center justify-center z-20 shadow-md">
-                                <i class="fa-solid fa-check text-[9px] sm:text-[11px] text-white"></i>
+                                <i class="fa-solid fa-check text-[9px] text-white"></i>
                             </div>
                         </button>
                         
@@ -866,12 +828,12 @@
 
                 return `
                 <div class="animate-fade-in pb-32 relative h-full">
-                    <div class="flex flex-row justify-between items-center sm:items-end mb-6 md:mb-8 text-white glass-panel p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border-t border-l border-white/30 gap-2">
+                    <div class="flex flex-row justify-between items-center sm:items-end mb-6 text-white glass-panel p-4 sm:p-6 rounded-2xl border-t border-l border-white/30 gap-2">
                         <div class="flex-1 min-w-0">
                             <h2 class="text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md truncate">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-1 animate-pulse text-lg md:text-2xl"></i></h2>
-                            <p class="text-blue-100 mt-1 md:mt-2 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกเพื่อนที่คุณต้องการส่งเสียงถึงได้เลย</p>
+                            <p class="text-blue-100 mt-1 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกเพื่อนที่คุณต้องการส่งเสียงถึงได้เลย</p>
                         </div>
-                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-sm font-medium transition shadow-lg flex items-center whitespace-nowrap">
+                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 rounded-full text-[10px] sm:text-sm font-medium transition shadow-lg flex items-center whitespace-nowrap">
                             <i class="fa-solid fa-users sm:mr-2"></i> 
                             <span class="hidden sm:inline">${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิกทั้งหมด' : 'เลือกทุกคน'}</span>
                             <span class="sm:hidden ml-1">${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิก' : 'ทั้งหมด'}</span>
@@ -885,9 +847,6 @@
                 `;
             },
 
-            // ==========================================
-            // COMPOSE FLOW
-            // ==========================================
             setComposeMode: function(mode) {
                 this.composeMode = mode;
                 if(mode === 'audio') { this.recordingTime = 0; this.audioBlob = null; this.isRecording = false; }
@@ -898,69 +857,68 @@
                 const isAudio = this.composeMode === 'audio';
                 const audioArea = this.audioBlob ? `
                     <div class="w-full space-y-4 flex flex-col items-center">
-                        <div class="bg-green-100 text-green-700 px-4 md:px-5 py-2 rounded-full font-bold text-xs md:text-sm flex items-center shadow-inner border border-green-200">
-                            <i class="fa-solid fa-circle-check text-base md:text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
+                        <div class="bg-green-100 text-green-700 px-5 py-2 rounded-full font-bold text-xs md:text-sm flex items-center shadow-inner border border-green-200">
+                            <i class="fa-solid fa-circle-check text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
                         </div>
-                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-[250px] sm:max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
-                        <button onclick="app.resetAudio()" class="text-xs md:text-sm text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
+                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
+                        <button onclick="app.resetAudio()" class="text-xs text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
                     </div>
                 ` : `
                     <div class="flex flex-col items-center">
-                        <div class="text-5xl md:text-6xl font-mono mb-6 md:mb-8 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
+                        <div class="text-5xl md:text-6xl font-mono mb-6 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
                             00:${String(this.recordingTime).padStart(2, '0')}
                         </div>
-                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
+                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
                             ${this.isRecording ? 
-                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl sm:text-5xl relative z-10"></i>' : 
-                                '<i class="fa-solid fa-microphone text-5xl sm:text-6xl relative z-10"></i>'}
+                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl relative z-10"></i>' : 
+                                '<i class="fa-solid fa-microphone text-5xl relative z-10"></i>'}
                         </button>
-                        <p class="text-xs sm:text-sm text-gray-500 mt-6 sm:mt-8 bg-white/50 px-4 sm:px-5 py-2 rounded-full font-bold shadow-sm border border-white/60 text-center">
-                            ${this.isRecording ? '<i class="fa-solid fa-record-vinyl animate-spin text-red-500 mr-1"></i> กำลังบันทึก... กดเพื่อหยุด' : `<i class="fa-solid fa-microphone-lines mr-1"></i> กดเพื่อเริ่มอัดเสียง (สูงสุด ${this.maxAudioTime} วิ)`}
+                        <p class="text-xs text-gray-500 mt-6 bg-white/50 px-5 py-2 rounded-full font-bold shadow-sm border border-white/60 text-center">
+                            ${this.isRecording ? '<i class="fa-solid fa-record-vinyl animate-spin text-red-500 mr-1"></i> กำลังบันทึก...' : `กดเพื่อเริ่มอัดเสียง (สูงสุด ${this.maxAudioTime} วิ)`}
                         </p>
                     </div>
                 `;
 
                 const textArea = `
                     <div class="w-full flex flex-col h-full animate-fade-in relative">
-                        <i class="fa-solid fa-pen-nib absolute top-4 right-4 sm:top-5 sm:right-5 text-gray-300 text-xl sm:text-2xl"></i>
-                        <textarea id="txtMessage" class="glass-input w-full flex-1 p-4 sm:p-6 rounded-2xl md:rounded-[2rem] outline-none resize-none min-h-[180px] sm:min-h-[220px] text-base sm:text-lg text-primary shadow-inner transition-all font-medium break-words" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
-                        <div class="text-right text-xs sm:text-sm mt-2 sm:mt-3 font-bold text-primary/60" id="wordCount">
+                        <textarea id="txtMessage" class="glass-input w-full flex-1 p-4 rounded-2xl outline-none resize-none min-h-[180px] text-base text-primary shadow-inner font-medium break-words" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
+                        <div class="text-right text-xs mt-2 font-bold text-primary/60" id="wordCount">
                             จำกัด ${this.maxWords} คำ
                         </div>
                     </div>
                 `;
 
                 return `
-                <div class="glass-card rounded-[2rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up relative z-20">
-                    <div class="flex items-center mb-6 md:mb-8 pb-3 md:pb-4 border-b border-white/40">
-                        <button onclick="app.showView('home')" class="p-2.5 sm:p-3 hover:bg-white/40 bg-white/20 rounded-full mr-3 sm:mr-4 transition text-primary shadow-sm flex-shrink-0">
-                            <i class="fa-solid fa-arrow-left text-lg sm:text-xl"></i>
+                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up">
+                    <div class="flex items-center mb-6 pb-4 border-b border-white/40">
+                        <button onclick="app.showView('home')" class="p-2.5 hover:bg-white/40 bg-white/20 rounded-full mr-4 transition text-primary shadow-sm flex-shrink-0">
+                            <i class="fa-solid fa-arrow-left text-lg"></i>
                         </button>
                         <div class="overflow-hidden">
-                            <h2 class="text-xl sm:text-2xl font-extrabold text-primary truncate">สร้างข้อความใหม่</h2>
-                            <p class="text-xs sm:text-sm text-primary/70 font-bold mt-1 truncate">ส่งถึง: <span class="bg-secondary/80 text-primary px-2 sm:px-3 py-0.5 rounded-full shadow-sm ml-1"><i class="fa-solid fa-user-group text-[10px] sm:text-xs mr-1"></i> ${this.selectedIds.length} คน</span></p>
+                            <h2 class="text-xl font-extrabold text-primary truncate">สร้างข้อความใหม่</h2>
+                            <p class="text-xs text-primary/70 font-bold mt-1 truncate">ส่งถึง: <span class="bg-secondary text-primary px-3 py-0.5 rounded-full shadow-sm ml-1">${this.selectedIds.length} คน</span></p>
                         </div>
                     </div>
 
-                    <div class="flex bg-white/30 p-1 md:p-1.5 rounded-xl md:rounded-2xl mb-6 md:mb-8 shadow-inner relative border border-white/40">
-                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold flex items-center justify-center space-x-1 sm:space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
-                            <i class="fa-solid fa-microphone-lines text-base sm:text-lg"></i> <span>ส่งเสียง</span>
+                    <div class="flex bg-white/30 p-1 rounded-2xl mb-6 shadow-inner relative border border-white/40">
+                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
+                            <i class="fa-solid fa-microphone-lines text-base"></i> <span>ส่งเสียง</span>
                         </button>
-                        <button onclick="app.setComposeMode('text')" class="flex-1 py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold flex items-center justify-center space-x-1 sm:space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
-                            <i class="fa-solid fa-keyboard text-base sm:text-lg"></i> <span>พิมพ์ข้อความ</span>
+                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
+                            <i class="fa-solid fa-keyboard text-base"></i> <span>พิมพ์ข้อความ</span>
                         </button>
                     </div>
 
-                    <div class="min-h-[250px] sm:min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-2xl md:rounded-[2.5rem] p-4 sm:p-8 bg-white/20 relative overflow-hidden shadow-inner">
+                    <div class="min-h-[250px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-3xl p-6 bg-white/20 shadow-inner">
                         ${isAudio ? audioArea : textArea}
                     </div>
 
-                    <div class="mt-6 md:mt-8 flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
-                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-white flex items-center justify-center space-x-2 transition-all bg-slate-700 hover:bg-slate-800 shadow-[0_10px_20px_rgba(0,0,0,0.2)] transform hover:-translate-y-1 text-sm sm:text-base w-full sm:w-auto">
-                            <i class="fa-solid fa-user-secret text-lg"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
+                    <div class="mt-8 flex flex-col sm:flex-row justify-end gap-3">
+                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-user-secret"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
                         </button>
-                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-primary flex items-center justify-center space-x-2 sm:space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1 text-sm sm:text-base w-full sm:w-auto">
-                            <i class="fa-solid fa-paper-plane text-lg sm:text-xl"></i> <span>ส่งระบุตัวตน</span>
+                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i> <span>ส่งระบุตัวตน</span>
                         </button>
                     </div>
                 </div>`;
@@ -975,29 +933,25 @@
                 } else {
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        
                         let options = {};
                         if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
                         else if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
                         
                         this.mediaRecorder = new MediaRecorder(stream, options);
                         this.audioChunks = [];
-
                         this.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) this.audioChunks.push(e.data); };
                         this.mediaRecorder.onstop = () => {
                             const type = this.mediaRecorder.mimeType || 'audio/mp4';
                             this.audioBlob = new Blob(this.audioChunks, { type: type });
-                            this.lastRecordingTime = this.recordingTime; 
+                            this.lastRecordingTime = this.recordingTime > 0 ? this.recordingTime : 1; 
                             stream.getTracks().forEach(track => track.stop());
                             this.showView('compose'); 
                         };
-
                         this.mediaRecorder.start();
                         this.isRecording = true;
                         this.recordingTime = 0;
                         this.audioBlob = null;
                         this.showView('compose');
-
                         this.timerInterval = setInterval(() => {
                             this.recordingTime++;
                             if(this.recordingTime >= this.maxAudioTime) this.toggleRecord();
@@ -1007,7 +961,7 @@
                             }
                         }, 1000);
                     } catch (e) {
-                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาอนุญาตการเข้าถึง', 'error');
+                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงไมโครโฟนได้', 'error');
                     }
                 }
             },
@@ -1024,9 +978,7 @@
                 const originalHTML = activeBtn.innerHTML;
 
                 let content = '';
-                
                 if(this.composeMode === 'text') {
-                    // ใช้ trim() ตัดช่องว่างและบรรทัดที่เกินความจำเป็นออก
                     content = document.getElementById('txtMessage').value.trim();
                     if(!content) return glassSwal.fire('แจ้งเตือน', 'กรุณาพิมพ์ข้อความ', 'warning');
                     const wc = content.split(/\s+/).filter(w=>w.length>0).length;
@@ -1040,9 +992,8 @@
                     });
                 }
 
-                btnNormal.disabled = true;
-                btnAnon.disabled = true;
-                activeBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-lg sm:text-xl"></i> <span>กำลังส่ง...</span>';
+                btnNormal.disabled = true; btnAnon.disabled = true;
+                activeBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>กำลังส่ง...</span>';
 
                 try {
                     const senderName = isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : this.profile.name;
@@ -1058,60 +1009,156 @@
                     await addDoc(msgsRef, messageData);
                     
                     glassSwal.fire({ 
-                        iconHtml: isAnonymous ? '<i class="fa-solid fa-user-secret text-slate-700 text-5xl"></i>' : '<i class="fa-solid fa-paper-plane text-secondary text-5xl"></i>',
-                        title: 'ส่งเรียบร้อย!', 
-                        showConfirmButton: false, 
-                        timer: 1500 
+                        iconHtml: isAnonymous ? '<i class="fa-solid fa-user-secret text-slate-700 text-5xl"></i>' : '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>',
+                        title: 'ส่งเรียบร้อย!', showConfirmButton: false, timer: 1500 
                     });
-                    this.selectedIds = [];
-                    this.audioBlob = null;
-                    this.recordingTime = 0;
-                    
+                    this.selectedIds = []; this.audioBlob = null; this.recordingTime = 0;
                     if(this.profile.isPredefined || this.profile.isAdmin) this.showView('feed');
                     else this.showView('inbox');
-                    
                 } catch (e) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
-                    btnNormal.disabled = false;
-                    btnAnon.disabled = false;
-                    activeBtn.innerHTML = originalHTML;
+                    btnNormal.disabled = false; btnAnon.disabled = false; activeBtn.innerHTML = originalHTML;
                 }
             },
 
-            // ==========================================
-            // INBOX FLOW 
-            // ==========================================
             deleteMsg: async function(id) {
                 glassSwal.fire({
                     title: 'ลบข้อความนี้?', 
                     html: "จะไม่สามารถกู้คืนได้", 
                     iconHtml: '<i class="fa-solid fa-trash-can text-red-400 text-5xl"></i>',
-                    showCancelButton: true, 
-                    confirmButtonText: 'ลบเลย', 
-                    cancelButtonText: 'ยกเลิก'
+                    showCancelButton: true, confirmButtonText: 'ลบเลย', cancelButtonText: 'ยกเลิก'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', id));
+                        glassSwal.fire({ 
+                            iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
+                            title: 'ลบสำเร็จ!', 
+                            showConfirmButton: false, 
+                            timer: 1500 
+                        });
                     }
                 });
+            },
+
+            deleteAllFiltered: async function() {
+                const query = this.adminSearchQuery.toLowerCase().trim();
+                const toDelete = this.messages.filter(msg => {
+                    if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
+                    let foundInTo = false;
+                    msg.to.forEach(toId => {
+                        if (toId.toLowerCase().includes(query)) foundInTo = true;
+                        const preUser = predefinedUsers.find(u => u.studentId === toId);
+                        if (preUser && (preUser.name.toLowerCase().includes(query) || preUser.fullName.toLowerCase().includes(query))) foundInTo = true;
+                    });
+                    return foundInTo;
+                });
+
+                if (toDelete.length === 0) return;
+
+                glassSwal.fire({
+                    title: `ลบทั้งหมด ${toDelete.length} รายการ?`,
+                    html: `การดำเนินการนี้จะลบข้อความทั้งหมดที่แสดงอยู่จากการค้นหา: <b>"${query}"</b>`,
+                    icon: 'warning', showCancelButton: true, confirmButtonText: 'ลบทั้งหมด', cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        const batch = writeBatch(db);
+                        toDelete.forEach(m => {
+                            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
+                            batch.delete(ref);
+                        });
+                        await batch.commit();
+                        
+                        glassSwal.fire({ 
+                            iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
+                            title: 'ลบสำเร็จ!', 
+                            showConfirmButton: false, 
+                            timer: 1500 
+                        });
+                        
+                        // ล้างช่องค้นหาทันที
+                        this.setAdminSearch('');
+                        const searchInput = document.querySelector('input[placeholder*="แอดมิน: ค้นหา"]');
+                        if(searchInput) searchInput.value = '';
+                    }
+                });
+            },
+
+            factoryReset: async function() {
+                const { value: password } = await glassSwal.fire({
+                    title: 'ล้างข้อมูลทั้งหมด?',
+                    html: 'ระบุรหัสแอดมินเพื่อยืนยันการล้างข้อมูลข้อความทั้งหมดในระบบ',
+                    input: 'password',
+                    inputPlaceholder: 'รหัสแอดมิน 8 หลัก',
+                    showCancelButton: true
+                });
+
+                if (password === '65030900') {
+                    glassSwal.fire({
+                        title: 'คุณแน่ใจจริงๆ ใช่ไหม?',
+                        text: "ข้อมูลข้อความทั้งหมดจะถูกลบถาวร!",
+                        icon: 'error',
+                        showCancelButton: true,
+                        confirmButtonText: 'ล้างระบบทันที!',
+                        cancelButtonColor: '#d33'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages'));
+                            const batch = writeBatch(db);
+                            snap.forEach(d => batch.delete(d.ref));
+                            await batch.commit();
+                            glassSwal.fire({ 
+                                iconHtml: '<i class="fa-solid fa-check text-blue-500 text-5xl"></i>', 
+                                title: 'ล้างระบบสำเร็จ!', 
+                                showConfirmButton: false, 
+                                timer: 1500 
+                            });
+                        }
+                    });
+                } else if (password) {
+                    glassSwal.fire('รหัสไม่ถูกต้อง', '', 'error');
+                }
             },
 
             setAdminSearch: function(val) {
                 this.adminSearchQuery = val;
                 const container = document.getElementById('inboxMessageContainer');
-                if (container) {
-                    container.innerHTML = this.renderInboxMessagesList();
-                }
+                const groupHeader = document.getElementById('searchGroupHeader');
+                if (container) container.innerHTML = this.renderInboxMessagesList();
+                if (groupHeader) groupHeader.innerHTML = this.renderSearchHeader();
+            },
+
+            renderSearchHeader: function() {
+                if (!this.profile.isAdmin || this.adminSearchQuery.trim() === '') return '';
+                const query = this.adminSearchQuery.toLowerCase().trim();
+                const count = this.messages.filter(msg => {
+                    if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
+                    let foundInTo = false;
+                    msg.to.forEach(toId => {
+                        if (toId.toLowerCase().includes(query)) foundInTo = true;
+                        const preUser = predefinedUsers.find(u => u.studentId === toId);
+                        if (preUser && (preUser.name.toLowerCase().includes(query) || preUser.fullName.toLowerCase().includes(query))) foundInTo = true;
+                    });
+                    return foundInTo;
+                }).length;
+
+                return `
+                    <div class="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center mb-6 animate-fadeIn gap-3">
+                        <div class="text-primary font-bold text-sm">
+                            พบ <span class="text-lg">${count}</span> รายการที่ตรงกับ "${this.adminSearchQuery}"
+                        </div>
+                        <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-trash-sweep"></i> ลบรายการที่ค้นหาทั้งหมด
+                        </button>
+                    </div>
+                `;
             },
 
             renderInboxMessagesList: function() {
                 let displayMessages = this.messages;
-                
                 if (this.profile.isAdmin && this.adminSearchQuery.trim() !== '') {
                     const query = this.adminSearchQuery.toLowerCase().trim();
                     displayMessages = this.messages.filter(msg => {
                         if (msg.from.name.toLowerCase().includes(query) || msg.from.id.toLowerCase().includes(query)) return true;
-                        
                         let foundInTo = false;
                         msg.to.forEach(toId => {
                             if (toId.toLowerCase().includes(query)) foundInTo = true;
@@ -1125,13 +1172,9 @@
                 let msgsHTML = '';
                 if(displayMessages.length === 0) {
                     msgsHTML = `
-                        <div class="text-center py-16 md:py-24 flex flex-col items-center justify-center animate-fade-in">
-                            <div class="w-20 h-20 md:w-32 md:h-32 bg-white/30 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner border border-white/50">
-                                <i class="fa-solid fa-envelope-open text-3xl md:text-5xl text-primary/40"></i>
-                            </div>
-                            <p class="text-white/90 font-bold text-base md:text-xl drop-shadow-sm text-center">
-                                ${this.profile.isAdmin && this.adminSearchQuery ? 'ไม่พบข้อความที่ค้นหา' : 'ยังไม่มีข้อความถึงคุณในขณะนี้'}
-                            </p>
+                        <div class="text-center py-20 flex flex-col items-center justify-center animate-fade-in">
+                            <i class="fa-solid fa-envelope-open text-5xl text-white/30 mb-4"></i>
+                            <p class="text-white/90 font-bold text-lg">${this.profile.isAdmin && this.adminSearchQuery ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อความ'}</p>
                         </div>`;
                 } else {
                     displayMessages.forEach((msg, idx) => {
@@ -1142,93 +1185,104 @@
                         let displayName = msg.from.name;
                         
                         const adminControls = this.profile.isAdmin ? `
-                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 backdrop-blur shadow hover:shadow-md p-1.5 md:p-2 rounded-lg transition-all" title="ลบข้อความ">
-                                <i class="fa-solid fa-trash-can text-sm md:text-base"></i>
+                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 p-2 rounded-lg transition-all shadow-sm">
+                                <i class="fa-solid fa-trash-can"></i>
                             </button>
                         ` : '';
                         
-                        const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-[9px] md:text-xs bg-primary/20 text-primary border border-primary/30 px-1.5 py-0.5 rounded-full font-bold shadow-sm whitespace-nowrap"><i class="fa-solid fa-users text-[8px] md:text-[10px]"></i> ${msg.to.length}</span>` : '';
-
                         if (this.profile.isAdmin && isAnonymous) {
                              const realSender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                             displayName += ` <span class="text-[9px] md:text-[10px] text-red-500 bg-red-50 px-1 rounded ml-1 border border-red-100">(${realSender ? realSender.name : msg.from.id})</span>`;
+                             displayName += ` <span class="text-[10px] text-red-500 bg-red-50 px-1 rounded ml-1 border border-red-100">(${realSender ? realSender.name : msg.from.id})</span>`;
                         }
 
                         if (isAnonymous) {
-                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg md:text-xl"></i></div>`;
+                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full text-base">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-base">${msg.from.name.substring(0,1)}</span>`;
+                            senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>`;
                         }
-                        
-                        // ลบบรรทัดที่เว้นว่างเกินจำเป็น
-                        let cleanContent = msg.content.trim();
 
                         msgsHTML += `
-                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-3 md:p-5 rounded-xl md:rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-2 md:gap-4 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up w-full" style="animation-delay: ${idx * 20}ms">
-                            <div class="flex flex-row sm:flex-col items-center justify-between w-full sm:w-auto gap-2 sm:gap-0 border-b border-gray-200/50 sm:border-0 pb-2 sm:pb-0">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden ${isAnonymous ? 'border-2 border-slate-400' : 'border-2 border-white'}">
+                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col sm:flex-row gap-4 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 20}ms">
+                            <div class="flex items-center justify-between sm:block">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
                                         ${senderImg}
                                     </div>
                                     <div class="sm:hidden">
-                                        <div class="font-extrabold ${isAnonymous ? 'text-slate-700' : 'text-primary'} text-sm break-words leading-tight">${displayName} ${adminToLabel}</div>
-                                        <div class="text-[9px] text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                        <div class="font-extrabold text-primary text-sm">${displayName}</div>
+                                        <div class="text-[9px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
                                 </div>
-                                <div class="sm:hidden flex items-center">
-                                    ${adminControls}
-                                </div>
+                                <div class="sm:hidden">${adminControls}</div>
                             </div>
                             
-                            <div class="flex-1 w-full min-w-0">
-                                <div class="hidden sm:flex justify-between items-start mb-1 md:mb-2">
-                                    <div class="min-w-0">
-                                        <span class="font-extrabold ${isAnonymous ? 'text-slate-700' : 'text-primary'} text-base md:text-lg tracking-wide break-words">${displayName}</span>
-                                        ${adminToLabel}
-                                        <div class="text-[10px] md:text-xs text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                            <div class="flex-1 w-full">
+                                <div class="hidden sm:flex justify-between items-start mb-2">
+                                    <div>
+                                        <span class="font-extrabold text-primary text-base">${displayName}</span>
+                                        <div class="text-[10px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
-                                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
-                                        ${adminControls}
-                                    </div>
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity">${adminControls}</div>
                                 </div>
                                 
                                 ${isAudio ? `
-                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit max-w-full shadow-sm mt-2 sm:mt-0">
-                                        <audio src="${msg.content}" controls class="h-8 md:h-10 w-[200px] sm:w-[250px]"></audio>
+                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm">
+                                        <audio src="${msg.content}" controls class="h-8 w-[200px]"></audio>
                                     </div>
                                 ` : `
-                                    <div class="text-primary bg-white/80 border border-white/50 whitespace-pre-wrap break-words leading-relaxed shadow-sm text-sm md:text-base relative font-medium mt-2 sm:mt-0 w-fit min-w-[120px] max-w-full rounded-2xl px-5 py-3 pl-10">
-                                        <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl md:text-2xl text-primary/20"></i>
-                                        <div class="relative z-10 break-words max-w-full pt-1">${cleanContent}</div>
+                                    <div class="text-primary bg-white/80 border border-white/50 px-5 py-3 rounded-2xl shadow-sm text-sm relative font-medium w-fit max-w-full">
+                                        <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl text-primary/20"></i>
+                                        <div class="pl-6 pt-1 break-words">${msg.content.trim()}</div>
                                     </div>
                                 `}
                             </div>
                         </div>`;
                     });
                 }
+                return msgsHTML;
+            },
 
-                return `
-                <div class="glass-card rounded-[1.5rem] md:rounded-[2.5rem] p-3 sm:p-5 md:p-8 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative z-20">
-                    <div class="flex items-center justify-between mb-4 md:mb-6 border-b border-white/40 pb-3 md:pb-5">
-                        <div class="flex items-center w-full">
-                            <button onclick="app.showView(app.profile.isPredefined ? 'feed' : 'home')" class="p-2 md:p-3 bg-white/20 hover:bg-white/40 hover:shadow-md rounded-xl md:rounded-2xl mr-2 sm:mr-4 transition-all text-white shadow-sm flex-shrink-0">
-                                <i class="fa-solid fa-arrow-left text-base md:text-xl"></i>
-                            </button>
-                            <div class="min-w-0">
-                                <h2 class="text-lg sm:text-xl md:text-2xl font-extrabold text-white flex items-center tracking-wide truncate drop-shadow-md">
-                                    <i class="fa-solid fa-envelope-open-text mr-2 hidden sm:inline-block"></i> กล่องจดหมาย
-                                </h2>
-                                <p class="text-blue-100 mt-0.5 font-bold text-[10px] md:text-xs truncate">
-                                    ${this.profile.isAdmin ? '<span class="text-red-500 bg-white px-1.5 py-0.5 rounded-md"><i class="fa-solid fa-shield-halved mr-1"></i> โหมดจัดการของแอดมิน</span>' : 'ข้อความที่ส่งถึงคุณ'}
-                                </p>
+            renderInbox: function() {
+                let adminControlsHTML = '';
+                if (this.profile.isAdmin) {
+                    adminControlsHTML = `
+                        <div class="mb-6 space-y-4">
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-sm"></i>
+                                <input type="text" placeholder="แอดมิน: ค้นหาด้วยชื่อ หรือรหัส..." 
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/40 border border-white/50 outline-none transition-all text-sm font-medium text-primary shadow-inner"
+                                    onkeyup="app.setAdminSearch(this.value)" value="${this.adminSearchQuery}">
+                            </div>
+                            <div id="searchGroupHeader">
+                                ${this.renderSearchHeader()}
                             </div>
                         </div>
+                    `;
+                }
+
+                return `
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative">
+                    <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
+                        <div class="flex items-center">
+                            <button onclick="app.showView(app.profile.isPredefined ? 'feed' : 'home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
+                                <i class="fa-solid fa-arrow-left text-xl"></i>
+                            </button>
+                            <div>
+                                <h2 class="text-xl font-extrabold text-white drop-shadow-md">กล่องจดหมาย</h2>
+                                <p class="text-blue-100 text-xs font-bold">${this.profile.isAdmin ? 'แผงควบคุมผู้ดูแลระบบ' : 'ข้อความถึงคุณ'}</p>
+                            </div>
+                        </div>
+                        ${this.profile.isAdmin ? `
+                            <button onclick="app.factoryReset()" class="bg-red-500/80 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg transition-all">
+                                <i class="fa-solid fa-triangle-exclamation mr-1"></i> ล้างระบบ
+                            </button>
+                        ` : ''}
                     </div>
                     
-                    ${adminSearchHTML}
+                    ${adminControlsHTML}
 
-                    <div id="inboxMessageContainer" class="space-y-3 md:space-y-5 relative z-10">
+                    <div id="inboxMessageContainer" class="space-y-4 relative z-10">
                         ${this.renderInboxMessagesList()}
                     </div>
                 </div>`;
@@ -1236,7 +1290,6 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => app.init());
-
     </script>
 </body>
 </html>
