@@ -46,7 +46,6 @@
             min-height: 100vh;
             overflow-x: hidden;
             word-wrap: break-word;
-            /* Disable double-tap zoom on mobile devices */
             touch-action: manipulation;
         }
         .glass-panel {
@@ -120,12 +119,26 @@
             opacity: 1;
         }
 
-        /* Helper for Centering Initial Letters */
+        /* Helper for Centering Initial Letters - Fixed for perfect centering */
         .flex-center-all {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            line-height: normal !important;
+        }
+
+        /* Mobile Menu Transitions & Blurring */
+        #mainContentWrapper {
+            transition: filter 0.3s ease, transform 0.3s ease;
+        }
+        .menu-open-blur {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+            transform: scale(0.98);
         }
     </style>
 </head>
@@ -178,13 +191,12 @@
                 </button>
             </div>
 
-            <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-5 right-4 md:hidden text-white/90 hover:text-secondary hidden z-50 transition-transform">
+            <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-5 right-4 md:hidden text-white/90 hover:text-secondary hidden z-[60] transition-all duration-300 transform">
                 <i class="fa-solid fa-bars text-2xl drop-shadow-md"></i>
                 <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
             </button>
             
-            <!-- Mobile Dropdown - White Cloudy Style -->
-            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 p-2 flex flex-col gap-1 z-50 w-48 transform transition-all origin-top-right">
+            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 p-2 flex flex-col gap-1 z-[60] w-48 transform transition-all origin-top-right">
                 <button id="btnUsersMob" onclick="app.showView('manage_users')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
                     <i class="fa-solid fa-users-gear w-5 text-center text-white"></i> จัดการสมาชิก
                 </button>
@@ -204,8 +216,10 @@
             </div>
         </header>
 
-        <main class="flex-1 p-3 sm:p-4 md:p-8 overflow-y-auto overflow-x-hidden relative" id="appRoot">
-        </main>
+        <div id="mainContentWrapper" class="flex-1 flex flex-col relative">
+            <main class="flex-1 p-3 sm:p-4 md:p-8 overflow-y-auto overflow-x-hidden relative" id="appRoot">
+            </main>
+        </div>
     </div>
 
     <div id="globalFabContainer" class="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm sm:max-w-md flex justify-center pointer-events-none"></div>
@@ -351,6 +365,16 @@
                 }
             },
 
+            // Helper for Consonant-only abbreviation (2 letters)
+            getAbbr: function(name) {
+                if (!name) return "";
+                const consonants = name.replace(/[^ก-ฮ]/g, '');
+                if (consonants.length >= 2) return consonants.substring(0, 2);
+                if (consonants.length === 1) return consonants;
+                // Fallback for non-Thai names
+                return name.substring(0, 2);
+            },
+
             checkBlockStatus: async function(uid) {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid);
                 const snap = await getDoc(docRef);
@@ -371,21 +395,47 @@
             toggleMobileMenu: function() {
                 this.isMobileMenuOpen = !this.isMobileMenuOpen;
                 const menu = document.getElementById('mobileDropdown');
+                const hamIcon = document.getElementById('navHamburger').querySelector('i');
+                const contentWrapper = document.getElementById('mainContentWrapper');
+                const fabContainer = document.getElementById('globalFabContainer');
+                
                 if (this.isMobileMenuOpen) {
                     menu.classList.remove('hidden');
                     menu.classList.add('flex');
+                    hamIcon.classList.remove('fa-bars');
+                    hamIcon.classList.add('fa-xmark');
+                    contentWrapper.classList.add('menu-open-blur');
+                    if(fabContainer) fabContainer.classList.add('menu-open-blur');
                 } else {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
+                    hamIcon.classList.add('fa-bars');
+                    hamIcon.classList.add('fa-xmark');
+                    contentWrapper.classList.remove('menu-open-blur');
+                    if(fabContainer) fabContainer.classList.remove('menu-open-blur');
                 }
             },
 
             closeMobileMenu: function() {
                 this.isMobileMenuOpen = false;
                 const menu = document.getElementById('mobileDropdown');
+                const hamIcon = document.getElementById('navHamburger')?.querySelector('i');
+                const contentWrapper = document.getElementById('mainContentWrapper');
+                const fabContainer = document.getElementById('globalFabContainer');
+
                 if(menu) {
                     menu.classList.add('hidden');
                     menu.classList.remove('flex');
+                }
+                if(hamIcon) {
+                    hamIcon.classList.add('fa-bars');
+                    hamIcon.classList.remove('fa-xmark');
+                }
+                if(contentWrapper) {
+                    contentWrapper.classList.remove('menu-open-blur');
+                }
+                if(fabContainer) {
+                    fabContainer.classList.remove('menu-open-blur');
                 }
             },
 
@@ -411,7 +461,6 @@
                 this.preloadedImages = true;
             },
 
-            // Helper to determine the relationship label (น้อง/พี่/เพื่อน/คน)
             getRelationshipLabel: function() {
                 if (!this.profile) return "คน";
                 const sid = this.profile.studentId;
@@ -535,7 +584,7 @@
                 this.setupMessagesListener();
                 this.setupUsersListener();
                 
-                glassSwal.fire({
+                 glassSwal.fire({
                     iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>',
                     title: `ยินดีต้อนรับ ${userProfile.name}!`,
                     html: 'เข้าสู่ระบบเรียบร้อยแล้ว',
@@ -602,7 +651,7 @@
                         </div>
                         <button onclick="app.requestOTP()" id="btnReqOTP"
                             class="w-full py-3.5 rounded-xl font-bold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transition-all transform hover:-translate-y-1 text-sm">
-                            รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>
+                            เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>
                         </button>
                     </div>
                     <div class="pb-6 text-center">
@@ -669,12 +718,12 @@
                         setTimeout(() => document.getElementById('otp-0').focus(), 100);
                     } else {
                         glassSwal.fire('ข้อผิดพลาด', result.message, 'error');
-                        btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>';
+                        btn.innerHTML = 'เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>';
                         btn.disabled = false;
                     }
                 } catch(e) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ส่งอีเมลได้', 'error');
-                    btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>';
+                    btn.innerHTML = 'เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>';
                     btn.disabled = false;
                 }
             },
@@ -828,7 +877,6 @@
                     }
                 });
 
-                // Thai language support for Excel via BOM
                 let csv = "\uFEFF"; 
                 csv += "รหัสนักศึกษา,ชื่อเรียก,ชื่อ-นามสกุล,สถานะผู้ใช้\n";
                 allUsers.forEach(u => {
@@ -861,8 +909,8 @@
                                 <p class="text-blue-100 text-xs font-bold">ควบคุมการเข้าถึงระบบ</p>
                             </div>
                         </div>
-                        <button onclick="app.exportUsersToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-file-excel text-sm"></i> โหลดรายชื่อ (.csv)
+                        <button onclick="app.exportUsersToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel text-sm"></i> <span class="hidden sm:inline">โหลดรายชื่อ (.csv)</span>
                         </button>
                     </div>
 
@@ -878,8 +926,8 @@
                     <div id="usersListContainer" class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar" style="max-height: 50vh;">
                     </div>
                     
-                    <div class="mt-4 pt-4 border-t border-white/10 text-center">
-                         <p class="text-[10px] text-white/50 italic">เลื่อนเพื่อดูสมาชิกทั้งหมด ${predefinedUsers.length + this.registeredUsers.filter(r => !predefinedUsers.some(p => p.studentId === r.id)).length} ท่าน</p>
+                    <div class="mt-2 pt-2 border-t border-white/10 text-center">
+                         <p class="text-[9px] text-white/50 italic">สมาชิกทั้งหมด ${predefinedUsers.length + this.registeredUsers.filter(r => !predefinedUsers.some(p => p.studentId === r.id)).length} ท่าน (เลื่อนเพื่อดูทั้งหมด)</p>
                     </div>
                 </div>`;
             },
@@ -920,8 +968,8 @@
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
                             <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all leading-none">${u.name[0]}</span>`)}
-                                <span class="fallback-name h-full w-full flex-center-all leading-none hidden absolute inset-0 z-10 bg-secondary">${u.name[0]}</span>
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${this.getAbbr(u.name)}</span>`)}
+                                <span class="fallback-name h-full w-full flex-center-all hidden absolute inset-0 z-10 bg-secondary">${this.getAbbr(u.name)}</span>
                             </div>
                             <div class="flex-1 text-center sm:text-left min-w-0 w-full">
                                 <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2 truncate">
@@ -1034,12 +1082,12 @@
                         let senderImg = '';
                         
                         if (isAnonymous) {
-                            senderImg = `<div class="w-full h-full flex-center-all text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
+                            senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden w-full h-full flex-center-all leading-none text-primary font-bold text-lg bg-secondary">${msg.from.name.substring(0,2)}</span>` : 
-                                `<div class="w-full h-full flex-center-all leading-none text-primary font-bold text-lg">${msg.from.name.substring(0,2)}</div>`;
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden w-full h-full flex-center-all text-primary font-bold text-lg bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
+                                `<div class="w-full h-full flex-center-all text-primary font-bold text-lg">${this.getAbbr(msg.from.name)}</div>`;
                         }
                         
                         const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
@@ -1136,17 +1184,19 @@
                 const suffix = label === "คน" ? "" : "ๆ";
 
                 if (this.currentView === 'feed') {
+                    const btnText = (label === "คน") ? "ส่งข้อความ" : `ส่งข้อความหา${label}${suffix}`;
                     container.innerHTML = `
                         <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
-                            <span class="truncate">ส่งข้อความหา${label}${suffix}</span>
+                            <span class="truncate">${btnText}</span>
                         </button>`;
                 } 
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
+                    const btnText = (label === "คน") ? "ส่งข้อความ" : `ส่งข้อความหา ${this.selectedIds.length} ${label}`;
                     container.innerHTML = `
                         <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
-                            <span class="truncate">ส่งข้อความหา ${this.selectedIds.length} ${label}</span>
+                            <span class="truncate">${btnText}</span>
                         </button>`;
                 } 
                 else {
@@ -1163,11 +1213,11 @@
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
                         <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
-                            class="relative rounded-full flex-center-all text-primary font-bold user-avatar mb-2 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
+                            class="relative rounded-full flex items-center justify-center text-primary font-bold user-avatar mb-2 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-lg' : 'shadow-md'}">
                             
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex-center-all shadow-inner">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-secondary relative border-2 border-white/60 flex items-center justify-center shadow-inner">
                                 ${app.renderImage(imgUrl, user.name)}
-                                <span class="fallback-name relative z-10 hidden w-full h-full flex-center-all leading-none text-[20px] md:text-[24px] font-bold text-primary bg-secondary">${user.name.substring(0, 2)}</span>
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-[20px] md:text-[24px] font-bold text-primary bg-secondary">${this.getAbbr(user.name)}</span>
                                 <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
                             </div>
                             
@@ -1238,7 +1288,7 @@
                         <div class="text-5xl md:text-6xl font-mono mb-6 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
                             00:${String(this.recordingTime).padStart(2, '0')}
                         </div>
-                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 rounded-full flex-center-all text-white shadow-xl transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
+                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
                             ${this.isRecording ? 
                                 '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl relative z-10"></i>' : 
                                 '<i class="fa-solid fa-microphone text-5xl relative z-10"></i>'}
@@ -1270,10 +1320,10 @@
                         </div>
                     </div>
                     <div class="flex bg-white/30 p-1 rounded-2xl mb-6 shadow-inner relative border border-white/40">
-                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3 rounded-xl text-sm font-bold flex-center-all space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
+                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
                             <i class="fa-solid fa-microphone-lines text-base"></i> <span>ส่งเสียง</span>
                         </button>
-                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3 rounded-xl text-sm font-bold flex-center-all space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
+                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60'}">
                             <i class="fa-solid fa-keyboard text-base"></i> <span>พิมพ์ข้อความ</span>
                         </button>
                     </div>
@@ -1281,10 +1331,10 @@
                         ${isAudio ? audioArea : textArea}
                     </div>
                     <div class="mt-8 flex flex-col sm:flex-row justify-end gap-3">
-                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex-center-all gap-2">
+                        <button onclick="app.sendMessage(true)" id="btnSendAnon" class="px-6 py-3.5 rounded-xl font-bold text-white bg-slate-700 hover:bg-slate-800 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-user-secret"></i> <span>ส่งแบบไม่ระบุตัวตน</span>
                         </button>
-                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex-center-all gap-2">
+                        <button onclick="app.sendMessage(false)" id="btnSendNormal" class="px-6 py-3.5 rounded-xl font-extrabold text-primary bg-secondary hover:bg-yellow-400 shadow-lg transform hover:-translate-y-1 text-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-paper-plane"></i> <span>ส่งระบุตัวตน</span>
                         </button>
                     </div>
@@ -1496,7 +1546,7 @@
                         <div class="text-primary font-bold text-sm">
                             พบ <span class="text-lg">${count}</span> รายการที่ตรงกับ "${this.adminSearchQuery}"
                         </div>
-                        <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex-center-all gap-2">
+                        <button onclick="app.deleteAllFiltered()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2">
                             <i class="fa-solid fa-trash-sweep"></i> ลบรายการที่ค้นหาทั้งหมด
                         </button>
                     </div>`;
@@ -1544,19 +1594,19 @@
                         }
 
                         if (isAnonymous) {
-                             senderImg = `<div class="w-full h-full flex-center-all bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
+                             senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all leading-none text-primary w-full h-full text-sm font-bold bg-secondary">${msg.from.name.substring(0,2)}</span>` : 
-                                `<span class="text-primary flex-center-all leading-none w-full h-full text-sm font-bold">${msg.from.name.substring(0,2)}</span>`;
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
+                                `<span class="text-primary flex-center-all w-full h-full text-sm font-bold">${this.getAbbr(msg.from.name)}</span>`;
                         }
 
                         msgsHTML += `
                         <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col sm:flex-row gap-4 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 15}ms">
                             <div class="flex items-center justify-between sm:block">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold shadow-md relative overflow-hidden border-2 border-white">
+                                    <div class="w-12 h-12 bg-secondary rounded-full flex items-center justify-center font-bold shadow-md relative overflow-hidden border-2 border-white">
                                         ${senderImg}
                                     </div>
                                     <div class="sm:hidden min-w-0 flex-1">
@@ -1631,7 +1681,15 @@
             }
         };
 
-        window.addEventListener('DOMContentLoaded', () => app.init());
+        window.addEventListener('DOMContentLoaded', () => {
+            // Force scroll to top on refresh
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+            window.scrollTo(0, 0);
+            
+            app.init();
+        });
     </script>
 </body>
 </html>
