@@ -48,6 +48,9 @@
         body { 
             background: linear-gradient(135deg, #1e5288 0%, #2b71b8 100%);
             min-height: 100vh;
+            min-height: 100dvh;
+            /* Allow natural scrolling so header can move away */
+            overflow-y: auto;
             overflow-x: hidden;
             word-wrap: break-word;
             touch-action: manipulation;
@@ -141,6 +144,11 @@
             user-select: none;
             transform: scale(0.98);
         }
+
+        /* Prevent overscroll bounce on mobile but allow scrolling away header */
+        .no-scroll {
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="text-slate-800 antialiased font-sans relative">
@@ -150,9 +158,10 @@
         <div class="absolute top-40 -right-20 w-[400px] h-[400px] bg-blob-2 animate-blob" style="animation-delay: 2s; animation-direction: alternate-reverse;"></div>
     </div>
 
+    <!-- Main Container: Flow naturally to allow header scrolling -->
     <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
-        <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50">
+        <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50 flex-shrink-0">
             <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center h-full">
                 <img src="LOGO 65.png" alt="Logo" class="h-10 md:h-14 w-auto drop-shadow-lg cursor-pointer hover:scale-105 transition-transform active:scale-95" 
                      onclick="app.handleLogoClick()"
@@ -223,8 +232,9 @@
             </div>
         </header>
 
+        <!-- Wrapper: Natural scroll area -->
         <div id="mainContentWrapper" class="flex-1 flex flex-col relative">
-            <main class="flex-1 p-3 sm:p-4 md:p-8 overflow-y-auto overflow-x-hidden relative" id="appRoot">
+            <main class="flex-1 p-3 sm:p-4 md:p-8 relative" id="appRoot">
             </main>
         </div>
     </div>
@@ -541,6 +551,7 @@
             },
 
             showView: function(viewName) {
+                window.scrollTo(0, 0); // Always scroll to top on view change
                 this.closeMobileMenu();
                 this.currentView = viewName;
                 const root = document.getElementById('appRoot');
@@ -661,7 +672,10 @@
                         const container = document.getElementById('inboxMessageContainer');
                         if(container) container.innerHTML = this.renderInboxMessagesList();
                     } 
-                    else if(this.currentView === 'feed') this.showView('feed');
+                    else if(this.currentView === 'feed') {
+                         const root = document.getElementById('appRoot');
+                         if(root) root.innerHTML = this.renderFeed();
+                    }
                 });
             },
 
@@ -724,6 +738,14 @@
                 
                 if(idInput === '65030900') {
                     return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
+                }
+
+                // TEST ID CASE: Skip OTP and go directly to profile creation
+                if(idInput === '90030000') {
+                    this.tempStudentId = idInput;
+                    this.actualOtp = 'SKIP';
+                    document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                    return;
                 }
 
                 this.tempStudentId = idInput;
@@ -835,12 +857,19 @@
                     <div class="p-6 md:p-8 space-y-6">
                         <div class="bg-white/40 p-5 rounded-2xl text-xs md:text-sm text-primary text-center border border-white/50 shadow-inner">
                             <i class="fa-solid fa-face-smile-wink text-3xl block mb-2 text-secondary animate-bounce"></i>
-                            ดูเหมือนคุณจะเป็นผู้ใช้ใหม่ <br/>แนะนำตัวให้พวกเราหน่อยครับ!
+                            แนะนำตัวให้พวกเราหน่อยครับ!
                         </div>
-                        <div>
-                            <input type="text" id="inputNewName" placeholder="ชื่อเรียกของคุณ..." 
-                                class="glass-input w-full px-5 py-4 rounded-xl transition-all outline-none text-center font-bold text-primary"
-                                onkeypress="if(event.key === 'Enter') app.registerNewUser()">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-white mb-1 ml-2">ชื่อเรียกของคุณ</label>
+                                <input type="text" id="inputNewName" placeholder="ชื่อเล่น..." 
+                                    class="glass-input w-full px-5 py-4 rounded-xl transition-all outline-none text-center font-bold text-primary">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-white mb-1 ml-2">ชั้นปี</label>
+                                <input type="text" id="inputNewYear" placeholder="ปี 1, ปี 2, ปี 3, ..." 
+                                    class="glass-input w-full px-5 py-4 rounded-xl transition-all outline-none text-center font-bold text-primary">
+                            </div>
                         </div>
                         <button onclick="app.registerNewUser()" 
                             class="w-full py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-xl font-bold text-lg shadow-lg transition-all transform hover:-translate-y-1">
@@ -851,8 +880,11 @@
             },
             registerNewUser: function() {
                 const name = document.getElementById('inputNewName').value.trim();
+                const year = document.getElementById('inputNewYear').value.trim();
                 if(!name) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
-                this.loginSuccess({ studentId: this.tempStudentId, name: name, isPredefined: false });
+                
+                const finalName = year ? `${name}, ${year}` : name;
+                this.loginSuccess({ studentId: this.tempStudentId, name: finalName, isPredefined: false });
             },
 
             renderSettings: function() {
@@ -1025,7 +1057,7 @@
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
                             <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${abbr}</span>`)}
+                                ${u.studentId.startsWith('G') || u.studentId === '90030000' ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all">${abbr}</span>`)}
                                 <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-sm h-full w-full">${abbr}</span>
                             </div>
                             <div class="flex-1 text-center sm:text-left min-w-0 w-full">
@@ -1065,7 +1097,6 @@
                     if (result.isConfirmed) {
                         const batch = writeBatch(db);
                         filtered.forEach(u => {
-                            // Only delete if they actually exist in registeredUsers (predefined but not registered can't be deleted)
                             if (this.registeredUsers.some(r => r.id === u.studentId)) {
                                 const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', u.studentId);
                                 batch.delete(ref);
