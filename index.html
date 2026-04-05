@@ -3,500 +3,789 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Song Siang - Classroom Voice System</title>
+    <title>ส่งเสียง | Song Siang</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Library สำหรับไฟล์ ZIP -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <style>
-        body { font-family: 'Kanit', sans-serif; background-color: #fffaf5; font-size: 13px; }
-        .italic-title { font-style: italic; }
-        .orange-theme { color: #f97316; }
-        .bg-orange-theme { background-color: #f97316; }
-        .custom-modal-backdrop { background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
-        .recording-pulse { animation: pulse 1.5s infinite; }
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
-            70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(249, 115, 22, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
+                    colors: { primary: '#2b71b8', secondary: '#fddf31' },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        pulseGlow: { '0%, 100%': { boxShadow: '0 0 0 0 rgba(253, 223, 49, 0.7)' }, '50%': { boxShadow: '0 0 0 15px rgba(253, 223, 49, 0)' } }
+                    }
+                }
+            }
         }
-        .btn-orange { background-color: #f97316; color: white; transition: all 0.2s; font-weight: 600; }
-        .btn-orange:hover { background-color: #ea580c; }
-        .btn-orange:active { transform: scale(0.97); }
-        .nav-active { color: #f97316; background-color: #fff7ed; }
-        .nav-inactive { color: #94a3b8; }
-        audio::-webkit-media-controls-panel { background-color: #fff7ed; }
-        .compact-input { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 0.4rem; border-radius: 0.5rem; font-weight: 500; font-size: 0.8rem; width: 100%; outline: none; }
-        .compact-input:focus { border-color: #f97316; }
-        .view-card { max-width: 450px; margin: 0 auto; }
+    </script>
+
+    <!-- FontAwesome & SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body { 
+            background: linear-gradient(135deg, #1e5288 0%, #2b71b8 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+        
+        .otp-input:focus { transform: translateY(-2px); }
+        .user-avatar { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .user-avatar:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(253, 223, 49, 0.6); }
+        .user-selected .user-avatar { 
+            border-color: #fddf31; 
+            transform: scale(1.05); 
+            box-shadow: 0 0 25px rgba(253, 223, 49, 0.8);
+        }
     </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col">
-
-    <!-- Global Modal -->
-    <div id="global-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4 custom-modal-backdrop">
-        <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl animate-in zoom-in duration-300 text-center border border-orange-100">
-            <div id="modal-icon-container" class="w-10 h-10 rounded-xl flex items-center justify-center mb-3 mx-auto shadow-sm"></div>
-            <h3 id="modal-title" class="text-sm font-black text-slate-800 mb-1 italic-title tracking-tight uppercase leading-none"></h3>
-            <p id="modal-message" class="text-slate-500 text-[11px] leading-relaxed mb-5 px-1"></p>
-            <div id="modal-actions" class="flex flex-col gap-2">
-                <button id="modal-primary-btn" class="w-full btn-orange py-2 rounded-lg font-black uppercase tracking-widest text-[9px] italic-title">ตกลง</button>
-                <button id="modal-secondary-btn" class="hidden w-full bg-slate-50 text-slate-400 py-2 rounded-lg font-bold text-[9px] uppercase tracking-widest">ยกเลิก</button>
-            </div>
-        </div>
+<body class="text-slate-800 antialiased font-sans relative">
+    
+    <!-- Background Animated Blobs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+        <div class="absolute top-0 right-1/4 w-96 h-96 bg-secondary rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-32 left-1/2 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
     </div>
 
-    <!-- Header (Hidden initially) -->
-    <header id="main-header" class="hidden bg-white/80 backdrop-blur-md border-b border-orange-50 sticky top-0 z-50 px-4 py-2 flex justify-between items-center">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.reload()">
-            <div class="bg-orange-theme p-1 rounded-md text-white">
-                <i data-lucide="mic-vocal" size="14"></i>
-            </div>
-            <h1 id="display-project-name" class="text-sm font-black tracking-tighter orange-theme italic-title uppercase">Song Siang</h1>
-        </div>
-        <div id="auth-status" class="flex items-center gap-2"></div>
-    </header>
-
     <!-- Main Container -->
-    <main class="flex-grow p-4 w-full overflow-x-hidden">
-        <div id="loading-screen" class="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <div class="w-7 h-7 border-[3px] border-orange-50 border-t-orange-500 rounded-full animate-spin"></div>
-            <p class="text-orange-400 font-black uppercase tracking-widest text-[8px] italic-title">Syncing Data</p>
-        </div>
-        <div id="views" class="hidden animate-in fade-in duration-500"></div>
-    </main>
+    <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col glass-panel shadow-2xl">
+        
+        <!-- Header -->
+        <header class="px-6 py-8 text-center text-white border-b border-white/10 relative">
+            <h1 class="text-5xl font-extrabold tracking-wider mb-2 drop-shadow-lg bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
+                ส่งเสียง
+            </h1>
+            <p class="text-sm font-light tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
+            
+            <div id="navMenu" class="absolute top-8 right-6 flex items-center space-x-6 hidden">
+                <button onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all">
+                    <div class="p-2 rounded-full group-hover:bg-white/10 transition-colors relative">
+                        <i class="fa-solid fa-envelope text-xl"></i>
+                        <span id="unreadBadge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full hidden"></span>
+                    </div>
+                    <span class="text-[10px] font-medium tracking-wide">กล่องจดหมาย</span>
+                </button>
+                <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
+                    <div class="p-2 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-xl"></i>
+                    </div>
+                    <span class="text-[10px] font-medium tracking-wide">ออกระบบ</span>
+                </button>
+            </div>
+        </header>
 
-    <!-- Student Nav (Hidden initially) -->
-    <nav id="student-nav" class="hidden fixed bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-xl border border-orange-100 rounded-2xl flex gap-1 p-1 z-50 shadow-lg">
-        <button onclick="renderView('home')" class="nav-btn p-2 rounded-xl flex items-center justify-center nav-active transition-all" data-view="home">
-            <i data-lucide="layout-grid" size="16"></i>
-        </button>
-        <button onclick="renderView('record')" class="nav-btn p-2 rounded-xl flex items-center justify-center nav-inactive" data-view="record">
-            <i data-lucide="mic" size="16"></i>
-        </button>
-        <button onclick="renderView('inbox')" class="nav-btn p-2 rounded-xl flex items-center justify-center nav-inactive" data-view="inbox">
-            <i data-lucide="mail" size="16"></i>
-        </button>
-    </nav>
+        <!-- Dynamic Content Area -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto relative" id="appRoot">
+            <!-- Content gets injected here -->
+        </main>
+    </div>
 
+    <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, signInAnonymously, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, query, where, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // ==========================================
+        // 1. การตั้งค่าระบบ
+        // ==========================================
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
+        
+        // กำหนดโฟลเดอร์รูปภาพเป็น "65" 
+        // ดังนั้นรูปจะถูกดึงจากพาธ 65/1.png, 65/2.png ตามลำดับ
+        const GITHUB_IMG_BASE_URL = "65"; 
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
             authDomain: "song-siang-fa86e.firebaseapp.com",
+            databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "song-siang-fa86e",
             storageBucket: "song-siang-fa86e.firebasestorage.app",
             messagingSenderId: "1090864995280",
-            appId: "1:1090864995280:web:cf08b12aa883ca830937d5",
-            measurementId: "G-KJNWRLY4LC"
+            appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
         };
 
-        const STUDENT_LIST = [
-            { id: "65030001", name: "นางสาวกชกร ทรัพย์โคกสูง", nick: "กิ๊ฟ" }, { id: "65030004", name: "นางสาวกนกวรรณ จันทร์มาเมือง", nick: "ฝ้าย" }, { id: "65030008", name: "นางสาวกมลเนตร ชัยชนะ", nick: "วิว" }, { id: "65030009", name: "นางสาวกมลฤทัย สว่างแจ้ง", nick: "เฟิร์น" }, { id: "65030022", name: "นางสาวกุลภัสสร์ ธีระเพ็ญแสง", nick: "ภัส" }, { id: "65030030", name: "นางสาวจันทรัตน์ อ่อนละมูล", nick: "น้ำฝน" }, { id: "65030036", name: "นายเฉลิมพร วันเพ็ญ", nick: "วันเพ็ญ" }, { id: "65030038", name: "นางสาวชญาสินี วงศ์รักษา", nick: "ต้นข้าว" }, { id: "65030040", name: "นางสาวชนาภา ท้วมเกร็ด", nick: "เต๋าเต๋า" }, { id: "65030043", name: "นายชยาวุธ ภวคุณกร", nick: "นน" }, { id: "65030045", name: "นางสาวชยุตรา เสนากูล", nick: "คะนิ้ง" }, { id: "65030048", name: "นางสาวชวพร ประสงค์ผล", nick: "มิว" }, { id: "65030054", name: "นางสาวโชติกา อายุวรรณ", nick: "กิว" }, { id: "65030057", name: "นายฐิติกานต์ ปุระเตนนท์", nick: "กัน" }, { id: "65030063", name: "นางสาวณัชชา อภิเดช", nick: "กล้องฟิล์ม" }, { id: "65030070", name: "นายณัฐนันท์ เตชัย", nick: "หวัง" }, { id: "65030093", name: "นายธนภัทร ไชยเมือง", nick: "อังเปา" }, { id: "65030094", name: "นายธนภัทร บุญต่าง", nick: "ภู" }, { id: "65030095", name: "นายธนภัทร พ้องเสียง", nick: "เพลง" }, { id: "65030097", name: "นางสาวธรรญชนก กิจพิบูลย์", nick: "ฟาง" }, { id: "65030105", name: "นายธาวิน ทองส่งเสริม", nick: "วิน" }, { id: "65030115", name: "นายนนทวัฒน์ ชีพอุบัติ", nick: "เฟรม" }, { id: "65030123", name: "นางสาวนันทกานต์ ชูจันทร์", nick: "จิ๊บ" }, { id: "65030138", name: "นายปฏิภาณ บำเรอจิต", nick: "ปลั๊ก" }, { id: "65030140", name: "นางสาวปณิตา พงษ์เรือง", nick: "ปิ่น" }, { id: "65030145", name: "นางสาวปรียากร สายสิม", nick: "ปาล์มมี่" }, { id: "65030173", name: "นางสาวพุธิตา ปันฟอง", nick: "ใบเตย" }, { id: "65030193", name: "นายภูวิศ ชินทองเปลว", nick: "โบ๊ท" }, { id: "65030215", name: "นางสาววนิชยา ทองสุข", nick: "ดรีม" }, { id: "65030216", name: "นางสาววนิดา วามะขัน", nick: "มิ้นท์" }, { id: "65030221", name: "นางสาววรัญญา ประสิทธิ์พิชิต", nick: "เมอ" }, { id: "65030225", name: "นางสาววริษา อุ่นวิเศษ", nick: "หมีพู" }, { id: "65030231", name: "นางสาววุฒิชัย อุ่นวิเศษ", nick: "วุฒิ" }, { id: "65030234", name: "นางสาวศศิกานต์ เจริญพันธ์", nick: "แพร์" }, { id: "65030242", name: "นายศิวกร คู่โนรัมย์", nick: "โอเว่น" }, { id: "65030249", name: "นายศุภาวุฒิ ไขดอน", nick: "เบต" }, { id: "65030272", name: "นางสาวอชิรญา ทิพกันทา", nick: "แทมมี่" }, { id: "65030273", name: "นางสาวอติกานต์ เกษแก้ว", nick: "เตย" }, { id: "65030280", name: "นางสาวอภิญญา ภัคศิริกุลวัฒน์", nick: "ตัง" }, { id: "65030282", name: "นางสาวอรกัญญา ปัญญา", nick: "มิก" }, { id: "65030286", name: "นางสาวอริสา ประทีป ณ ถลาง", nick: "ฟิล์ม" }, { id: "65030288", name: "นางสาวอังคณา ใบตะเห", nick: "ดาว" }, { id: "65030290", name: "นายอัฟนาน สาเม๊าะ", nick: "อัฟ" }, { id: "65030292", name: "นางสาวอาทิตยาม พริกเอียด", nick: "ณัฐ" }, { id: "65030295", name: "นางสาวอารียา สุขเหลือง", nick: "อ๋อม" }, { id: "65030298", name: "นายนราวิชญ์ สมันตกุล", nick: "บอส" },
-        ];
+        const appFirebase = initializeApp(firebaseConfig);
+        const auth = getAuth(appFirebase);
+        const db = getFirestore(appFirebase);
+        const appId = "song-siang-app";
 
-        // --- State ---
-        let user = null;
-        let role = 'guest';
-        let studentId = '';
-        let config = { 
-            projectName: 'Song Siang', 
-            wordLimit: 50, 
-            publicEnabled: true, 
-            studentEnabled: true,
-            submissionType: 'admin', 
-            submissionTitle: 'อัดเสียงส่งงาน'
-        };
-        let currentView = 'login';
-        let targetStudent = null;
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let recordedBase64 = "";
-        let isProcessingAudio = false;
-        let recognition = null;
-        let transcript = "";
-        let timer = 0;
-        let timerInterval = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'song-siang-fa86e';
+        // ฐานข้อมูลเพื่อน 45 คน (เรียงตามลำดับรูป 1.png - 45.png)
+        const predefinedUsers = [
+            { id: 1, studentId: "65030001", fullName: "นางสาวกชกร ทรัพย์โคกสูง", name: "กิ๊ฟ" },
+            { id: 2, studentId: "65030004", fullName: "นางสาวกนกวรรณ จันทร์มาเมือง", name: "ฝ้าย" },
+            { id: 3, studentId: "65030008", fullName: "นางสาวกมลเนตร ชัยชนะ", name: "วิว" },
+            { id: 4, studentId: "65030009", fullName: "นางสาวกมลฤทัย สว่างแจ้ง", name: "เฟิร์น" },
+            { id: 5, studentId: "65030022", fullName: "นางสาวกุลภัสสร์ ธีระเพ็ญแสง", name: "ภัส" },
+            { id: 6, studentId: "65030030", fullName: "นางสาวจันทรัตน์ อ่อนละมูล", name: "น้ำฝน" },
+            { id: 7, studentId: "65030036", fullName: "นายเฉลิมพร วันเพ็ญ", name: "วันเพ็ญ" },
+            { id: 8, studentId: "65030038", fullName: "นางสาวชญาสินี วงศ์รักษา", name: "ต้นข้าว" },
+            { id: 9, studentId: "65030040", fullName: "นางสาวชนาภา ท้วมเกร็ด", name: "เต๋าเต๋า" },
+            { id: 10, studentId: "65030043", fullName: "นายชยาวุธ ภวคุณกร", name: "นน" },
+            { id: 11, studentId: "65030045", fullName: "นางสาวชยุตรา เสนากูล", name: "คะนิ้ง" },
+            { id: 12, studentId: "65030048", fullName: "นางสาวชวพร ประสงค์ผล", name: "มิว" },
+            { id: 13, studentId: "65030054", fullName: "นางสาวโชติกา อายุวรรณ", name: "กิว" },
+            { id: 14, studentId: "65030057", fullName: "นายฐิติกานต์ ปุระเตนนท์", name: "กัน" },
+            { id: 15, studentId: "65030063", fullName: "นางสาวณัชชา อภิเดช", name: "กล้องฟิล์ม" },
+            { id: 16, studentId: "65030070", fullName: "นายณัฐนันท์ เตชัย", name: "หวัง" },
+            { id: 17, studentId: "65030093", fullName: "นายธนภัทร ไชยเมือง", name: "อังเปา" },
+            { id: 18, studentId: "65030095", fullName: "นายธนภัทร พ้องเสียง", name: "เพลง" },
+            { id: 19, studentId: "65030097", fullName: "นางสาวธรรญชนก กิจพิบูลย์", name: "ฟาง" },
+            { id: 20, studentId: "65030105", fullName: "นายธาวิน ทองส่งเสริม", name: "วิน" },
+            { id: 21, studentId: "65030115", fullName: "นายนนทวัฒน์ ชีพอุบัติ", name: "เฟรม" },
+            { id: 22, studentId: "65030123", fullName: "นางสาวนันทกานต์ ชูจันทร์", name: "จิ๊บ" },
+            { id: 23, studentId: "65030138", fullName: "นายปฏิภาณ บำเรอจิต", name: "ปลั๊ก" },
+            { id: 24, studentId: "65030140", fullName: "นางสาวปณิตา พงษ์เรือง", name: "ปิ่น" },
+            { id: 25, studentId: "65030145", fullName: "นางสาวปรียากร สายสิม", name: "ปาล์มมี่" },
+            { id: 26, studentId: "65030173", fullName: "นางสาวพุธิตา ปันฟอง", name: "ใบเตย" },
+            { id: 27, studentId: "65030193", fullName: "นายภูวิศ ชินทองเปลว", name: "โบ๊ท" },
+            { id: 28, studentId: "65030215", fullName: "นางสาววนิชยา ทองสุข", name: "ดรีม" },
+            { id: 29, studentId: "65030216", fullName: "นางสาววนิดา วามะขัน", name: "มิ้นท์" },
+            { id: 30, studentId: "65030221", fullName: "นางสาววรัญญา ประสิทธิ์พิชิต", name: "เมอ" },
+            { id: 31, studentId: "65030225", fullName: "นางสาววริษา อุ่นวิเศษ", name: "หมีพู" },
+            { id: 32, studentId: "65030231", fullName: "นางสาววุฒิชัย อุ่นวิเศษ", name: "วุฒิ" },
+            { id: 33, studentId: "65030234", fullName: "นางสาวศศิกานต์ เจิรญพันธ์", name: "แพร์" },
+            { id: 34, studentId: "65030242", fullName: "นายศิวกร คู่โนรัมย์", name: "โอเว่น" },
+            { id: 35, studentId: "65030249", fullName: "นายศุภาวุฒิ ไขดอน", name: "เบต" },
+            { id: 36, studentId: "65030272", fullName: "นางสาวอชิรญา ทิพกันทา", name: "แทมมี่" },
+            { id: 37, studentId: "65030273", fullName: "นางสาวอติกานต์ เกษแก้ว", name: "เตย" },
+            { id: 38, studentId: "65030280", fullName: "นางสาวอภิญญา ภัคศิริกุลวัฒน์", name: "ตัง" },
+            { id: 39, studentId: "65030282", fullName: "นางสาวอรกัญญา ปัญญา", name: "มิก" },
+            { id: 40, studentId: "65030286", fullName: "นางสาวอริสา ประทีป ณ ถลาง", name: "ฟิล์ม" },
+            { id: 41, studentId: "65030288", fullName: "นางสาวอังคณา ใบตะเห", name: "ดาว" },
+            { id: 42, studentId: "65030290", fullName: "นายอัฟนาน สาเม๊าะ", name: "อัฟ" },
+            { id: 43, studentId: "65030292", fullName: "นางสาวอาทิตยาม พริกเอียด", name: "ณัฐ" },
+            { id: 44, studentId: "65030295", fullName: "นางสาวอารียา สุขเหลือง", name: "อ๋อม" },
+            { id: 45, studentId: "65030298", fullName: "นายนราวิชญ์ สมันตกุล", name: "บอส" }
+        ].map(u => ({ ...u, isPredefined: true }));
 
-        const fbApp = initializeApp(firebaseConfig);
-        const auth = getAuth(fbApp);
-        const db = getFirestore(fbApp);
-        const provider = new GoogleAuthProvider();
+        const MAX_WORDS = 200;
+        const MAX_AUDIO_TIME = 30;
 
-        const getSettingsDoc = () => doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'general');
-        const getPublicCollection = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
-
-        window.showModal = (title, message, type = 'info', onPrimary = null, showSecondary = false) => {
-            const modal = document.getElementById('global-modal');
-            const iconContainer = document.getElementById('modal-icon-container');
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-message').innerText = message;
-            iconContainer.className = "w-10 h-10 rounded-xl flex items-center justify-center mb-3 mx-auto " + 
-                (type === 'error' ? 'bg-red-50 text-red-500' : type === 'success' ? 'bg-green-50 text-green-500' : 'bg-orange-50 text-orange-500');
-            iconContainer.innerHTML = `<i data-lucide="${type === 'error' ? 'alert-circle' : type === 'success' ? 'check-circle' : 'info'}" size="20"></i>`;
-            document.getElementById('modal-primary-btn').onclick = () => { modal.classList.add('hidden'); if(onPrimary) onPrimary(); };
-            const secondaryBtn = document.getElementById('modal-secondary-btn');
-            secondaryBtn.classList.toggle('hidden', !showSecondary);
-            secondaryBtn.onclick = () => modal.classList.add('hidden');
-            modal.classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        const initAuthFlow = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
-                } else { await signInAnonymously(auth); }
-            } catch (err) { console.error("Init failed"); }
-        };
-
-        onAuthStateChanged(auth, async (u) => {
-            user = u;
-            document.getElementById('loading-screen').classList.add('hidden');
-            document.getElementById('views').classList.remove('hidden');
-
-            if (u && !u.isAnonymous) {
-                const email = u.email || "";
-                if (email === "ie.architecture65@gmail.com") {
-                    role = 'admin'; renderView('admin');
-                } else if (email.endsWith('@kmitl.ac.th')) {
-                    const prefix = email.split('@')[0];
-                    if (STUDENT_LIST.some(s => s.id === prefix)) {
-                        role = 'student'; studentId = prefix; renderView('home');
-                    } else { await signOut(auth); showModal("Fail", "คุณไม่อยู่ในรายชื่อนักศึกษา", "error"); }
-                } else { await signOut(auth); showModal("Fail", "จำกัดเฉพาะ KMITL หรือ Admin", "error"); }
-                document.getElementById('main-header').classList.remove('hidden');
-            } else {
-                role = 'guest'; renderLogin();
-                document.getElementById('main-header').classList.add('hidden');
-                document.getElementById('student-nav').classList.add('hidden');
-            }
-            updateAuthUI();
-
-            onSnapshot(getSettingsDoc(), (snap) => {
-                if (snap.exists()) {
-                    config = { ...config, ...snap.data() };
-                    document.getElementById('display-project-name').innerText = config.projectName;
-                    if (currentView === 'login') renderLogin();
-                    if (currentView === 'admin') renderAdmin();
-                }
-            }, (err) => console.log("Settings permission issue (Expected before setup)"));
-        });
-
-        initAuthFlow();
-
-        window.login = async () => { try { await signInWithPopup(auth, provider); } catch (e) { showModal("Error", e.message, "error"); } };
-        window.loginAsPublic = () => { if (!config.publicEnabled) { showModal("Notice", "ระบบปิดชั่วคราว", "info"); return; } role = 'public'; renderHome(); };
-        window.logout = () => showModal("ยืนยัน", "ออกจากระบบ?", "info", () => { signOut(auth).then(() => window.location.reload()); }, true);
-
-        function updateAuthUI() {
-            const container = document.getElementById('auth-status');
-            if (user && !user.isAnonymous) {
-                container.innerHTML = `<button onclick="logout()" class="p-1.5 text-slate-300 hover:text-red-500 bg-white rounded-lg shadow-sm border border-orange-50"><i data-lucide="log-out" size="14"></i></button>`;
-            } else if (role === 'public') {
-                container.innerHTML = `<button onclick="window.location.reload()" class="text-[7px] font-black text-slate-400 bg-white border border-slate-100 px-2.5 py-1 rounded-full flex items-center gap-1 italic-title uppercase">Portal <i data-lucide="log-out" size="8"></i></button>`;
-            }
-            lucide.createIcons();
-        }
-
-        window.renderView = (viewName) => {
-            currentView = viewName;
-            document.getElementById('student-nav').classList.toggle('hidden', role !== 'student');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('nav-active', b.dataset.view === viewName));
-            if (viewName === 'home') renderHome();
-            else if (viewName === 'record') renderRecord();
-            else if (viewName === 'inbox') renderInbox();
-            else if (viewName === 'admin') renderAdmin();
-            lucide.createIcons();
-        };
-
-        function renderLogin() {
-            currentView = 'login';
-            document.getElementById('views').innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 animate-in fade-in duration-700">
-                    <div class="w-14 h-14 bg-orange-500 text-white rounded-2xl flex items-center justify-center shadow-lg mb-4 transform rotate-3"><i data-lucide="mic-vocal" size="28"></i></div>
-                    <h2 class="text-2xl font-black text-slate-800 mb-1 italic-title uppercase text-center tracking-tighter leading-none">${config.projectName}</h2>
-                    <p class="text-slate-300 text-[8px] font-black uppercase tracking-[0.4em] mb-8 italic-title">Classroom Portal</p>
-                    <div class="w-full max-w-[200px] space-y-3">
-                        <button onclick="login()" class="w-full bg-white border border-orange-100 p-2.5 rounded-xl flex items-center justify-center gap-3 shadow-sm active:scale-95 group">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="14">
-                            <span class="font-black text-slate-700 text-[10px] uppercase tracking-widest italic-title leading-none">รหัส 65</span>
-                        </button>
-                        <button onclick="loginAsPublic()" class="w-full ${config.publicEnabled ? 'bg-orange-500 shadow-orange-100' : 'bg-slate-300'} text-white p-3 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 italic-title leading-none">
-                            <i data-lucide="${config.publicEnabled ? 'send' : 'lock'}" size="12"></i> บุคคลทั่วไป
-                        </button>
-                    </div>
-                </div>`;
-            lucide.createIcons();
-        }
-
-        function renderHome() {
-            const container = document.getElementById('views');
-            if (role === 'admin') { renderAdmin(); return; }
-            if (role === 'public') {
-                container.innerHTML = `
-                    <div class="space-y-3 animate-in fade-in duration-500 view-card">
-                        <div class="orange-gradient rounded-2xl p-4 text-orange-900 border border-white">
-                            <h2 class="text-lg font-black italic-title tracking-tighter uppercase leading-none">Voice Selection</h2>
-                            <p class="text-orange-800/60 text-[8px] font-bold uppercase tracking-widest italic-title leading-none mt-1">ส่งเสียงความในใจถึงเพื่อน</p>
-                        </div>
-                        <button onclick="targetStudent={id:'Everyone', nick:'ทุกคนในห้อง'}; renderView('record')" class="w-full bg-white p-3.5 rounded-2xl border border-orange-100 flex items-center gap-3 group">
-                            <div class="w-8 h-8 bg-orange-500 text-white rounded-lg flex items-center justify-center shadow-md"><i data-lucide="megaphone" size="14"></i></div>
-                            <p class="font-black text-orange-900 text-sm italic-title uppercase tracking-tight italic leading-none">ทุกคนในห้อง</p>
-                        </button>
-                        <div class="grid grid-cols-2 gap-2" id="student-grid"></div>
-                    </div>`;
-                STUDENT_LIST.forEach(s => {
-                    const btn = document.createElement('button');
-                    btn.className = "bg-white p-3 rounded-2xl border border-slate-50 shadow-sm text-left";
-                    btn.innerHTML = `<p class="text-[6px] text-slate-300 font-black mb-1 uppercase tracking-tighter leading-none">${s.id}</p><p class="font-black text-slate-700 italic text-xs italic-title leading-none italic">${s.nick}</p>`;
-                    btn.onclick = () => { targetStudent = s; renderView('record'); };
-                    document.getElementById('student-grid').appendChild(btn);
-                });
-            } else {
-                container.innerHTML = `
-                    <div class="space-y-3 animate-in fade-in duration-500 view-card">
-                        <div class="bg-white p-5 rounded-3xl border border-orange-50 shadow-sm text-center">
-                            <h2 class="text-lg font-black text-slate-800 italic-title uppercase leading-none">Hi, ${STUDENT_LIST.find(s=>s.id===studentId)?.nick || '65'}</h2>
-                            <p class="text-slate-400 text-[7px] font-black uppercase tracking-[0.3em] mt-1 italic-title leading-none">Classroom Terminal</p>
-                        </div>
-                        <button onclick="handleRecordClick()" class="w-full bg-orange-500 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-orange-100 group">
-                            <div class="flex items-center gap-4"><div class="bg-white/20 p-2.5 rounded-lg"><i data-lucide="mic-vocal" size="18"></i></div><div><p class="font-black text-sm italic-title uppercase italic leading-none">${config.submissionTitle}</p></div></div>
-                            <i data-lucide="chevron-right" size="18"></i>
-                        </button>
-                        <button onclick="renderView('inbox')" class="w-full bg-white border border-orange-100 p-4 rounded-2xl flex items-center justify-between shadow-sm group">
-                            <div class="flex items-center gap-4"><div class="bg-orange-50 p-2.5 rounded-lg text-orange-400"><i data-lucide="mail" size="18"></i></div><div><p class="font-black text-sm italic-title uppercase text-slate-800 leading-none italic">Inbox</p></div></div>
-                            <i data-lucide="chevron-right" size="18" class="text-slate-200"></i>
-                        </button>
-                    </div>`;
-            }
-            lucide.createIcons();
-        }
-
-        window.handleRecordClick = () => {
-            if (config.submissionType === 'peer') { role = 'public'; renderHome(); }
-            else { targetStudent = {id:'Admin', nick:'Admin'}; renderView('record'); }
-        };
-
-        function renderRecord() {
-            transcript = ""; timer = 0; recordedBase64 = ""; isProcessingAudio = false;
-            document.getElementById('views').innerHTML = `
-                <div class="max-w-[280px] mx-auto space-y-4 animate-in slide-in-from-bottom-6 duration-700">
-                    <div class="text-center space-y-1">
-                        <h2 class="text-lg font-black text-slate-800 italic-title uppercase leading-none">${targetStudent ? `To: ${targetStudent.nick}` : 'Record'}</h2>
-                        <p class="text-orange-500 text-[7px] font-black uppercase tracking-widest">${targetStudent?.id === 'Admin' ? `Limit: ${config.wordLimit} Words` : 'Open Heart'}</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-[32px] shadow-xl border border-orange-50 flex flex-col items-center gap-6">
-                        <div id="timer-display" class="text-4xl font-mono font-black text-slate-100 tracking-tighter leading-none italic-title">00:00</div>
-                        <button id="record-btn" onclick="toggleRecording()" class="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-100 hover:bg-orange-600 transition-all active:scale-90">
-                            <i data-lucide="mic" id="mic-icon" size="28" class="text-white"></i>
-                        </button>
-                        <div id="status-text" class="text-slate-300 text-[7px] font-black uppercase tracking-widest italic-title leading-none italic">Tap to start</div>
-                        <div id="recording-feedback" class="w-full space-y-3 hidden">
-                             <div class="w-full bg-orange-50/20 p-3 rounded-xl border border-dashed border-orange-100 text-left">
-                                <p id="transcript-preview" class="text-[10px] text-slate-600 italic-title min-h-[3rem] italic">"Waiting..."</p>
-                                <div id="audio-preview-container" class="mt-2 hidden"><audio id="audio-preview-el" controls class="w-full h-7 opacity-80"></audio></div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="resetRecording()" class="flex-1 bg-slate-50 text-slate-400 py-2 rounded-lg font-black uppercase tracking-widest text-[8px] italic leading-none">Retry</button>
-                                <button id="submit-btn" onclick="submitVoice()" class="flex-1 bg-orange-theme py-2 rounded-lg font-black shadow-md uppercase tracking-widest text-[8px] italic-title text-white italic">Submit</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            lucide.createIcons();
-        }
-
-        window.toggleRecording = async () => {
-            const btn = document.getElementById('record-btn');
-            const icon = document.getElementById('mic-icon');
-            const timerEl = document.getElementById('timer-display');
-            if (!mediaRecorder || mediaRecorder.state === "inactive") {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream); audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = async () => { 
-                        isProcessingAudio = true;
-                        const blob = new Blob(audioChunks, { type: 'audio/mp3' });
-                        const audioUrl = URL.createObjectURL(blob);
-                        document.getElementById('audio-preview-el').src = audioUrl;
-                        document.getElementById('audio-preview-container').classList.remove('hidden');
-                        const reader = new FileReader(); reader.readAsDataURL(blob);
-                        reader.onloadend = () => { recordedBase64 = reader.result; isProcessingAudio = false; };
-                    };
-                    mediaRecorder.start();
-                    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    if (SR) {
-                        recognition = new SR(); recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'th-TH';
-                        recognition.onresult = (e) => {
-                            let text = ""; for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
-                            transcript = text;
-                            const count = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-                            document.getElementById('transcript-preview').innerText = `"${text}"`;
-                            const subBtn = document.getElementById('submit-btn');
-                            if (targetStudent?.id === 'Admin' && count > config.wordLimit) { subBtn.disabled = true; subBtn.classList.add('opacity-50'); } 
-                            else { subBtn.disabled = false; subBtn.classList.remove('opacity-50'); }
-                        };
-                        recognition.start();
-                    }
-                    btn.classList.add('recording-pulse', 'bg-red-500'); icon.setAttribute('data-lucide', 'square');
-                    timerEl.classList.replace('text-slate-100', 'text-orange-500'); 
-                    document.getElementById('status-text').innerText = "RECORDING";
-                    timer = 0; timerInterval = setInterval(() => {
-                        timer++; const m = Math.floor(timer/60).toString().padStart(2,'0'); const s = (timer%60).toString().padStart(2,'0');
-                        timerEl.innerText = `${m}:${s}`;
-                    }, 1000); lucide.createIcons();
-                } catch (e) { showModal("Mic Error", "ไม่สามารถใช้ไมค์ได้", "error"); }
-            } else {
-                mediaRecorder.stop(); if(recognition) recognition.stop(); clearInterval(timerInterval);
-                btn.classList.add('hidden'); document.getElementById('recording-feedback').classList.remove('hidden');
-                document.getElementById('status-text').innerText = "REVIEW";
-                timerEl.classList.replace('text-orange-500', 'text-slate-800'); lucide.createIcons();
-            }
-        };
-
-        window.submitVoice = async () => {
-            if (!user) return;
-            if (isProcessingAudio) { showModal("Process", "กำลังแปลงไฟล์เสียง...", "info"); return; }
-            const btn = document.getElementById('submit-btn');
-            btn.disabled = true; btn.innerText = ".";
-            try {
-                const count = transcript.trim().split(/\s+/).filter(w => w.length > 0).length;
-                const payload = {
-                    from: studentId || "Guest",
-                    fromName: user.isAnonymous ? "Guest" : user.displayName,
-                    targetId: targetStudent ? targetStudent.id : "Admin",
-                    timestamp: new Date().toISOString(),
-                    transcript: transcript,
-                    wordCount: count,
-                    audioData: recordedBase64
-                };
-                if (role === 'student' && targetStudent?.id === 'Admin') {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'submissions', studentId), payload);
-                } else { await addDoc(getPublicCollection('messages'), payload); }
-                showModal("Sent!", "ส่งสำเร็จแล้ว", "success", () => renderView('home'));
-            } catch (e) { showModal("Error", "ส่งไม่สำเร็จ", "error"); btn.disabled = false; btn.innerText = "Submit"; }
-        };
-
-        window.resetRecording = () => { if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop(); if(recognition) recognition.stop(); clearInterval(timerInterval); renderView('record'); };
-
-        function renderInbox() {
-            const container = document.getElementById('views');
-            container.innerHTML = `<h2 class="text-xl font-black italic-title mb-4 text-slate-800 tracking-tighter uppercase text-left italic"><i data-lucide="mail" class="text-orange-500 inline mr-2"></i> Inbox</h2><div id="inbox-list" class="grid gap-3"></div>`;
-            const q = query(getPublicCollection('messages'), where("targetId", "in", [studentId, "Everyone"]));
-            onSnapshot(q, (snapshot) => {
-                const list = document.getElementById('inbox-list');
-                if(!list) return; list.innerHTML = "";
-                if (snapshot.empty) { list.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center text-slate-300 italic text-[8px]">No voices.</div>`; return; }
-                snapshot.docs.forEach(d => {
-                    const msg = d.data(); const isGlobal = msg.targetId === "Everyone";
-                    const item = document.createElement('div');
-                    item.className = `bg-white p-4 rounded-2xl border ${isGlobal ? 'border-orange-500 shadow-orange-100' : 'border-slate-50 shadow-sm'} text-left`;
-                    item.innerHTML = `<div class="flex justify-between items-center mb-2"><span class="text-[7px] font-black ${isGlobal ? 'text-orange-600' : 'text-slate-300'} uppercase italic-title italic">${isGlobal ? 'Global' : 'Secret'}</span><span class="text-[6px] text-slate-300 font-black uppercase">${new Date(msg.timestamp).toLocaleDateString()}</span></div><p class="text-slate-600 italic-title mb-3 text-xs font-medium italic">"${msg.transcript}"</p><audio controls src="${msg.audioData}" class="w-full mb-1 h-8 opacity-80"></audio>`;
-                    list.appendChild(item);
-                });
-                lucide.createIcons();
-            });
-        }
-
-        function renderAdmin() {
-            const container = document.getElementById('views');
-            container.innerHTML = `
-                <div class="space-y-4 text-left animate-in fade-in view-card">
-                    <div class="bg-white p-5 rounded-3xl shadow-xl border border-orange-50">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-lg font-black italic-title text-orange-600 uppercase leading-none">Hub Admin</h2>
-                            <button onclick="confirmReset()" class="text-[7px] font-black text-red-300 uppercase italic">Wipe</button>
-                        </div>
-                        <div class="grid gap-3 mb-5 text-left italic">
-                            <div class="space-y-0.5"><label class="text-[7px] font-black text-slate-300 uppercase tracking-widest ml-2 uppercase leading-none italic">Title</label><input id="adm-p-name" type="text" oninput="config.projectName=this.value" value="${config.projectName}" class="compact-input italic"></div>
-                            <div class="space-y-0.5"><label class="text-[7px] font-black text-slate-300 uppercase tracking-widest ml-2 uppercase leading-none italic">Words</label><input id="adm-word-limit" type="number" oninput="config.wordLimit=parseInt(this.value)" value="${config.wordLimit}" class="compact-input italic font-black text-base"></div>
-                            <div class="space-y-0.5"><label class="text-[7px] font-black text-slate-300 uppercase tracking-widest ml-2 uppercase leading-none italic">Label</label><input id="adm-sub-title" type="text" oninput="config.submissionTitle=this.value" value="${config.submissionTitle}" class="compact-input italic"></div>
-                            <div class="grid grid-cols-2 gap-2 mt-1">
-                                <button onclick="config.publicEnabled=!config.publicEnabled; renderAdmin()" class="w-full ${config.publicEnabled ? 'bg-orange-500' : 'bg-slate-200'} text-white p-2 rounded-lg font-black text-[7px] uppercase shadow-sm italic">Public: ${config.publicEnabled?'On':'Off'}</button>
-                                <button onclick="config.submissionType=config.submissionType==='admin'?'peer':'admin'; renderAdmin()" class="w-full bg-slate-800 text-white p-2 rounded-lg font-black text-[7px] uppercase shadow-sm italic">Type: ${config.submissionType}</button>
-                            </div>
-                        </div>
-                        <button onclick="saveAdminSettings()" id="save-btn" class="w-full btn-orange py-2.5 rounded-xl font-black text-[9px] mb-2 uppercase tracking-widest shadow-lg italic">บันทึกค่า</button>
-                        <button onclick="downloadAllAudio()" class="w-full bg-slate-100 text-slate-500 py-2 rounded-xl font-black uppercase text-[8px] italic flex items-center justify-center gap-1.5"><i data-lucide="download" size="10"></i> Download ZIP</button>
-                    </div>
-                    <div class="space-y-2 italic">
-                        <h3 class="font-black text-slate-300 uppercase tracking-widest text-[7px] italic ml-2">Submissions</h3>
-                        <div id="admin-submissions" class="grid gap-2"></div>
-                    </div>
-                </div>`;
+        // ==========================================
+        // 2. State & Core App Controller
+        // ==========================================
+        window.app = {
+            profile: null,
+            currentView: 'login',
+            selectedIds: [],
+            messages: [],
+            unsubscribeMsgs: null,
+            actualOtp: '',
+            tempStudentId: '',
+            currentRef: '', // เพิ่ม state สำหรับเก็บรหัสอ้างอิง
             
-            onSnapshot(getPublicCollection('submissions'), (snapshot) => {
-                const subList = document.getElementById('admin-submissions');
-                if(!subList) return; subList.innerHTML = ""; 
-                snapshot.docs.forEach(d => {
-                    const sub = d.data(); const item = document.createElement('div');
-                    item.className = "bg-white p-3 rounded-2xl border border-orange-50 shadow-sm text-left";
-                    item.innerHTML = `
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500 font-black text-[9px] uppercase italic-title">${sub.from.slice(-2)}</div>
-                                <div><p class="font-black text-slate-800 italic text-xs italic-title">${STUDENT_LIST.find(s=>s.id===sub.from)?.nick || sub.from}</p><p class="text-[6px] text-slate-300 uppercase">${sub.wordCount} words</p></div>
-                            </div>
-                            <button onclick="showModal('Transcript', '${sub.transcript.replace(/'/g, "\\'")}', 'info')" class="p-2 text-slate-200 hover:text-orange-500 bg-slate-50 rounded-lg"><i data-lucide="file-text" size="12"></i></button>
-                        </div>
-                        <audio controls src="${sub.audioData}" class="w-full h-7 opacity-80 rounded-full"></audio>`;
-                    subList.appendChild(item);
-                });
-                lucide.createIcons();
-            });
-        }
+            // Audio Recording State
+            mediaRecorder: null,
+            audioChunks: [],
+            isRecording: false,
+            recordingTime: 0,
+            timerInterval: null,
+            audioBlob: null,
+            composeMode: 'audio',
 
-        window.saveAdminSettings = async () => {
-            if (!user) return;
-            const btn = document.getElementById('save-btn'); btn.disabled = true; btn.innerText = ".";
-            try { 
-                await setDoc(getSettingsDoc(), {
-                    projectName: config.projectName || 'Song Siang',
-                    wordLimit: config.wordLimit || 50,
-                    publicEnabled: config.publicEnabled,
-                    submissionType: config.submissionType,
-                    submissionTitle: config.submissionTitle || 'อัดเสียงส่งงาน'
-                }, { merge: true }); 
-                showModal("Success", "บันทึกค่าลงระบบเรียบร้อย", "success");
-            } catch (e) { console.error(e); showModal("Error", "ล้มเหลว: " + e.message, "error"); }
-            btn.disabled = false; btn.innerText = "บันทึกค่า";
-        };
-
-        window.downloadAllAudio = async () => {
-            showModal("Wait", "กำลังรวบรวมไฟล์เสียง...", "info");
-            const zip = new JSZip();
-            const snapshot = await getDocs(getPublicCollection('submissions'));
-            if(snapshot.empty) { showModal("Fail", "ไม่มีข้อมูล", "error"); return; }
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                if(data.audioData) {
-                    const student = STUDENT_LIST.find(s => s.id === data.from);
-                    const fileName = `${data.from}_${student ? student.nick : 'user'}.mp3`;
-                    const base64Data = data.audioData.split(',')[1];
-                    zip.file(fileName, base64Data, {base64: true});
-                }
-            });
-            zip.generateAsync({type:"blob"}).then(c => { saveAs(c, "Room65_Voices.zip"); showModal("Complete", "ดาวน์โหลดสำเร็จ", "success"); });
-        };
-
-        window.confirmReset = () => {
-            showModal("Danger", "ล้างข้อมูลทั้งหมด?", "error", async () => {
+            init: async function() {
                 try {
-                    const subs = await getDocs(getPublicCollection('submissions'));
-                    const msgs = await getDocs(getPublicCollection('messages'));
-                    await Promise.all([...subs.docs.map(d => deleteDoc(d.ref)), ...msgs.docs.map(d => deleteDoc(d.ref))]);
-                    showModal("Wiped", "ล้างข้อมูลสำเร็จ", "success");
-                } catch(e) { showModal("Fail", "ล้มเหลว", "error"); }
-            }, true);
+                    await signInAnonymously(auth);
+                    const savedProfile = localStorage.getItem('songSiangProfile');
+                    if (savedProfile) {
+                        this.profile = JSON.parse(savedProfile);
+                        this.showView('home');
+                        this.setupMessagesListener();
+                    } else {
+                        this.showView('login');
+                    }
+                } catch (e) {
+                    console.error("Auth error:", e);
+                }
+            },
+
+            showView: function(viewName) {
+                this.currentView = viewName;
+                const root = document.getElementById('appRoot');
+                const nav = document.getElementById('navMenu');
+                
+                if(this.profile) nav.classList.remove('hidden');
+                else nav.classList.add('hidden');
+
+                if(viewName === 'login') root.innerHTML = this.renderLogin1();
+                else if(viewName === 'home') root.innerHTML = this.renderHome();
+                else if(viewName === 'compose') root.innerHTML = this.renderCompose();
+                else if(viewName === 'inbox') root.innerHTML = this.renderInbox();
+            },
+
+            loginSuccess: function(userProfile) {
+                this.profile = userProfile;
+                localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
+                this.setupMessagesListener();
+                Swal.fire({
+                    icon: 'success',
+                    title: `ยินดีต้อนรับ ${userProfile.name}!`,
+                    text: 'เข้าสู่ระบบสำเร็จ',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: '#fff',
+                    color: '#2b71b8'
+                });
+                this.showView('home');
+            },
+
+            logout: function() {
+                Swal.fire({
+                    title: 'ออกจากระบบ?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#2b71b8',
+                    confirmButtonText: 'ออกจากระบบ',
+                    cancelButtonText: 'ยกเลิก'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.profile = null;
+                        localStorage.removeItem('songSiangProfile');
+                        if(this.unsubscribeMsgs) this.unsubscribeMsgs();
+                        this.showView('login');
+                    }
+                });
+            },
+
+            setupMessagesListener: function() {
+                if(this.unsubscribeMsgs) this.unsubscribeMsgs();
+                if(!this.profile) return;
+
+                const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
+                this.unsubscribeMsgs = onSnapshot(msgsRef, (snapshot) => {
+                    const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const myMsgs = allMsgs.filter(msg => this.profile.isAdmin || msg.to.includes(this.profile.studentId));
+                    myMsgs.sort((a, b) => b.timestamp - a.timestamp);
+                    this.messages = myMsgs;
+                    
+                    if(this.currentView === 'inbox') this.showView('inbox'); // re-render
+                });
+            },
+
+            // ==========================================
+            // LOGIN FLOW
+            // ==========================================
+            renderLogin1: function() {
+                return `
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-slide-up border border-white/40 relative">
+                    <div class="p-8 text-center bg-secondary relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
+                        <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">เข้าสู่ระบบ</h2>
+                        <p class="text-primary/80 text-sm mt-2 relative z-10 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2 pl-1"><i class="fa-solid fa-id-card text-primary mr-1"></i> รหัสนักศึกษา 8 หลัก</label>
+                            <input type="text" id="inputId" placeholder="เช่น 65030xxx" maxlength="8"
+                                class="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none text-xl tracking-widest text-center font-mono shadow-inner"
+                                onkeypress="if(event.key === 'Enter') app.requestOTP()">
+                        </div>
+                        <button onclick="app.requestOTP()" id="btnReqOTP"
+                            class="w-full py-4 rounded-2xl font-bold text-white bg-primary hover:bg-blue-700 shadow-lg hover:shadow-primary/40 transition-all transform hover:-translate-y-1">
+                            รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>`;
+            },
+
+            requestOTP: async function() {
+                const idInput = document.getElementById('inputId').value.replace(/[^0-9]/g, '');
+                if(idInput.length !== 8) return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสนักศึกษาให้ครบ 8 หลัก', 'warning');
+                
+                // Admin Bypass
+                if(idInput === '65030900') {
+                    return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
+                }
+
+                this.tempStudentId = idInput;
+                const btn = document.getElementById('btnReqOTP');
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังส่งรหัส...';
+                btn.disabled = true;
+
+                const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                const targetEmail = `${idInput}@kmitl.ac.th`;
+                
+                // สร้างรหัสอ้างอิง (Ref) สุ่ม 6 ตัวอักษร
+                const refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                this.currentRef = refCode;
+
+                try {
+                    // แนบ ref ไปกับ URL ด้วย
+                    const response = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(targetEmail)}&otp=${generatedOtp}&ref=${refCode}`);
+                    const result = await response.json();
+                    
+                    if(result.status === 'success') {
+                        this.actualOtp = generatedOtp;
+                        document.getElementById('appRoot').innerHTML = this.renderLogin2();
+                        setTimeout(() => document.getElementById('otp-0').focus(), 100);
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', result.message, 'error');
+                        btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-arrow-right ml-2"></i>';
+                        btn.disabled = false;
+                    }
+                } catch(e) {
+                    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ส่งอีเมลได้', 'error');
+                    btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-arrow-right ml-2"></i>';
+                    btn.disabled = false;
+                }
+            },
+
+            renderLogin2: function() {
+                let inputs = '';
+                for(let i=0; i<6; i++) {
+                    inputs += `<input type="text" id="otp-${i}" maxlength="1" 
+                        oninput="app.onOtpInput(this, ${i})" onkeydown="app.onOtpKeydown(event, ${i})"
+                        class="otp-input w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-bold rounded-xl bg-gray-50 border-2 border-gray-200 focus:bg-white focus:border-secondary focus:ring-4 focus:ring-secondary/30 transition-all outline-none shadow-inner" />`;
+                }
+                return `
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-fade-in border border-white/40 relative">
+                    <div class="p-8 text-center bg-secondary relative">
+                        <div class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
+                        <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">ยืนยันรหัส</h2>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-500">รหัสถูกส่งไปยังอีเมลสถาบันแล้ว</p>
+                            <p class="font-bold text-lg text-primary mt-1">${this.tempStudentId}@kmitl.ac.th</p>
+                            <div class="mt-3 mb-1 inline-block bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider shadow-sm">
+                                <i class="fa-solid fa-hashtag mr-1"></i> Ref: ${this.currentRef}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2"><i class="fa-solid fa-circle-info"></i> โปรดตรวจสอบในโฟลเดอร์สแปมด้วย</p>
+                        </div>
+                        <div class="flex justify-between gap-2 px-2" id="otpContainer">${inputs}</div>
+                        <button onclick="app.showView('login')" class="w-full py-3 text-sm font-medium text-gray-400 hover:text-primary transition-colors">
+                            <i class="fa-solid fa-rotate-left"></i> เปลี่ยนรหัสนักศึกษา
+                        </button>
+                    </div>
+                </div>`;
+            },
+
+            onOtpInput: function(el, index) {
+                if(isNaN(el.value)) { el.value = ""; return; }
+                if(el.value !== "" && index < 5) document.getElementById(`otp-${index+1}`).focus();
+                this.checkFullOtp();
+            },
+            onOtpKeydown: function(e, index) {
+                if(e.key === "Backspace" && e.target.value === "" && index > 0) {
+                    document.getElementById(`otp-${index-1}`).focus();
+                }
+            },
+            checkFullOtp: function() {
+                let currentOtp = "";
+                for(let i=0; i<6; i++) currentOtp += document.getElementById(`otp-${i}`).value;
+                if(currentOtp.length === 6) {
+                    if(currentOtp === this.actualOtp) {
+                        const existingUser = predefinedUsers.find(u => u.studentId === this.tempStudentId);
+                        if(existingUser) this.loginSuccess(existingUser);
+                        else document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                    } else {
+                        Swal.fire('ไม่ถูกต้อง', 'รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่', 'error');
+                        for(let i=0; i<6; i++) document.getElementById(`otp-${i}`).value = '';
+                        document.getElementById('otp-0').focus();
+                    }
+                }
+            },
+
+            renderLogin3: function() {
+                return `
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-fade-in border border-white/40">
+                    <div class="p-8 text-center bg-secondary relative">
+                        <div class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent"></div>
+                        <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">ยินดีต้อนรับ</h2>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div class="bg-blue-50/50 p-5 rounded-2xl text-sm text-primary text-center border border-blue-100 shadow-inner">
+                            <span class="text-3xl block mb-2 animate-bounce">👋</span>
+                            ดูเหมือนคุณจะเป็นรุ่นน้อง หรือผู้ใช้ใหม่ <br/>แนะนำตัวให้พวกเราหน่อยครับ!
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2 pl-1">ชื่อเล่น / ชื่อเรียก</label>
+                            <input type="text" id="inputNewName" placeholder="กรอกชื่อของคุณ..." 
+                                class="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-secondary focus:ring-4 focus:ring-secondary/30 transition-all outline-none text-lg"
+                                onkeypress="if(event.key === 'Enter') app.registerNewUser()">
+                        </div>
+                        <button onclick="app.registerNewUser()" 
+                            class="w-full py-4 bg-secondary hover:bg-yellow-400 text-primary rounded-2xl font-bold text-lg shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1">
+                            เริ่มต้นใช้งาน <i class="fa-solid fa-rocket ml-2"></i>
+                        </button>
+                    </div>
+                </div>`;
+            },
+            registerNewUser: function() {
+                const name = document.getElementById('inputNewName').value.trim();
+                if(!name) return Swal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
+                this.loginSuccess({ studentId: this.tempStudentId, name: name, isPredefined: false });
+            },
+
+            // ==========================================
+            // HOME / GRID FLOW
+            // ==========================================
+            toggleUser: function(id) {
+                const idx = this.selectedIds.indexOf(id);
+                if(idx > -1) this.selectedIds.splice(idx, 1);
+                else this.selectedIds.push(id);
+                this.showView('home'); // re-render fast enough for vanilla
+            },
+            selectAllUsers: function() {
+                if(this.selectedIds.length === predefinedUsers.length) this.selectedIds = [];
+                else this.selectedIds = predefinedUsers.map(u => u.studentId);
+                this.showView('home');
+            },
+
+            renderHome: function() {
+                let gridHTML = '';
+                predefinedUsers.forEach(user => {
+                    const isSelected = this.selectedIds.includes(user.studentId);
+                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
+                    
+                    gridHTML += `
+                    <div class="flex flex-col items-center animate-fade-in user-card ${isSelected ? 'user-selected' : ''}" style="animation-delay: ${user.id * 15}ms">
+                        <button onclick="app.toggleUser('${user.studentId}')"
+                            class="relative w-16 h-16 md:w-20 md:h-20 rounded-full shadow-lg flex items-center justify-center text-primary font-bold text-xl bg-secondary user-avatar border-4 border-transparent overflow-hidden group">
+                            
+                            <!-- รูปภาพดึงจาก Github -->
+                            <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" 
+                                 class="w-full h-full object-cover rounded-full absolute inset-0 z-0" alt="${user.name}">
+                            
+                            <!-- Fallback ถ้าไม่มีรูป -->
+                            <span class="relative z-10 hidden">${user.name.substring(0, 2)}</span>
+                            
+                            <!-- Overlay ตอนโฮเวอร์ -->
+                            <div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity z-10"></div>
+                            
+                            ${isSelected ? `<div class="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-1 border-2 border-white z-20 shadow-md transform scale-110"><i class="fa-solid fa-check text-xs"></i></div>` : ''}
+                        </button>
+                        <span class="text-white text-xs mt-2 font-medium bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm">
+                            ${user.name}
+                        </span>
+                    </div>`;
+                });
+
+                const fabHTML = this.selectedIds.length > 0 ? `
+                    <div class="fixed bottom-8 left-0 right-0 flex justify-center z-50 animate-bounce">
+                        <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-8 py-4 rounded-full font-extrabold shadow-[0_10px_30px_rgba(253,223,49,0.5)] flex items-center space-x-3 text-lg border-4 border-white/50 backdrop-blur-md transform transition hover:scale-105">
+                            <i class="fa-solid fa-paper-plane text-xl"></i>
+                            <span>ส่งข้อความหา ${this.selectedIds.length} คน</span>
+                        </button>
+                    </div>
+                ` : '';
+
+                return `
+                <div class="animate-fade-in pb-24">
+                    <div class="flex justify-between items-end mb-8 text-white glass-panel p-6 rounded-3xl border-t border-l border-white/20">
+                        <div>
+                            <h2 class="text-3xl font-bold drop-shadow-md">สวัสดี, ${this.profile.name} <span class="animate-pulse inline-block">👋</span></h2>
+                            <p class="text-blue-100 mt-1 opacity-90 font-light">เลือกคนที่คุณต้องการส่งเสียงถึงได้เลย</p>
+                        </div>
+                        <button onclick="app.selectAllUsers()" class="bg-white/10 hover:bg-white/20 backdrop-blur border border-white/30 px-5 py-2.5 rounded-full text-sm font-medium transition shadow-lg flex items-center">
+                            <i class="fa-solid fa-users mr-2"></i> 
+                            ${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-x-4 gap-y-8">
+                        ${gridHTML}
+                    </div>
+                    ${fabHTML}
+                </div>`;
+            },
+
+            // ==========================================
+            // COMPOSE FLOW
+            // ==========================================
+            setComposeMode: function(mode) {
+                this.composeMode = mode;
+                this.showView('compose'); // trigger re-render
+            },
+
+            renderCompose: function() {
+                const isAudio = this.composeMode === 'audio';
+                const audioArea = this.audioBlob ? `
+                    <div class="w-full space-y-4 flex flex-col items-center">
+                        <div class="bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium text-sm flex items-center shadow-inner"><i class="fa-solid fa-check-circle mr-2"></i> บันทึกเสียงเสร็จสิ้น!</div>
+                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-md"></audio>
+                        <button onclick="app.resetAudio()" class="text-sm text-red-500 hover:text-red-700 hover:underline"><i class="fa-solid fa-rotate-right"></i> อัดใหม่</button>
+                    </div>
+                ` : `
+                    <div class="flex flex-col items-center">
+                        <div class="text-5xl font-mono mb-6 font-bold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-gray-300'} drop-shadow-sm">
+                            00:${String(this.recordingTime).padStart(2, '0')}
+                        </div>
+                        <button onclick="app.toggleRecord()" class="w-28 h-28 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
+                            ${this.isRecording ? 
+                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl relative z-10"></i>' : 
+                                '<i class="fa-solid fa-microphone text-5xl relative z-10"></i>'}
+                        </button>
+                        <p class="text-sm text-gray-500 mt-6 bg-gray-100 px-4 py-1.5 rounded-full font-medium shadow-inner">
+                            ${this.isRecording ? 'กำลังบันทึก... กดเพื่อหยุด' : `กดเพื่อเริ่มอัดเสียง (สูงสุด ${MAX_AUDIO_TIME} วิ)`}
+                        </p>
+                    </div>
+                `;
+
+                const textArea = `
+                    <div class="w-full flex flex-col h-full animate-fade-in">
+                        <textarea id="txtMessage" class="w-full flex-1 p-5 rounded-2xl border-2 border-gray-100 focus:bg-white bg-gray-50 focus:border-secondary focus:ring-4 focus:ring-secondary/20 outline-none resize-none min-h-[200px] text-lg shadow-inner transition-all" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
+                        <div class="text-right text-sm mt-3 font-medium text-gray-400" id="wordCount">
+                            จำกัด ${MAX_WORDS} คำ
+                        </div>
+                    </div>
+                `;
+
+                return `
+                <div class="bg-white rounded-[2rem] p-8 shadow-2xl max-w-2xl mx-auto border border-gray-100 animate-slide-up">
+                    <div class="flex items-center mb-8 pb-4 border-b border-gray-100">
+                        <button onclick="app.showView('home')" class="p-3 hover:bg-gray-100 rounded-full mr-4 transition text-gray-400 hover:text-primary">
+                            <i class="fa-solid fa-arrow-left text-xl"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-2xl font-bold text-primary">สร้างข้อความใหม่</h2>
+                            <p class="text-sm text-gray-500 font-medium mt-1">ส่งถึง: <span class="bg-secondary/30 text-primary px-2 py-0.5 rounded-md">${this.selectedIds.length} คน</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex bg-gray-100 p-1.5 rounded-2xl mb-8 shadow-inner relative">
+                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-gray-400 hover:text-gray-600'}">
+                            <i class="fa-solid fa-microphone-lines text-lg"></i> <span>ส่งเสียง</span>
+                        </button>
+                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-gray-400 hover:text-gray-600'}">
+                            <i class="fa-solid fa-keyboard text-lg"></i> <span>พิมพ์ข้อความ</span>
+                        </button>
+                    </div>
+
+                    <div class="min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-gray-200 rounded-[2rem] p-8 bg-gray-50/50 relative overflow-hidden">
+                        ${isAudio ? audioArea : textArea}
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button onclick="app.sendMessage()" id="btnSend" class="px-10 py-4 rounded-2xl font-bold text-primary flex items-center space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1">
+                            <i class="fa-solid fa-paper-plane text-xl"></i> <span>ส่งข้อความเลย!</span>
+                        </button>
+                    </div>
+                </div>`;
+            },
+
+            toggleRecord: async function() {
+                if(this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    clearInterval(this.timerInterval);
+                    this.showView('compose');
+                } else {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        this.mediaRecorder = new MediaRecorder(stream);
+                        this.audioChunks = [];
+
+                        this.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) this.audioChunks.push(e.data); };
+                        this.mediaRecorder.onstop = () => {
+                            this.audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                            stream.getTracks().forEach(track => track.stop());
+                            this.showView('compose'); // update UI
+                        };
+
+                        this.mediaRecorder.start();
+                        this.isRecording = true;
+                        this.recordingTime = 0;
+                        this.audioBlob = null;
+                        this.showView('compose');
+
+                        this.timerInterval = setInterval(() => {
+                            this.recordingTime++;
+                            if(this.recordingTime >= MAX_AUDIO_TIME) this.toggleRecord();
+                            else this.showView('compose'); // re-render timer (inefficient but works for vanilla)
+                        }, 1000);
+                    } catch (e) {
+                        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาอนุญาตการเข้าถึง', 'error');
+                    }
+                }
+            },
+            resetAudio: function() { this.audioBlob = null; this.showView('compose'); },
+
+            sendMessage: async function() {
+                const btn = document.getElementById('btnSend');
+                let content = '';
+                
+                if(this.composeMode === 'text') {
+                    content = document.getElementById('txtMessage').value.trim();
+                    if(!content) return Swal.fire('แจ้งเตือน', 'กรุณาพิมพ์ข้อความ', 'warning');
+                    const wc = content.split(/\s+/).filter(w=>w.length>0).length;
+                    if(wc > MAX_WORDS) return Swal.fire('แจ้งเตือน', `จำกัดไม่เกิน ${MAX_WORDS} คำ`, 'warning');
+                } else {
+                    if(!this.audioBlob) return Swal.fire('แจ้งเตือน', 'กรุณาอัดเสียงก่อนส่ง', 'warning');
+                    // Convert Blob to Base64
+                    content = await new Promise((res) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => res(reader.result);
+                        reader.readAsDataURL(this.audioBlob);
+                    });
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>กำลังส่ง...</span>';
+
+                try {
+                    const messageData = {
+                        from: { id: this.profile.studentId, name: this.profile.name },
+                        to: this.selectedIds,
+                        type: this.composeMode,
+                        content: content,
+                        timestamp: Date.now()
+                    };
+                    const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
+                    await addDoc(msgsRef, messageData);
+                    
+                    Swal.fire({ icon: 'success', title: 'ส่งเรียบร้อย!', showConfirmButton: false, timer: 1500 });
+                    this.selectedIds = [];
+                    this.audioBlob = null;
+                    this.showView('inbox');
+                } catch (e) {
+                    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-paper-plane text-xl"></i> <span>ส่งข้อความเลย!</span>';
+                }
+            },
+
+            // ==========================================
+            // INBOX FLOW
+            // ==========================================
+            deleteMsg: async function(id) {
+                Swal.fire({
+                    title: 'ลบข้อความนี้?', text: "จะไม่สามารถกู้คืนได้", icon: 'warning',
+                    showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'ลบเลย', cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', id));
+                        Swal.fire({ icon:'success', title:'ลบแล้ว', showConfirmButton:false, timer:1000});
+                    }
+                });
+            },
+
+            renderInbox: function() {
+                let msgsHTML = '';
+                if(this.messages.length === 0) {
+                    msgsHTML = `
+                        <div class="text-center py-24 flex flex-col items-center justify-center animate-fade-in">
+                            <div class="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-gray-100">
+                                <i class="fa-solid fa-inbox text-5xl text-gray-300"></i>
+                            </div>
+                            <p class="text-gray-400 font-medium text-lg">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
+                        </div>`;
+                } else {
+                    this.messages.forEach((msg, idx) => {
+                        const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
+                        const isAudio = msg.type === 'audio';
+                        const adminControls = this.profile.isAdmin ? `
+                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white shadow hover:shadow-md p-2 rounded-lg transition-all" title="ลบข้อความ">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        ` : '';
+                        
+                        const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-normal shadow-sm">ถึง ${msg.to.length} คน</span>` : '';
+
+                        // หา User Profile ของคนส่งเพื่อเอารูปมาโชว์ (ถ้าเป็น 45 คนหลัก)
+                        const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0"><span class="relative z-10 hidden text-primary">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary">${msg.from.name.substring(0,1)}</span>`;
+
+                        msgsHTML += `
+                        <div class="bg-white border border-gray-100 p-6 rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-5 shadow-sm hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up" style="animation-delay: ${idx * 50}ms">
+                            <div class="flex-shrink-0 w-14 h-14 bg-secondary rounded-full flex items-center justify-center font-bold text-2xl shadow-inner relative overflow-hidden border-2 border-secondary">
+                                ${senderImg}
+                            </div>
+                            <div class="flex-1 w-full">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <span class="font-extrabold text-primary text-xl tracking-wide">${msg.from.name}</span>
+                                        ${adminToLabel}
+                                        <div class="text-xs text-gray-400 mt-0.5"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        ${adminControls}
+                                    </div>
+                                </div>
+                                
+                                ${isAudio ? `
+                                    <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 inline-block w-full max-w-md shadow-inner">
+                                        <audio src="${msg.content}" controls class="w-full h-10"></audio>
+                                    </div>
+                                ` : `
+                                    <div class="text-gray-700 bg-blue-50/50 p-5 rounded-2xl border border-blue-100 whitespace-pre-wrap leading-relaxed shadow-sm text-lg relative">
+                                        <i class="fa-solid fa-quote-left absolute top-3 left-3 text-2xl text-blue-200/50"></i>
+                                        <div class="relative z-10 pl-4">${msg.content}</div>
+                                    </div>
+                                `}
+                            </div>
+                        </div>`;
+                    });
+                }
+
+                return `
+                <div class="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-w-3xl mx-auto min-h-[75vh] border border-white/50 animate-slide-up">
+                    <div class="flex items-center justify-between mb-10 border-b border-gray-100 pb-6">
+                        <div class="flex items-center">
+                            <button onclick="app.showView('home')" class="p-3 bg-gray-50 hover:bg-secondary hover:text-primary hover:shadow-md rounded-2xl mr-5 transition-all text-gray-500">
+                                <i class="fa-solid fa-arrow-left text-xl"></i>
+                            </button>
+                            <div>
+                                <h2 class="text-3xl font-extrabold text-primary flex items-center tracking-wide">
+                                    กล่องจดหมาย
+                                </h2>
+                                <p class="text-gray-500 mt-1 font-medium">
+                                    ${this.profile.isAdmin ? '<span class="text-red-500"><i class="fa-solid fa-shield-halved"></i> โหมดผู้ดูแลระบบ: เห็นข้อความทั้งหมด</span>' : 'ข้อความจากเพื่อนและรุ่นน้องที่ส่งถึงคุณ'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-6 relative z-10">
+                        ${msgsHTML}
+                    </div>
+                </div>`;
+            }
         };
+
+        // Initialize App on load
+        window.addEventListener('DOMContentLoaded', () => app.init());
+
     </script>
 </body>
 </html>
