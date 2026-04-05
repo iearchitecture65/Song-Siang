@@ -485,7 +485,8 @@
             },
 
             getRelationshipLabel: function() {
-                return "คน";
+                const isPredefined = predefinedUsers.some(u => u.studentId === this.profile?.studentId);
+                return isPredefined ? "เพื่อนๆ" : "";
             },
 
             renderImage: function(src, altText, extraClass = "") {
@@ -897,7 +898,7 @@
 
             renderSettings: function() {
                 return `
-                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-w-md mx-auto animate-slide-up mt-6 mb-20">
+                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-md mx-auto animate-slide-up mt-6 mb-20">
                     <div class="flex items-center mb-6 pb-3 border-b border-white/40">
                         <button onclick="app.showView('home')" class="p-2 bg-white/20 hover:bg-white/40 rounded-full mr-3 transition text-white shadow-sm flex-shrink-0">
                             <i class="fa-solid fa-arrow-left"></i>
@@ -1322,8 +1323,11 @@
                 const container = document.getElementById('globalFabContainer');
                 if (!container) return;
 
+                const isPredefined = predefinedUsers.some(u => u.studentId === this.profile?.studentId);
+                const label = isPredefined ? "หาเพื่อนๆ" : "";
+
                 if (this.currentView === 'feed') {
-                    const btnText = "ส่งข้อความ";
+                    const btnText = `ส่งข้อความ${label}`;
                     container.innerHTML = `
                         <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
@@ -1331,7 +1335,8 @@
                         </button>`;
                 } 
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
-                    const btnText = "ส่งข้อความ";
+                    const countLabel = isPredefined ? ` (${this.selectedIds.length} คน)` : "";
+                    const btnText = `ส่งข้อความ${label}${countLabel}`;
                     container.innerHTML = `
                         <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
@@ -1457,7 +1462,7 @@
                         <div class="overflow-hidden">
                             <h2 class="text-xl font-extrabold text-white truncate">สร้างข้อความใหม่</h2>
                             <p class="text-xs text-white/90 font-bold mt-1 truncate">
-                                ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} ${label}</span>
+                                ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} ${label || 'คน'}</span>
                             </p>
                         </div>
                     </div>
