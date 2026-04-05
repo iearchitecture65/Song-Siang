@@ -485,19 +485,7 @@
             },
 
             getRelationshipLabel: function() {
-                if (!this.profile) return "คน";
-                const sid = this.profile.studentId;
-                if (!sid || sid.startsWith('G')) return "คน";
-
-                const yearMatch = sid.match(/^\d{2}/);
-                if (!yearMatch) return "คน";
-                const year = parseInt(yearMatch[0]);
-
-                if (year < 65) return "น้อง"; 
-                if (year > 65) return "พี่";   
-                
-                const isPredefined = predefinedUsers.some(u => u.studentId === sid);
-                return isPredefined ? "เพื่อน" : "คน";
+                return "คน";
             },
 
             renderImage: function(src, altText, extraClass = "") {
@@ -1334,11 +1322,8 @@
                 const container = document.getElementById('globalFabContainer');
                 if (!container) return;
 
-                const label = this.getRelationshipLabel();
-                const suffix = label === "คน" ? "" : "ๆ";
-
                 if (this.currentView === 'feed') {
-                    const btnText = (label === "คน") ? "ส่งข้อความ" : `ส่งข้อความหา${label}${suffix}`;
+                    const btnText = "ส่งข้อความ";
                     container.innerHTML = `
                         <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
@@ -1346,7 +1331,7 @@
                         </button>`;
                 } 
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
-                    const btnText = (label === "คน") ? "ส่งข้อความ" : `ส่งข้อความหา ${this.selectedIds.length} ${label}`;
+                    const btnText = "ส่งข้อความ";
                     container.innerHTML = `
                         <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
