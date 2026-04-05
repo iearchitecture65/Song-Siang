@@ -20,8 +20,8 @@
                     colors: { primary: '#2b71b8', secondary: '#fddf31' },
                     animation: {
                         'blob': 'blob 7s infinite',
-                        'fade-in': 'fadeIn 0.5s ease-out',
-                        'slide-up': 'slideUp 0.5s ease-out',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
                         'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
                     },
                     keyframes: {
@@ -32,7 +32,7 @@
                             '100%': { transform: 'translate(0px, 0px) scale(1)' },
                         },
                         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(30px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
                         pulseGlow: { '0%, 100%': { boxShadow: '0 0 0 0 rgba(253, 223, 49, 0.7)' }, '50%': { boxShadow: '0 0 0 15px rgba(253, 223, 49, 0)' } }
                     }
                 }
@@ -51,16 +51,28 @@
             overflow-x: hidden;
         }
         .glass-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
         .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: #fddf31;
+        }
+        
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -68,13 +80,10 @@
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
         
         .otp-input:focus { transform: translateY(-2px); }
-        .user-avatar { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .user-avatar:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(253, 223, 49, 0.6); }
-        .user-selected .user-avatar { 
-            border-color: #fddf31; 
-            transform: scale(1.05); 
-            box-shadow: 0 0 25px rgba(253, 223, 49, 0.8);
-        }
+        
+        /* Custom User Avatar Interaction */
+        .user-avatar { transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .user-avatar:hover { transform: scale(1.08); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body class="text-slate-800 antialiased font-sans relative">
@@ -131,7 +140,6 @@
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         
         // กำหนดโฟลเดอร์รูปภาพเป็น "65" 
-        // ดังนั้นรูปจะถูกดึงจากพาธ 65/1.png, 65/2.png ตามลำดับ
         const GITHUB_IMG_BASE_URL = "65"; 
 
         const firebaseConfig = {
@@ -149,7 +157,6 @@
         const db = getFirestore(appFirebase);
         const appId = "song-siang-app";
 
-        // ฐานข้อมูลเพื่อน 45 คน (เรียงตามลำดับรูป 1.png - 45.png)
         const predefinedUsers = [
             { id: 1, studentId: "65030001", fullName: "นางสาวกชกร ทรัพย์โคกสูง", name: "กิ๊ฟ" },
             { id: 2, studentId: "65030004", fullName: "นางสาวกนกวรรณ จันทร์มาเมือง", name: "ฝ้าย" },
@@ -201,6 +208,20 @@
         const MAX_WORDS = 200;
         const MAX_AUDIO_TIME = 30;
 
+        // SweetAlert แบบ Glassmorphism
+        const glassSwal = Swal.mixin({
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdrop: 'rgba(0,0,0,0.5)',
+            customClass: {
+                popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl',
+                title: 'text-primary font-extrabold',
+                htmlContainer: 'text-gray-700 font-medium',
+                confirmButton: 'bg-secondary text-primary rounded-xl px-8 py-3 font-bold shadow-lg transition hover:scale-105',
+                cancelButton: 'bg-white text-gray-500 rounded-xl px-6 py-3 font-bold shadow transition hover:bg-gray-100'
+            },
+            buttonsStyling: false
+        });
+
         // ==========================================
         // 2. State & Core App Controller
         // ==========================================
@@ -212,9 +233,8 @@
             unsubscribeMsgs: null,
             actualOtp: '',
             tempStudentId: '',
-            currentRef: '', // เพิ่ม state สำหรับเก็บรหัสอ้างอิง
+            currentRef: '',
             
-            // Audio Recording State
             mediaRecorder: null,
             audioChunks: [],
             isRecording: false,
@@ -248,7 +268,10 @@
                 else nav.classList.add('hidden');
 
                 if(viewName === 'login') root.innerHTML = this.renderLogin1();
-                else if(viewName === 'home') root.innerHTML = this.renderHome();
+                else if(viewName === 'home') {
+                    root.innerHTML = this.renderHome();
+                    this.updateFAB(); // แสดงปุ่มเด้งล่างจอหลังโหลดหน้าหลัก
+                }
                 else if(viewName === 'compose') root.innerHTML = this.renderCompose();
                 else if(viewName === 'inbox') root.innerHTML = this.renderInbox();
             },
@@ -257,26 +280,25 @@
                 this.profile = userProfile;
                 localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
                 this.setupMessagesListener();
-                Swal.fire({
-                    icon: 'success',
+                
+                glassSwal.fire({
+                    iconHtml: '<i class="fa-solid fa-circle-check text-green-500 text-5xl drop-shadow-md"></i>',
                     title: `ยินดีต้อนรับ ${userProfile.name}!`,
-                    text: 'เข้าสู่ระบบสำเร็จ',
-                    timer: 1500,
-                    showConfirmButton: false,
-                    background: '#fff',
-                    color: '#2b71b8'
+                    html: 'เข้าสู่ระบบเรียบร้อยแล้ว',
+                    timer: 1800,
+                    showConfirmButton: false
                 });
+                
                 this.showView('home');
             },
 
             logout: function() {
-                Swal.fire({
+                glassSwal.fire({
                     title: 'ออกจากระบบ?',
-                    icon: 'question',
+                    html: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+                    iconHtml: '<i class="fa-solid fa-arrow-right-from-bracket text-red-400 text-5xl"></i>',
                     showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#2b71b8',
-                    confirmButtonText: 'ออกจากระบบ',
+                    confirmButtonText: 'ใช่, ออกจากระบบ',
                     cancelButtonText: 'ยกเลิก'
                 }).then((result) => {
                     if (result.isConfirmed) {
@@ -299,7 +321,7 @@
                     myMsgs.sort((a, b) => b.timestamp - a.timestamp);
                     this.messages = myMsgs;
                     
-                    if(this.currentView === 'inbox') this.showView('inbox'); // re-render
+                    if(this.currentView === 'inbox') this.showView('inbox'); 
                 });
             },
 
@@ -308,22 +330,21 @@
             // ==========================================
             renderLogin1: function() {
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-slide-up border border-white/40 relative">
-                    <div class="p-8 text-center bg-secondary relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
+                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] overflow-hidden mt-10 animate-slide-up relative">
+                    <div class="p-10 text-center bg-white/30 border-b border-white/40 relative overflow-hidden">
+                        <i class="fa-solid fa-id-card-clip text-primary text-5xl mb-4 opacity-90 drop-shadow-md"></i>
                         <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">เข้าสู่ระบบ</h2>
-                        <p class="text-primary/80 text-sm mt-2 relative z-10 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
+                        <p class="text-primary/90 text-sm mt-2 relative z-10 font-medium">ยืนยันตัวตนด้วยรหัสนักศึกษา</p>
                     </div>
                     <div class="p-8 space-y-6">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2 pl-1"><i class="fa-solid fa-id-card text-primary mr-1"></i> รหัสนักศึกษา 8 หลัก</label>
-                            <input type="text" id="inputId" placeholder="เช่น 65030xxx" maxlength="8"
-                                class="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none text-xl tracking-widest text-center font-mono shadow-inner"
+                            <input type="text" id="inputId" placeholder="รหัสนักศึกษา 8 หลัก (เช่น 65030xxx)" maxlength="8"
+                                class="glass-input w-full px-5 py-4 rounded-2xl transition-all outline-none text-xl tracking-widest text-center font-mono text-primary shadow-inner"
                                 onkeypress="if(event.key === 'Enter') app.requestOTP()">
                         </div>
                         <button onclick="app.requestOTP()" id="btnReqOTP"
-                            class="w-full py-4 rounded-2xl font-bold text-white bg-primary hover:bg-blue-700 shadow-lg hover:shadow-primary/40 transition-all transform hover:-translate-y-1">
-                            รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-arrow-right ml-2"></i>
+                            class="w-full py-4 rounded-2xl font-bold text-primary bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transition-all transform hover:-translate-y-1">
+                            รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>
                         </button>
                     </div>
                 </div>`;
@@ -331,9 +352,8 @@
 
             requestOTP: async function() {
                 const idInput = document.getElementById('inputId').value.replace(/[^0-9]/g, '');
-                if(idInput.length !== 8) return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสนักศึกษาให้ครบ 8 หลัก', 'warning');
+                if(idInput.length !== 8) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกรหัสนักศึกษาให้ครบ 8 หลัก', 'warning');
                 
-                // Admin Bypass
                 if(idInput === '65030900') {
                     return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
                 }
@@ -345,13 +365,10 @@
 
                 const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
                 const targetEmail = `${idInput}@kmitl.ac.th`;
-                
-                // สร้างรหัสอ้างอิง (Ref) สุ่ม 6 ตัวอักษร
                 const refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                 this.currentRef = refCode;
 
                 try {
-                    // แนบ ref ไปกับ URL ด้วย
                     const response = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(targetEmail)}&otp=${generatedOtp}&ref=${refCode}`);
                     const result = await response.json();
                     
@@ -360,13 +377,13 @@
                         document.getElementById('appRoot').innerHTML = this.renderLogin2();
                         setTimeout(() => document.getElementById('otp-0').focus(), 100);
                     } else {
-                        Swal.fire('ข้อผิดพลาด', result.message, 'error');
-                        btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-arrow-right ml-2"></i>';
+                        glassSwal.fire('ข้อผิดพลาด', result.message, 'error');
+                        btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>';
                         btn.disabled = false;
                     }
                 } catch(e) {
-                    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ส่งอีเมลได้', 'error');
-                    btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-arrow-right ml-2"></i>';
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ส่งอีเมลได้', 'error');
+                    btn.innerHTML = 'รับรหัสยืนยันผ่านอีเมล <i class="fa-solid fa-envelope-open-text ml-2"></i>';
                     btn.disabled = false;
                 }
             },
@@ -376,26 +393,25 @@
                 for(let i=0; i<6; i++) {
                     inputs += `<input type="text" id="otp-${i}" maxlength="1" 
                         oninput="app.onOtpInput(this, ${i})" onkeydown="app.onOtpKeydown(event, ${i})"
-                        class="otp-input w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-bold rounded-xl bg-gray-50 border-2 border-gray-200 focus:bg-white focus:border-secondary focus:ring-4 focus:ring-secondary/30 transition-all outline-none shadow-inner" />`;
+                        class="otp-input glass-input w-12 h-14 md:w-14 md:h-16 text-center text-3xl font-bold rounded-xl text-primary transition-all outline-none shadow-inner" />`;
                 }
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-fade-in border border-white/40 relative">
-                    <div class="p-8 text-center bg-secondary relative">
-                        <div class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent pointer-events-none"></div>
-                        <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">ยืนยันรหัส</h2>
+                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] overflow-hidden mt-10 animate-slide-up relative">
+                    <div class="p-8 text-center bg-white/30 border-b border-white/40">
+                        <i class="fa-solid fa-shield-halved text-primary text-4xl mb-3 opacity-90"></i>
+                        <h2 class="text-3xl font-extrabold text-primary drop-shadow-sm">ยืนยันรหัส</h2>
                     </div>
                     <div class="p-8 space-y-6">
                         <div class="text-center">
-                            <p class="text-sm text-gray-500">รหัสถูกส่งไปยังอีเมลสถาบันแล้ว</p>
-                            <p class="font-bold text-lg text-primary mt-1">${this.tempStudentId}@kmitl.ac.th</p>
-                            <div class="mt-3 mb-1 inline-block bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider shadow-sm">
+                            <p class="text-sm text-gray-700 font-medium">ส่งรหัสไปยังอีเมลสถาบันแล้ว</p>
+                            <p class="font-extrabold text-xl text-primary mt-1 tracking-wide">${this.tempStudentId}@kmitl.ac.th</p>
+                            <div class="mt-3 mb-1 inline-block bg-white/50 border border-white/60 text-primary px-4 py-1.5 rounded-full text-xs font-bold tracking-wider shadow-sm">
                                 <i class="fa-solid fa-hashtag mr-1"></i> Ref: ${this.currentRef}
                             </div>
-                            <p class="text-xs text-gray-400 mt-2"><i class="fa-solid fa-circle-info"></i> โปรดตรวจสอบในโฟลเดอร์สแปมด้วย</p>
                         </div>
                         <div class="flex justify-between gap-2 px-2" id="otpContainer">${inputs}</div>
-                        <button onclick="app.showView('login')" class="w-full py-3 text-sm font-medium text-gray-400 hover:text-primary transition-colors">
-                            <i class="fa-solid fa-rotate-left"></i> เปลี่ยนรหัสนักศึกษา
+                        <button onclick="app.showView('login')" class="w-full py-3 text-sm font-medium text-gray-500 hover:text-primary transition-colors flex items-center justify-center">
+                            <i class="fa-solid fa-rotate-left mr-2"></i> เปลี่ยนรหัสนักศึกษา
                         </button>
                     </div>
                 </div>`;
@@ -420,7 +436,11 @@
                         if(existingUser) this.loginSuccess(existingUser);
                         else document.getElementById('appRoot').innerHTML = this.renderLogin3();
                     } else {
-                        Swal.fire('ไม่ถูกต้อง', 'รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่', 'error');
+                        glassSwal.fire({
+                            iconHtml: '<i class="fa-solid fa-circle-xmark text-red-500 text-5xl"></i>',
+                            title: 'รหัสไม่ถูกต้อง',
+                            html: 'กรุณาลองใหม่อีกครั้ง'
+                        });
                         for(let i=0; i<6; i++) document.getElementById(`otp-${i}`).value = '';
                         document.getElementById('otp-0').focus();
                     }
@@ -429,20 +449,19 @@
 
             renderLogin3: function() {
                 return `
-                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 animate-fade-in border border-white/40">
-                    <div class="p-8 text-center bg-secondary relative">
-                        <div class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent"></div>
-                        <h2 class="text-3xl font-extrabold text-primary relative z-10 drop-shadow-sm">ยินดีต้อนรับ</h2>
+                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] overflow-hidden mt-10 animate-slide-up">
+                    <div class="p-8 text-center bg-white/30 border-b border-white/40">
+                        <i class="fa-solid fa-user-plus text-primary text-4xl mb-3 opacity-90"></i>
+                        <h2 class="text-3xl font-extrabold text-primary drop-shadow-sm">สร้างโปรไฟล์</h2>
                     </div>
                     <div class="p-8 space-y-6">
-                        <div class="bg-blue-50/50 p-5 rounded-2xl text-sm text-primary text-center border border-blue-100 shadow-inner">
-                            <span class="text-3xl block mb-2 animate-bounce">👋</span>
-                            ดูเหมือนคุณจะเป็นรุ่นน้อง หรือผู้ใช้ใหม่ <br/>แนะนำตัวให้พวกเราหน่อยครับ!
+                        <div class="bg-white/40 p-5 rounded-2xl text-sm text-primary text-center border border-white/50 shadow-inner">
+                            <i class="fa-solid fa-face-smile-wink text-4xl block mb-3 text-secondary drop-shadow animate-bounce"></i>
+                            ดูเหมือนคุณจะเป็นผู้ใช้ใหม่ <br/>แนะนำตัวให้พวกเราหน่อยครับ!
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2 pl-1">ชื่อเล่น / ชื่อเรียก</label>
-                            <input type="text" id="inputNewName" placeholder="กรอกชื่อของคุณ..." 
-                                class="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 focus:bg-white focus:border-secondary focus:ring-4 focus:ring-secondary/30 transition-all outline-none text-lg"
+                            <input type="text" id="inputNewName" placeholder="ชื่อเล่น / ชื่อเรียกของคุณ..." 
+                                class="glass-input w-full px-5 py-4 rounded-2xl transition-all outline-none text-lg text-primary text-center font-bold"
                                 onkeypress="if(event.key === 'Enter') app.registerNewUser()">
                         </div>
                         <button onclick="app.registerNewUser()" 
@@ -454,23 +473,82 @@
             },
             registerNewUser: function() {
                 const name = document.getElementById('inputNewName').value.trim();
-                if(!name) return Swal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
+                if(!name) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
                 this.loginSuccess({ studentId: this.tempStudentId, name: name, isPredefined: false });
             },
 
             // ==========================================
-            // HOME / GRID FLOW
+            // HOME / GRID FLOW (Optimized No-Flicker)
             // ==========================================
-            toggleUser: function(id) {
+            toggleUser: function(id, btnElement) {
                 const idx = this.selectedIds.indexOf(id);
-                if(idx > -1) this.selectedIds.splice(idx, 1);
-                else this.selectedIds.push(id);
-                this.showView('home'); // re-render fast enough for vanilla
+                const isAdding = idx === -1;
+                
+                if (isAdding) {
+                    this.selectedIds.push(id);
+                } else {
+                    this.selectedIds.splice(idx, 1);
+                }
+
+                // Update DOM elements manually instead of re-rendering
+                if (btnElement) {
+                    const checkIcon = btnElement.querySelector('.check-indicator');
+                    if (isAdding) {
+                        btnElement.classList.add('ring-4', 'ring-secondary', 'scale-110', 'shadow-[0_0_20px_rgba(253,223,49,0.7)]');
+                        if (checkIcon) { checkIcon.classList.remove('hidden'); checkIcon.classList.add('flex'); }
+                    } else {
+                        btnElement.classList.remove('ring-4', 'ring-secondary', 'scale-110', 'shadow-[0_0_20px_rgba(253,223,49,0.7)]');
+                        if (checkIcon) { checkIcon.classList.remove('flex'); checkIcon.classList.add('hidden'); }
+                    }
+                }
+                
+                this.updateFAB();
             },
+            
             selectAllUsers: function() {
-                if(this.selectedIds.length === predefinedUsers.length) this.selectedIds = [];
-                else this.selectedIds = predefinedUsers.map(u => u.studentId);
-                this.showView('home');
+                const container = document.getElementById('usersGrid');
+                if (!container) return;
+                
+                const isSelectingAll = this.selectedIds.length !== predefinedUsers.length;
+                this.selectedIds = isSelectingAll ? predefinedUsers.map(u => u.studentId) : [];
+                
+                const buttons = container.querySelectorAll('button[data-student-id]');
+                buttons.forEach(btn => {
+                    const checkIcon = btn.querySelector('.check-indicator');
+                    if (isSelectingAll) {
+                        btn.classList.add('ring-4', 'ring-secondary', 'scale-110', 'shadow-[0_0_20px_rgba(253,223,49,0.7)]');
+                        if (checkIcon) { checkIcon.classList.remove('hidden'); checkIcon.classList.add('flex'); }
+                    } else {
+                        btn.classList.remove('ring-4', 'ring-secondary', 'scale-110', 'shadow-[0_0_20px_rgba(253,223,49,0.7)]');
+                        if (checkIcon) { checkIcon.classList.remove('flex'); checkIcon.classList.add('hidden'); }
+                    }
+                });
+
+                const btnSelectAll = document.getElementById('btnSelectAll');
+                if (btnSelectAll) {
+                    btnSelectAll.innerHTML = `<i class="fa-solid fa-users mr-2"></i> ${isSelectingAll ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}`;
+                }
+                
+                this.updateFAB();
+            },
+
+            updateFAB: function() {
+                const container = document.getElementById('fabContainer');
+                if (!container) return;
+
+                if (this.selectedIds.length > 0) {
+                    // Fixed to viewport center bottom
+                    container.innerHTML = `
+                        <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-slide-up pointer-events-auto">
+                            <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-8 py-4 rounded-full font-extrabold shadow-[0_15px_40px_rgba(0,0,0,0.4)] flex items-center space-x-3 text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 whitespace-nowrap">
+                                <i class="fa-solid fa-paper-plane text-2xl"></i>
+                                <span>ส่งข้อความหา ${this.selectedIds.length} คน</span>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '';
+                }
             },
 
             renderHome: function() {
@@ -480,54 +558,49 @@
                     const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
                     
                     gridHTML += `
-                    <div class="flex flex-col items-center animate-fade-in user-card ${isSelected ? 'user-selected' : ''}" style="animation-delay: ${user.id * 15}ms">
-                        <button onclick="app.toggleUser('${user.studentId}')"
-                            class="relative w-16 h-16 md:w-20 md:h-20 rounded-full shadow-lg flex items-center justify-center text-primary font-bold text-xl bg-secondary user-avatar border-4 border-transparent overflow-hidden group">
+                    <div class="flex flex-col items-center animate-fade-in user-card group" style="animation-delay: ${user.id * 10}ms">
+                        <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
+                            class="relative rounded-full flex items-center justify-center text-primary font-bold text-xl user-avatar m-1 transition-all ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-[0_0_20px_rgba(253,223,49,0.7)]' : 'shadow-lg'}">
                             
-                            <!-- รูปภาพดึงจาก Github -->
-                            <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" 
-                                 class="w-full h-full object-cover rounded-full absolute inset-0 z-0" alt="${user.name}">
+                            <!-- รูปภาพปรับให้พอดีวงกลมเป๊ะไม่มีขอบเว้น -->
+                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative">
+                                <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
+                                     class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0" alt="${user.name}">
+                                <span class="relative z-10 hidden w-full h-full items-center justify-center">${user.name.substring(0, 2)}</span>
+                                <div class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
+                            </div>
                             
-                            <!-- Fallback ถ้าไม่มีรูป -->
-                            <span class="relative z-10 hidden">${user.name.substring(0, 2)}</span>
-                            
-                            <!-- Overlay ตอนโฮเวอร์ -->
-                            <div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity z-10"></div>
-                            
-                            ${isSelected ? `<div class="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-1 border-2 border-white z-20 shadow-md transform scale-110"><i class="fa-solid fa-check text-xs"></i></div>` : ''}
+                            <!-- เครื่องหมายถูก วงกลมเล็กๆ มุมขวาบน -->
+                            <div class="check-indicator ${isSelected ? 'flex' : 'hidden'} absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white items-center justify-center z-20 shadow-md">
+                                <i class="fa-solid fa-check text-[11px] text-white"></i>
+                            </div>
                         </button>
-                        <span class="text-white text-xs mt-2 font-medium bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm">
+                        <span class="text-white text-[11px] mt-2 font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm whitespace-nowrap">
                             ${user.name}
                         </span>
                     </div>`;
                 });
 
-                const fabHTML = this.selectedIds.length > 0 ? `
-                    <div class="fixed bottom-8 left-0 right-0 flex justify-center z-50 animate-bounce">
-                        <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-8 py-4 rounded-full font-extrabold shadow-[0_10px_30px_rgba(253,223,49,0.5)] flex items-center space-x-3 text-lg border-4 border-white/50 backdrop-blur-md transform transition hover:scale-105">
-                            <i class="fa-solid fa-paper-plane text-xl"></i>
-                            <span>ส่งข้อความหา ${this.selectedIds.length} คน</span>
-                        </button>
-                    </div>
-                ` : '';
-
                 return `
-                <div class="animate-fade-in pb-24">
-                    <div class="flex justify-between items-end mb-8 text-white glass-panel p-6 rounded-3xl border-t border-l border-white/20">
+                <div class="animate-fade-in pb-32 relative h-full">
+                    <div class="flex justify-between items-end mb-8 text-white glass-panel p-6 rounded-[2rem] border-t border-l border-white/30">
                         <div>
-                            <h2 class="text-3xl font-bold drop-shadow-md">สวัสดี, ${this.profile.name} <span class="animate-pulse inline-block">👋</span></h2>
-                            <p class="text-blue-100 mt-1 opacity-90 font-light">เลือกคนที่คุณต้องการส่งเสียงถึงได้เลย</p>
+                            <h2 class="text-3xl font-bold drop-shadow-md">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-2 animate-pulse text-2xl"></i></h2>
+                            <p class="text-blue-100 mt-2 opacity-90 font-light text-sm"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกคนที่คุณต้องการส่งเสียงถึงได้เลย</p>
                         </div>
-                        <button onclick="app.selectAllUsers()" class="bg-white/10 hover:bg-white/20 backdrop-blur border border-white/30 px-5 py-2.5 rounded-full text-sm font-medium transition shadow-lg flex items-center">
+                        <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-5 py-2.5 rounded-full text-sm font-medium transition shadow-lg flex items-center">
                             <i class="fa-solid fa-users mr-2"></i> 
                             ${this.selectedIds.length === predefinedUsers.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
                         </button>
                     </div>
-                    <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-x-4 gap-y-8">
+                    
+                    <div id="usersGrid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-x-2 gap-y-6">
                         ${gridHTML}
                     </div>
-                    ${fabHTML}
-                </div>`;
+                </div>
+                <!-- Container สำหรับปุ่มลอยหน้าจอ -->
+                <div id="fabContainer"></div>
+                `;
             },
 
             // ==========================================
@@ -535,69 +608,72 @@
             // ==========================================
             setComposeMode: function(mode) {
                 this.composeMode = mode;
-                this.showView('compose'); // trigger re-render
+                this.showView('compose'); 
             },
 
             renderCompose: function() {
                 const isAudio = this.composeMode === 'audio';
                 const audioArea = this.audioBlob ? `
                     <div class="w-full space-y-4 flex flex-col items-center">
-                        <div class="bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium text-sm flex items-center shadow-inner"><i class="fa-solid fa-check-circle mr-2"></i> บันทึกเสียงเสร็จสิ้น!</div>
-                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-md"></audio>
-                        <button onclick="app.resetAudio()" class="text-sm text-red-500 hover:text-red-700 hover:underline"><i class="fa-solid fa-rotate-right"></i> อัดใหม่</button>
+                        <div class="bg-green-100 text-green-700 px-5 py-2 rounded-full font-bold text-sm flex items-center shadow-inner border border-green-200">
+                            <i class="fa-solid fa-circle-check text-lg mr-2"></i> บันทึกเสียงเสร็จสิ้น!
+                        </div>
+                        <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
+                        <button onclick="app.resetAudio()" class="text-sm text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
                     </div>
                 ` : `
                     <div class="flex flex-col items-center">
-                        <div class="text-5xl font-mono mb-6 font-bold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-gray-300'} drop-shadow-sm">
+                        <div class="text-6xl font-mono mb-8 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
                             00:${String(this.recordingTime).padStart(2, '0')}
                         </div>
-                        <button onclick="app.toggleRecord()" class="w-28 h-28 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
+                        <button onclick="app.toggleRecord()" class="w-32 h-32 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
                             ${this.isRecording ? 
-                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl relative z-10"></i>' : 
-                                '<i class="fa-solid fa-microphone text-5xl relative z-10"></i>'}
+                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-5xl relative z-10"></i>' : 
+                                '<i class="fa-solid fa-microphone text-6xl relative z-10"></i>'}
                         </button>
-                        <p class="text-sm text-gray-500 mt-6 bg-gray-100 px-4 py-1.5 rounded-full font-medium shadow-inner">
-                            ${this.isRecording ? 'กำลังบันทึก... กดเพื่อหยุด' : `กดเพื่อเริ่มอัดเสียง (สูงสุด ${MAX_AUDIO_TIME} วิ)`}
+                        <p class="text-sm text-gray-500 mt-8 bg-white/50 px-5 py-2 rounded-full font-bold shadow-sm border border-white/60">
+                            ${this.isRecording ? '<i class="fa-solid fa-record-vinyl animate-spin text-red-500 mr-1"></i> กำลังบันทึก... กดเพื่อหยุด' : `<i class="fa-solid fa-microphone-lines mr-1"></i> กดเพื่อเริ่มอัดเสียง (สูงสุด ${MAX_AUDIO_TIME} วิ)`}
                         </p>
                     </div>
                 `;
 
                 const textArea = `
-                    <div class="w-full flex flex-col h-full animate-fade-in">
-                        <textarea id="txtMessage" class="w-full flex-1 p-5 rounded-2xl border-2 border-gray-100 focus:bg-white bg-gray-50 focus:border-secondary focus:ring-4 focus:ring-secondary/20 outline-none resize-none min-h-[200px] text-lg shadow-inner transition-all" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
-                        <div class="text-right text-sm mt-3 font-medium text-gray-400" id="wordCount">
+                    <div class="w-full flex flex-col h-full animate-fade-in relative">
+                        <i class="fa-solid fa-pen-nib absolute top-5 right-5 text-gray-300 text-2xl"></i>
+                        <textarea id="txtMessage" class="glass-input w-full flex-1 p-6 rounded-[2rem] outline-none resize-none min-h-[220px] text-lg text-primary shadow-inner transition-all font-medium" placeholder="พิมพ์ความรู้สึกของคุณที่นี่..."></textarea>
+                        <div class="text-right text-sm mt-3 font-bold text-primary/60" id="wordCount">
                             จำกัด ${MAX_WORDS} คำ
                         </div>
                     </div>
                 `;
 
                 return `
-                <div class="bg-white rounded-[2rem] p-8 shadow-2xl max-w-2xl mx-auto border border-gray-100 animate-slide-up">
-                    <div class="flex items-center mb-8 pb-4 border-b border-gray-100">
-                        <button onclick="app.showView('home')" class="p-3 hover:bg-gray-100 rounded-full mr-4 transition text-gray-400 hover:text-primary">
+                <div class="glass-card rounded-[2.5rem] p-8 shadow-2xl max-w-2xl mx-auto animate-slide-up relative z-20">
+                    <div class="flex items-center mb-8 pb-4 border-b border-white/40">
+                        <button onclick="app.showView('home')" class="p-3 hover:bg-white/40 bg-white/20 rounded-full mr-4 transition text-primary shadow-sm">
                             <i class="fa-solid fa-arrow-left text-xl"></i>
                         </button>
                         <div>
-                            <h2 class="text-2xl font-bold text-primary">สร้างข้อความใหม่</h2>
-                            <p class="text-sm text-gray-500 font-medium mt-1">ส่งถึง: <span class="bg-secondary/30 text-primary px-2 py-0.5 rounded-md">${this.selectedIds.length} คน</span></p>
+                            <h2 class="text-2xl font-extrabold text-primary">สร้างข้อความใหม่</h2>
+                            <p class="text-sm text-primary/70 font-bold mt-1">ส่งถึง: <span class="bg-secondary/80 text-primary px-3 py-0.5 rounded-full shadow-sm ml-1"><i class="fa-solid fa-user-group text-xs mr-1"></i> ${this.selectedIds.length} คน</span></p>
                         </div>
                     </div>
 
-                    <div class="flex bg-gray-100 p-1.5 rounded-2xl mb-8 shadow-inner relative">
-                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-gray-400 hover:text-gray-600'}">
+                    <div class="flex bg-white/30 p-1.5 rounded-2xl mb-8 shadow-inner relative border border-white/40">
+                        <button onclick="app.setComposeMode('audio')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
                             <i class="fa-solid fa-microphone-lines text-lg"></i> <span>ส่งเสียง</span>
                         </button>
-                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-gray-400 hover:text-gray-600'}">
+                        <button onclick="app.setComposeMode('text')" class="flex-1 py-3.5 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all z-10 ${!isAudio ? 'bg-white shadow-md text-primary' : 'text-primary/60 hover:bg-white/20'}">
                             <i class="fa-solid fa-keyboard text-lg"></i> <span>พิมพ์ข้อความ</span>
                         </button>
                     </div>
 
-                    <div class="min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-gray-200 rounded-[2rem] p-8 bg-gray-50/50 relative overflow-hidden">
+                    <div class="min-h-[300px] flex flex-col justify-center items-center border-2 border-dashed border-white/60 rounded-[2.5rem] p-8 bg-white/20 relative overflow-hidden shadow-inner">
                         ${isAudio ? audioArea : textArea}
                     </div>
 
                     <div class="mt-8 flex justify-end">
-                        <button onclick="app.sendMessage()" id="btnSend" class="px-10 py-4 rounded-2xl font-bold text-primary flex items-center space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1">
+                        <button onclick="app.sendMessage()" id="btnSend" class="px-10 py-4 rounded-2xl font-extrabold text-primary flex items-center space-x-3 transition-all bg-secondary hover:bg-yellow-400 shadow-[0_10px_20px_rgba(253,223,49,0.3)] transform hover:-translate-y-1">
                             <i class="fa-solid fa-paper-plane text-xl"></i> <span>ส่งข้อความเลย!</span>
                         </button>
                     </div>
@@ -620,7 +696,7 @@
                         this.mediaRecorder.onstop = () => {
                             this.audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
                             stream.getTracks().forEach(track => track.stop());
-                            this.showView('compose'); // update UI
+                            this.showView('compose'); 
                         };
 
                         this.mediaRecorder.start();
@@ -632,10 +708,14 @@
                         this.timerInterval = setInterval(() => {
                             this.recordingTime++;
                             if(this.recordingTime >= MAX_AUDIO_TIME) this.toggleRecord();
-                            else this.showView('compose'); // re-render timer (inefficient but works for vanilla)
+                            else {
+                                // อัปเดตเวลาโดยไม่ต้องโหลดหน้าทั้งหมดใหม่ (เพื่อไม่ให้กระตุก)
+                                const timeDisplay = document.querySelector('.font-mono');
+                                if (timeDisplay) timeDisplay.textContent = `00:${String(this.recordingTime).padStart(2, '0')}`;
+                            }
                         }, 1000);
                     } catch (e) {
-                        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาอนุญาตการเข้าถึง', 'error');
+                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาอนุญาตการเข้าถึง', 'error');
                     }
                 }
             },
@@ -647,12 +727,11 @@
                 
                 if(this.composeMode === 'text') {
                     content = document.getElementById('txtMessage').value.trim();
-                    if(!content) return Swal.fire('แจ้งเตือน', 'กรุณาพิมพ์ข้อความ', 'warning');
+                    if(!content) return glassSwal.fire('แจ้งเตือน', 'กรุณาพิมพ์ข้อความ', 'warning');
                     const wc = content.split(/\s+/).filter(w=>w.length>0).length;
-                    if(wc > MAX_WORDS) return Swal.fire('แจ้งเตือน', `จำกัดไม่เกิน ${MAX_WORDS} คำ`, 'warning');
+                    if(wc > MAX_WORDS) return glassSwal.fire('แจ้งเตือน', `จำกัดไม่เกิน ${MAX_WORDS} คำ`, 'warning');
                 } else {
-                    if(!this.audioBlob) return Swal.fire('แจ้งเตือน', 'กรุณาอัดเสียงก่อนส่ง', 'warning');
-                    // Convert Blob to Base64
+                    if(!this.audioBlob) return glassSwal.fire('แจ้งเตือน', 'กรุณาอัดเสียงก่อนส่ง', 'warning');
                     content = await new Promise((res) => {
                         const reader = new FileReader();
                         reader.onloadend = () => res(reader.result);
@@ -661,7 +740,7 @@
                 }
 
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>กำลังส่ง...</span>';
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xl"></i> <span>กำลังส่ง...</span>';
 
                 try {
                     const messageData = {
@@ -674,12 +753,17 @@
                     const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
                     await addDoc(msgsRef, messageData);
                     
-                    Swal.fire({ icon: 'success', title: 'ส่งเรียบร้อย!', showConfirmButton: false, timer: 1500 });
+                    glassSwal.fire({ 
+                        iconHtml: '<i class="fa-solid fa-paper-plane text-secondary text-5xl"></i>',
+                        title: 'ส่งเรียบร้อย!', 
+                        showConfirmButton: false, 
+                        timer: 1500 
+                    });
                     this.selectedIds = [];
                     this.audioBlob = null;
                     this.showView('inbox');
                 } catch (e) {
-                    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อความได้', 'error');
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-paper-plane text-xl"></i> <span>ส่งข้อความเลย!</span>';
                 }
@@ -689,14 +773,17 @@
             // INBOX FLOW
             // ==========================================
             deleteMsg: async function(id) {
-                Swal.fire({
-                    title: 'ลบข้อความนี้?', text: "จะไม่สามารถกู้คืนได้", icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'ลบเลย', cancelButtonText: 'ยกเลิก'
+                glassSwal.fire({
+                    title: 'ลบข้อความนี้?', 
+                    html: "จะไม่สามารถกู้คืนได้", 
+                    iconHtml: '<i class="fa-solid fa-trash-can text-red-400 text-5xl"></i>',
+                    showCancelButton: true, 
+                    confirmButtonText: 'ลบเลย', 
+                    cancelButtonText: 'ยกเลิก'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', id));
-                        Swal.fire({ icon:'success', title:'ลบแล้ว', showConfirmButton:false, timer:1000});
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-green-500 text-5xl"></i>', title:'ลบแล้ว', showConfirmButton:false, timer:1000});
                     }
                 });
             },
@@ -706,30 +793,29 @@
                 if(this.messages.length === 0) {
                     msgsHTML = `
                         <div class="text-center py-24 flex flex-col items-center justify-center animate-fade-in">
-                            <div class="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-gray-100">
-                                <i class="fa-solid fa-inbox text-5xl text-gray-300"></i>
+                            <div class="w-32 h-32 bg-white/30 rounded-full flex items-center justify-center mb-6 shadow-inner border border-white/50">
+                                <i class="fa-solid fa-envelope-open text-5xl text-primary/40"></i>
                             </div>
-                            <p class="text-gray-400 font-medium text-lg">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
+                            <p class="text-primary/70 font-bold text-xl drop-shadow-sm">ยังไม่มีข้อความถึงคุณในขณะนี้</p>
                         </div>`;
                 } else {
                     this.messages.forEach((msg, idx) => {
                         const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
                         const isAudio = msg.type === 'audio';
                         const adminControls = this.profile.isAdmin ? `
-                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white shadow hover:shadow-md p-2 rounded-lg transition-all" title="ลบข้อความ">
+                            <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 backdrop-blur shadow hover:shadow-md p-2 rounded-lg transition-all" title="ลบข้อความ">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         ` : '';
                         
-                        const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-normal shadow-sm">ถึง ${msg.to.length} คน</span>` : '';
+                        const adminToLabel = this.profile.isAdmin ? `<span class="ml-2 text-xs bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold shadow-sm"><i class="fa-solid fa-users text-[10px]"></i> ${msg.to.length}</span>` : '';
 
-                        // หา User Profile ของคนส่งเพื่อเอารูปมาโชว์ (ถ้าเป็น 45 คนหลัก)
                         const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0"><span class="relative z-10 hidden text-primary">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary">${msg.from.name.substring(0,1)}</span>`;
+                        const senderImg = sender ? `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover rounded-full absolute inset-0 z-0 m-0 p-0"><span class="relative z-10 hidden text-primary items-center justify-center w-full h-full">${msg.from.name.substring(0,1)}</span>` : `<span class="text-primary flex items-center justify-center w-full h-full">${msg.from.name.substring(0,1)}</span>`;
 
                         msgsHTML += `
-                        <div class="bg-white border border-gray-100 p-6 rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-5 shadow-sm hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up" style="animation-delay: ${idx * 50}ms">
-                            <div class="flex-shrink-0 w-14 h-14 bg-secondary rounded-full flex items-center justify-center font-bold text-2xl shadow-inner relative overflow-hidden border-2 border-secondary">
+                        <div class="bg-white/60 backdrop-blur-md border border-white/60 p-6 rounded-[2rem] flex flex-col sm:flex-row sm:items-start gap-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group animate-slide-up" style="animation-delay: ${idx * 50}ms">
+                            <div class="flex-shrink-0 w-16 h-16 bg-secondary rounded-full flex items-center justify-center font-bold text-3xl shadow-md relative overflow-hidden border-2 border-white">
                                 ${senderImg}
                             </div>
                             <div class="flex-1 w-full">
@@ -737,7 +823,7 @@
                                     <div>
                                         <span class="font-extrabold text-primary text-xl tracking-wide">${msg.from.name}</span>
                                         ${adminToLabel}
-                                        <div class="text-xs text-gray-400 mt-0.5"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                        <div class="text-xs text-primary/60 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
                                     <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         ${adminControls}
@@ -745,13 +831,13 @@
                                 </div>
                                 
                                 ${isAudio ? `
-                                    <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 inline-block w-full max-w-md shadow-inner">
+                                    <div class="bg-white/80 p-4 rounded-2xl border border-white inline-block w-full max-w-md shadow-sm">
                                         <audio src="${msg.content}" controls class="w-full h-10"></audio>
                                     </div>
                                 ` : `
-                                    <div class="text-gray-700 bg-blue-50/50 p-5 rounded-2xl border border-blue-100 whitespace-pre-wrap leading-relaxed shadow-sm text-lg relative">
-                                        <i class="fa-solid fa-quote-left absolute top-3 left-3 text-2xl text-blue-200/50"></i>
-                                        <div class="relative z-10 pl-4">${msg.content}</div>
+                                    <div class="text-primary bg-white/70 p-5 rounded-2xl border border-white whitespace-pre-wrap leading-relaxed shadow-sm text-lg relative font-medium">
+                                        <i class="fa-solid fa-quote-left absolute top-3 left-3 text-3xl text-primary/10"></i>
+                                        <div class="relative z-10 pl-5">${msg.content}</div>
                                     </div>
                                 `}
                             </div>
@@ -760,18 +846,18 @@
                 }
 
                 return `
-                <div class="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-w-3xl mx-auto min-h-[75vh] border border-white/50 animate-slide-up">
-                    <div class="flex items-center justify-between mb-10 border-b border-gray-100 pb-6">
+                <div class="glass-card rounded-[2.5rem] p-6 md:p-10 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative z-20">
+                    <div class="flex items-center justify-between mb-10 border-b border-white/40 pb-6">
                         <div class="flex items-center">
-                            <button onclick="app.showView('home')" class="p-3 bg-gray-50 hover:bg-secondary hover:text-primary hover:shadow-md rounded-2xl mr-5 transition-all text-gray-500">
+                            <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 hover:shadow-md rounded-2xl mr-5 transition-all text-primary shadow-sm">
                                 <i class="fa-solid fa-arrow-left text-xl"></i>
                             </button>
                             <div>
                                 <h2 class="text-3xl font-extrabold text-primary flex items-center tracking-wide">
-                                    กล่องจดหมาย
+                                    <i class="fa-solid fa-envelope-open-text mr-3"></i> กล่องจดหมาย
                                 </h2>
-                                <p class="text-gray-500 mt-1 font-medium">
-                                    ${this.profile.isAdmin ? '<span class="text-red-500"><i class="fa-solid fa-shield-halved"></i> โหมดผู้ดูแลระบบ: เห็นข้อความทั้งหมด</span>' : 'ข้อความจากเพื่อนและรุ่นน้องที่ส่งถึงคุณ'}
+                                <p class="text-primary/70 mt-1 font-bold">
+                                    ${this.profile.isAdmin ? '<span class="text-red-500 bg-red-50 px-2 py-0.5 rounded-md"><i class="fa-solid fa-shield-halved mr-1"></i> โหมดผู้ดูแลระบบ: เห็นข้อความทั้งหมด</span>' : 'ข้อความจากเพื่อนและรุ่นน้องที่ส่งถึงคุณ'}
                                 </p>
                             </div>
                         </div>
@@ -783,7 +869,6 @@
             }
         };
 
-        // Initialize App on load
         window.addEventListener('DOMContentLoaded', () => app.init());
 
     </script>
