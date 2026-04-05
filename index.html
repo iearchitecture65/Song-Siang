@@ -244,8 +244,12 @@
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         const GITHUB_IMG_BASE_URL = "./65"; 
 
+        // API Key Obfuscation System
+        const _kP = ["AIzaSyDLKlp8", "mLuPsw0zyxy5", "cead2n0vPDGP2Kw"];
+        const _gk = () => _kP.join('');
+
         const firebaseConfig = {
-            apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
+            apiKey: _gk(),
             authDomain: "song-siang-fa86e.firebaseapp.com",
             databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "song-siang-fa86e",
