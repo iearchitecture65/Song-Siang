@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ส่งเสียง | Song Siang</title>
     
-    <!-- Website Icon (Favicon) - Fixed path to same directory -->
+    <!-- Website Icon (Favicon) -->
     <link rel="icon" type="image/png" href="iconLOGO 65.png">
     <link rel="apple-touch-icon" href="iconLOGO 65.png">
     
@@ -156,9 +156,11 @@
     <div class="max-w-5xl mx-auto min-h-screen relative z-10 flex flex-col">
         
         <header class="px-4 py-6 md:px-6 md:py-8 text-center text-white border-b border-white/10 relative z-50">
-            <!-- Website Logo - Fixed path to same directory -->
-            <div class="flex justify-center mb-3">
-                <img src="iconLOGO 65.png" alt="Song Siang Logo" class="h-16 md:h-20 w-auto drop-shadow-xl animate-fade-in" onerror="this.style.display='none'">
+            <!-- Website Logo - Top Left -->
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center h-full">
+                <img src="LOGO 65.png" alt="Logo" class="h-10 md:h-14 w-auto drop-shadow-lg cursor-pointer hover:scale-105 transition-transform active:scale-95" 
+                     onclick="app.handleLogoClick()"
+                     onerror="this.style.display='none'">
             </div>
             
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-wider mb-1 md:mb-2 drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-white to-secondary">
@@ -240,7 +242,6 @@
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         const GITHUB_IMG_BASE_URL = "65"; 
-        const SITE_LOGO_URL = "iconLOGO 65.png"; // Fixed path
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
@@ -382,6 +383,15 @@
                 if (consonants.length >= 2) return consonants.substring(0, 2);
                 if (consonants.length === 1) return consonants;
                 return name.substring(0, 2);
+            },
+
+            handleLogoClick: function() {
+                if (!this.profile) return;
+                if (this.profile.isPredefined || this.profile.isAdmin) {
+                    this.showView('feed');
+                } else {
+                    this.showView('home');
+                }
             },
 
             checkBlockStatus: async function(uid) {
@@ -1217,7 +1227,7 @@
                 let gridHTML = '';
                 predefinedUsers.forEach(user => {
                     const isSelected = this.selectedIds.includes(user.studentId);
-                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`;
+                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${user.id}.png`; // Reverted to 65/ folder
                     
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 8}ms">
