@@ -733,9 +733,9 @@
                     gridHTML += `
                     <div class="flex flex-col items-center justify-start animate-fade-in user-card group w-full" style="animation-delay: ${user.id * 10}ms">
                         <button data-student-id="${user.studentId}" onclick="app.toggleUser('${user.studentId}', this)"
-                            class="relative rounded-full flex items-center justify-center text-primary font-bold text-xl user-avatar mb-1 transition-all ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-[0_0_20px_rgba(253,223,49,0.7)]' : 'shadow-lg'}">
+                            class="relative rounded-full flex items-center justify-center text-primary font-bold text-xl user-avatar mb-1 transition-all bg-secondary ${isSelected ? 'ring-4 ring-secondary scale-110 shadow-[0_0_20px_rgba(253,223,49,0.7)]' : 'shadow-lg'}">
                             
-                            <div class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative border border-white/40">
+                            <div class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-secondary relative">
                                 <img src="${imgUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
                                      class="w-full h-full object-cover absolute inset-0 z-0 m-0 p-0" alt="${user.name}">
                                 <span class="relative z-10 hidden w-full h-full items-center justify-center text-[14px] md:text-[18px]">${user.name.substring(0, 2)}</span>
