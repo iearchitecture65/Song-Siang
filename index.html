@@ -71,9 +71,10 @@
             border-color: #fddf31;
         }
         
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
         
         .otp-input:focus { transform: translateY(-2px); }
         .user-avatar { transition: transform 0.2s ease-out; }
@@ -256,7 +257,7 @@
             { id: 21, studentId: "65030115", fullName: "นายนนทวัฒน์ ชีพอุบัติ", name: "เฟรม" },
             { id: 22, studentId: "65030123", fullName: "นางสาวนันทกานต์ ชูจันทร์", name: "จิ๊บ" },
             { id: 23, studentId: "65030138", fullName: "นายปฏิภาณ บำเรอจิต", name: "ปลั๊ก" },
-            { id: 24, studentId: "65030140", fullName: "นางสาวปณิตตา พงษ์เรือง", name: "ปิ่น" },
+            { id: 24, studentId: "65030140", fullName: "นางสาวปณิตา พงษ์เรือง", name: "ปิ่น" },
             { id: 25, studentId: "65030145", fullName: "นางสาวปรียากร สายสิม", name: "ปาล์มมี่" },
             { id: 26, studentId: "65030173", fullName: "นางสาวพุธิตา ปันฟอง", name: "ใบเตย" },
             { id: 27, studentId: "65030193", fullName: "นายภูวิศ ชินทองเปลว", name: "โบ๊ท" },
@@ -408,6 +409,23 @@
                     img.onload = () => { this.imageCache[imgUrl] = true; };
                 });
                 this.preloadedImages = true;
+            },
+
+            // Helper to determine the relationship label (น้อง/พี่/เพื่อน/คน)
+            getRelationshipLabel: function() {
+                if (!this.profile) return "คน";
+                const sid = this.profile.studentId;
+                if (!sid || sid.startsWith('G')) return "คน";
+
+                const yearMatch = sid.match(/^\d{2}/);
+                if (!yearMatch) return "คน";
+                const year = parseInt(yearMatch[0]);
+
+                if (year < 65) return "น้อง"; 
+                if (year > 65) return "พี่";   
+                
+                const isPredefined = predefinedUsers.some(u => u.studentId === sid);
+                return isPredefined ? "เพื่อน" : "คน";
             },
 
             renderImage: function(src, altText, extraClass = "") {
@@ -802,9 +820,37 @@
                 }
             },
 
+            exportUsersToExcel: function() {
+                const allUsers = [...predefinedUsers];
+                this.registeredUsers.forEach(reg => {
+                    if (!allUsers.find(u => u.studentId === reg.id)) {
+                        allUsers.push({ studentId: reg.id, name: reg.name, fullName: reg.fullName, isPredefined: false });
+                    }
+                });
+
+                // Thai language support for Excel via BOM
+                let csv = "\uFEFF"; 
+                csv += "รหัสนักศึกษา,ชื่อเรียก,ชื่อ-นามสกุล,สถานะผู้ใช้\n";
+                allUsers.forEach(u => {
+                    const regData = this.registeredUsers.find(r => r.id === u.studentId) || {};
+                    const status = regData.isBlocked ? "ระงับการใช้งาน" : (regData.lastLogin ? "ปกติ" : "ยังไม่เคยเข้าสู่ระบบ");
+                    csv += `"${u.studentId}","${u.name}","${u.fullName || ''}","${status}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `รายชื่อสมาชิก_ส่งเสียง_${new Date().toLocaleDateString('th-TH').replace(/\//g,'-')}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
             renderUserManagement: function() {
                 return `
-                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[75vh] animate-slide-up">
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[75vh] animate-slide-up flex flex-col">
                     <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
                         <div class="flex items-center">
                             <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
@@ -815,18 +861,25 @@
                                 <p class="text-blue-100 text-xs font-bold">ควบคุมการเข้าถึงระบบ</p>
                             </div>
                         </div>
+                        <button onclick="app.exportUsersToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-file-excel text-sm"></i> โหลดรายชื่อ (.csv)
+                        </button>
                     </div>
 
                     <div class="mb-6">
                         <div class="relative">
-                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-sm"></i>
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-sm"></i>
                             <input type="text" placeholder="ค้นหาชื่อ หรือรหัส..." 
-                                class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/40 border border-white/50 outline-none transition-all text-sm font-medium text-primary shadow-inner"
+                                class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/30 border border-white/40 outline-none transition-all text-sm font-medium text-white placeholder:text-white/80 shadow-inner"
                                 onkeyup="app.setMemberSearch(this.value)">
                         </div>
                     </div>
 
-                    <div id="usersListContainer" class="space-y-3">
+                    <div id="usersListContainer" class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar" style="max-height: 50vh;">
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-white/10 text-center">
+                         <p class="text-[10px] text-white/50 italic">เลื่อนเพื่อดูสมาชิกทั้งหมด ${predefinedUsers.length + this.registeredUsers.filter(r => !predefinedUsers.some(p => p.studentId === r.id)).length} ท่าน</p>
                     </div>
                 </div>`;
             },
@@ -867,29 +920,64 @@
                     return `
                         <div class="bg-white/60 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 border border-white/40 transition-all ${isBlocked ? 'opacity-60 bg-red-100/50' : 'hover:bg-white/80'}">
                             <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold text-primary shadow-sm border border-white relative shrink-0 overflow-hidden">
-                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all leading-none">${u.name[0]}</span>`)}
+                                ${u.studentId.startsWith('G') ? '<i class="fa-solid fa-user-tag text-lg"></i>' : (u.id ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name) : `<span class="h-full w-full flex-center-all leading-none">${u.name[0]}</span>`)}
                                 <span class="fallback-name h-full w-full flex-center-all leading-none hidden absolute inset-0 z-10 bg-secondary">${u.name[0]}</span>
                             </div>
-                            <div class="flex-1 text-center sm:text-left">
-                                <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2">
+                            <div class="flex-1 text-center sm:text-left min-w-0 w-full">
+                                <div class="font-extrabold text-primary flex items-center justify-center sm:justify-start gap-2 truncate">
                                     ${u.name} 
-                                    ${u.studentId.startsWith('G') ? '<span class="text-[9px] bg-blue-500 text-white px-1.5 rounded-full font-medium">Guest</span>' : ''}
-                                    ${isBlocked ? '<span class="text-[9px] bg-red-500 text-white px-1.5 rounded-full font-medium">Blocked</span>' : ''}
+                                    ${u.studentId.startsWith('G') ? '<span class="text-[9px] bg-blue-500 text-white px-1.5 rounded-full font-medium shrink-0">Guest</span>' : ''}
+                                    ${isBlocked ? '<span class="text-[9px] bg-red-500 text-white px-1.5 rounded-full font-medium shrink-0">Blocked</span>' : ''}
                                 </div>
-                                <div class="text-[10px] text-primary/70 font-medium">${u.studentId} | ${u.fullName || ''}</div>
+                                <div class="text-[10px] text-primary/70 font-medium truncate">${u.studentId} | ${u.fullName || ''}</div>
                                 <div class="text-[9px] text-primary/50 mt-1 italic">ล่าสุด: ${lastLogin}</div>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="app.toggleUserBlock('${u.studentId}', ${isBlocked})" class="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all ${isBlocked ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}">
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="app.toggleUserBlock('${u.studentId}', ${isBlocked})" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white transition-all ${isBlocked ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}">
                                     ${isBlocked ? '<i class="fa-solid fa-unlock mr-1"></i> ปลดบล็อก' : '<i class="fa-solid fa-ban mr-1"></i> บล็อก'}
                                 </button>
-                                <button onclick="app.deleteUserFromSystem('${u.studentId}')" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all">
+                                <button onclick="app.deleteUserFromSystem('${u.studentId}')" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 transition-all">
                                     <i class="fa-solid fa-trash-can mr-1"></i> ลบ
                                 </button>
                             </div>
                         </div>
                     `;
                 }).join('');
+            },
+
+            toggleUserBlock: async function(uid, currentlyBlocked) {
+                const action = currentlyBlocked ? 'ปลดบล็อก' : 'บล็อก';
+                glassSwal.fire({
+                    title: `${action}สมาชิก?`,
+                    text: currentlyBlocked ? 'สมาชิกจะสามารถกลับมาใช้งานระบบได้ปกติ' : 'สมาชิกจะไม่สามารถเข้าสู่ระบบและใช้งานได้',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: action,
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid), {
+                            isBlocked: !currentlyBlocked
+                        }, { merge: true });
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ดำเนินการสำเร็จ!', showConfirmButton: false, timer: 1000 });
+                    }
+                });
+            },
+
+            deleteUserFromSystem: async function(uid) {
+                glassSwal.fire({
+                    title: 'ลบข้อมูลสมาชิก?',
+                    text: 'ข้อมูลสถานะการเข้าสู่ระบบจะถูกลบ ข้อมูลการล็อกอินจะถูกล้าง',
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบข้อมูล',
+                    cancelButtonText: 'ยกเลิก'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid));
+                        glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ลบเรียบร้อย!', showConfirmButton: false, timer: 1000 });
+                    }
+                });
             },
 
             viewFeedMessage: function(msgId) {
@@ -1044,18 +1132,21 @@
                 const container = document.getElementById('globalFabContainer');
                 if (!container) return;
 
+                const label = this.getRelationshipLabel();
+                const suffix = label === "คน" ? "" : "ๆ";
+
                 if (this.currentView === 'feed') {
                     container.innerHTML = `
                         <button onclick="app.showView('home')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
-                            <span class="truncate">ส่งข้อความหาเพื่อนๆ</span>
+                            <span class="truncate">ส่งข้อความหา${label}${suffix}</span>
                         </button>`;
                 } 
                 else if (this.currentView === 'home' && this.selectedIds.length > 0) {
                     container.innerHTML = `
                         <button onclick="app.showView('compose')" class="bg-secondary hover:bg-yellow-400 text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-full font-extrabold shadow-xl flex items-center justify-center space-x-2 sm:space-x-3 text-sm sm:text-lg border-4 border-white/80 backdrop-blur-xl transform transition hover:scale-105 w-full pointer-events-auto animate-slide-up">
                             <i class="fa-solid fa-paper-plane text-xl"></i>
-                            <span class="truncate">ส่งข้อความหา ${this.selectedIds.length} คน</span>
+                            <span class="truncate">ส่งข้อความหา ${this.selectedIds.length} ${label}</span>
                         </button>`;
                 } 
                 else {
@@ -1093,12 +1184,14 @@
                     </div>`;
                 });
 
+                const label = this.getRelationshipLabel();
+
                 return `
                 <div class="animate-fade-in pb-32 relative h-full">
                     <div class="flex flex-row justify-between items-center sm:items-end mb-8 text-white glass-panel p-4 sm:p-6 rounded-3xl border border-white/10 gap-3 shadow-xl">
                         <div class="flex-1 min-w-0">
                             <h2 class="text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md truncate">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-1 animate-pulse text-lg md:text-2xl"></i></h2>
-                            <p class="text-blue-100 mt-1 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกเพื่อนที่คุณต้องการส่งเสียงถึงได้เลย</p>
+                            <p class="text-blue-100 mt-1 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือก${label}ที่คุณต้องการส่งเสียงถึงได้เลย</p>
                         </div>
                         <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 rounded-full text-[10px] sm:text-sm font-bold transition shadow-lg flex items-center whitespace-nowrap">
                             <i class="fa-solid fa-users sm:mr-2"></i> 
@@ -1132,6 +1225,7 @@
 
             renderCompose: function() {
                 const isAudio = this.composeMode === 'audio';
+                const label = this.getRelationshipLabel();
                 const audioArea = this.audioBlob ? `
                     <div class="w-full space-y-4 flex flex-col items-center">
                         <div class="text-primary font-extrabold text-xs md:text-sm flex items-center animate-fade-in">
@@ -1171,7 +1265,7 @@
                         <div class="overflow-hidden">
                             <h2 class="text-xl font-extrabold text-primary truncate">สร้างข้อความใหม่</h2>
                             <p class="text-xs text-primary/70 font-bold mt-1 truncate">
-                                ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} คน</span>
+                                ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} ${label}</span>
                             </p>
                         </div>
                     </div>
@@ -1465,24 +1559,24 @@
                                     <div class="w-12 h-12 bg-secondary rounded-full flex-center-all font-bold shadow-md relative overflow-hidden border-2 border-white">
                                         ${senderImg}
                                     </div>
-                                    <div class="sm:hidden">
-                                        <div class="font-extrabold text-primary text-sm">${displayName}</div>
+                                    <div class="sm:hidden min-w-0 flex-1">
+                                        <div class="font-extrabold text-primary text-sm truncate">${displayName}</div>
                                         <div class="text-[9px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
                                 </div>
                                 <div class="sm:hidden">${adminControls}</div>
                             </div>
-                            <div class="flex-1 w-full">
+                            <div class="flex-1 w-full min-w-0">
                                 <div class="hidden sm:flex justify-between items-start mb-2">
-                                    <div>
-                                        <span class="font-extrabold text-primary text-base">${displayName}</span>
+                                    <div class="min-w-0 flex-1">
+                                        <span class="font-extrabold text-primary text-base truncate block">${displayName}</span>
                                         <div class="text-[10px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
                                     </div>
-                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity">${adminControls}</div>
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">${adminControls}</div>
                                 </div>
                                 ${isAudio ? `
-                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm">
-                                        <audio src="${msg.content}" controls class="h-8 w-[200px]"></audio>
+                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm max-w-full">
+                                        <audio src="${msg.content}" controls class="h-8 w-[200px] max-w-full"></audio>
                                     </div>` : `
                                     <div class="text-primary bg-white/80 border border-white/50 px-5 py-3 rounded-2xl shadow-sm text-sm relative font-medium w-fit max-w-full">
                                         <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl text-primary/20"></i>
@@ -1501,9 +1595,9 @@
                     adminControlsHTML = `
                         <div class="mb-6 space-y-4">
                             <div class="relative">
-                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-sm"></i>
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-sm"></i>
                                 <input type="text" placeholder="แอดมิน: ค้นหาด้วยชื่อ หรือรหัส..." 
-                                    class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/40 border border-white/50 outline-none transition-all text-sm font-medium text-primary shadow-inner"
+                                    class="w-full pl-10 pr-4 py-3 rounded-xl bg-white/30 border border-white/40 outline-none transition-all text-sm font-medium text-white placeholder:text-white/80 shadow-inner"
                                     onkeyup="app.setAdminSearch(this.value)" value="${this.adminSearchQuery}">
                             </div>
                             <div id="searchGroupHeader">
@@ -1513,7 +1607,7 @@
                 }
 
                 return `
-                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative">
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-3xl mx-auto min-h-[75vh] animate-slide-up relative flex flex-col">
                     <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
                         <div class="flex items-center">
                             <button onclick="app.showView(app.profile.isPredefined ? 'feed' : 'home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
@@ -1530,7 +1624,7 @@
                             </button>` : ''}
                     </div>
                     ${adminControlsHTML}
-                    <div id="inboxMessageContainer" class="space-y-4 relative z-10">
+                    <div id="inboxMessageContainer" class="flex-1 overflow-y-auto pr-1 space-y-4 relative z-10 custom-scrollbar">
                         ${this.renderInboxMessagesList()}
                     </div>
                 </div>`;
