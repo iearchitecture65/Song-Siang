@@ -1103,11 +1103,12 @@
                         let senderImg = '';
                         
                         if (isAnonymous) {
-                            senderImg = `<div class="w-full h-full flex items-center justify-center text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
+                            senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-2xl"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                            // Fixed: Ensure abbreviation appears if image is not available in feed
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary font-bold text-lg bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary font-bold text-[1.5rem] bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
                                 `<div class="w-full h-full flex-center-all text-primary font-bold text-lg">${this.getAbbr(msg.from.name)}</div>`;
                         }
                         
@@ -1618,8 +1619,9 @@
                              senderImg = `<div class="w-full h-full flex items-center justify-center bg-slate-700 text-white rounded-full"><i class="fa-solid fa-user-secret text-lg"></i></div>`;
                         } else {
                             const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                            // Fixed: Fallback name logic for inbox
                             senderImg = sender ? 
-                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name relative z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
+                                `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary w-full h-full text-sm font-bold bg-secondary">${this.getAbbr(msg.from.name)}</span>` : 
                                 `<span class="text-primary flex-center-all w-full h-full text-sm font-bold">${this.getAbbr(msg.from.name)}</span>`;
                         }
 
