@@ -110,10 +110,13 @@
 
         .img-loading-spinner {
             border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid #fddf31;
+            border-top-color: #fddf31;
             border-radius: 50%;
-            width: 50%;
-            height: 50%;
+            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
+            width: 40%;
+            height: 40%;
+            min-width: 12px;
+            min-height: 12px;
             max-width: 24px;
             max-height: 24px;
             animation: spin 1s linear infinite;
@@ -360,6 +363,11 @@
             preloadedImages: false,
             isMobileMenuOpen: false,
             imageCache: {},
+
+            // Audio Visualizer Context
+            audioContext: null,
+            audioAnalyser: null,
+            visualizerFrame: null,
 
             init: async function() {
                 try {
@@ -1512,6 +1520,29 @@
                 }
             },
 
+            drawVisualizer: function() {
+                if (!this.isRecording || !this.audioAnalyser) return;
+                
+                const bufferLength = this.audioAnalyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                this.audioAnalyser.getByteFrequencyData(dataArray);
+
+                const barsContainer = document.getElementById('audio-bars');
+                if (barsContainer) {
+                    const numBars = 20; 
+                    let html = '';
+                    const step = Math.floor(bufferLength / numBars) || 1;
+                    for (let i = 0; i < numBars; i++) {
+                        const value = dataArray[i * step] || 0;
+                        const heightPct = Math.max(15, (value / 255) * 100);
+                        html += `<div class="flex-1 bg-primary rounded-full transition-all duration-75" style="height: ${heightPct}%; min-width: 3px;"></div>`;
+                    }
+                    barsContainer.innerHTML = html;
+                }
+                
+                this.visualizerFrame = requestAnimationFrame(() => this.drawVisualizer());
+            },
+
             renderCompose: function() {
                 const isAudio = this.composeMode === 'audio';
                 const sendBtnLabel = isAudio ? 'ส่งข้อความเสียง' : 'ส่งข้อความ';
@@ -1523,20 +1554,35 @@
                         </div>
                         <audio src="${URL.createObjectURL(this.audioBlob)}" controls class="w-full max-w-sm rounded-full shadow-lg border-2 border-white/50"></audio>
                         <button onclick="app.resetAudio()" class="text-xs text-red-500 hover:text-red-700 font-bold mt-2 py-2 px-4 bg-white/50 rounded-full transition-all"><i class="fa-solid fa-rotate-right mr-1"></i> อัดใหม่</button>
+                    </div>` : 
+                    (this.isRecording ? `
+                    <div class="flex flex-col items-center w-full max-w-sm animate-fade-in">
+                        <div class="w-full bg-white/40 backdrop-blur-md rounded-full p-2 flex items-center gap-3 shadow-lg border border-white/60 mb-6">
+                            <button onclick="app.toggleRecord()" class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shadow-md hover:bg-red-600 transition shrink-0 animate-pulse">
+                                <i class="fa-solid fa-stop"></i>
+                            </button>
+                            <div id="audio-bars" class="flex-1 flex items-center h-8 gap-0.5 sm:gap-1 overflow-hidden px-2">
+                                <!-- Bars injected by JS -->
+                            </div>
+                            <div id="recordingTimerDisplay" class="font-mono text-sm font-bold text-primary shrink-0 w-12 text-right pr-2">
+                                00:${String(this.recordingTime).padStart(2, '0')}
+                            </div>
+                        </div>
+                        <p class="text-xs text-red-500 font-bold bg-white/50 px-4 py-1.5 rounded-full shadow-sm border border-white/60">
+                            <i class="fa-solid fa-record-vinyl animate-spin mr-1"></i> กำลังบันทึก... (สูงสุด ${this.maxAudioTime} วิ)
+                        </p>
                     </div>` : `
                     <div class="flex flex-col items-center">
-                        <div class="text-5xl md:text-6xl font-mono mb-6 font-extrabold tracking-wider ${this.isRecording ? 'text-red-500 animate-pulse' : 'text-primary/40'} drop-shadow-sm">
-                            00:${String(this.recordingTime).padStart(2, '0')}
+                        <div class="text-5xl md:text-6xl font-mono mb-6 font-extrabold tracking-wider text-primary/40 drop-shadow-sm">
+                            00:00
                         </div>
-                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform hover:scale-105 relative ${this.isRecording ? 'bg-red-500' : 'bg-gradient-to-tr from-primary to-blue-400'}">
-                            ${this.isRecording ? 
-                                '<div class="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div><i class="fa-solid fa-stop text-4xl relative z-10"></i>' : 
-                                '<i class="fa-solid fa-microphone text-5xl relative z-10"></i>'}
+                        <button onclick="app.toggleRecord()" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform hover:scale-105 relative bg-gradient-to-tr from-primary to-blue-400">
+                            <i class="fa-solid fa-microphone text-5xl relative z-10"></i>
                         </button>
                         <p class="text-xs text-gray-500 mt-6 bg-white/50 px-5 py-2 rounded-full font-bold shadow-sm border border-white/60 text-center">
-                            ${this.isRecording ? '<i class="fa-solid fa-record-vinyl animate-spin text-red-500 mr-1"></i> กำลังบันทึก...' : `กดเพื่อเริ่มอัดเสียง (สูงสุด ${this.maxAudioTime} วิ)`}
+                            กดเพื่อเริ่มอัดเสียง (สูงสุด ${this.maxAudioTime} วิ)
                         </p>
-                    </div>`;
+                    </div>`);
 
                 const textArea = `
                     <div class="w-full flex flex-col h-full animate-fade-in relative">
@@ -1586,7 +1632,8 @@
                     this.mediaRecorder.stop();
                     this.isRecording = false;
                     clearInterval(this.timerInterval);
-                    this.showView('compose');
+                    if (this.visualizerFrame) cancelAnimationFrame(this.visualizerFrame);
+                    if (this.audioContext && this.audioContext.state !== 'closed') this.audioContext.close();
                 } else {
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1604,16 +1651,30 @@
                             stream.getTracks().forEach(track => track.stop());
                             this.showView('compose'); 
                         };
+
+                        try {
+                            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            const source = this.audioContext.createMediaStreamSource(stream);
+                            this.audioAnalyser = this.audioContext.createAnalyser();
+                            this.audioAnalyser.fftSize = 128; 
+                            source.connect(this.audioAnalyser);
+                        } catch (err) {
+                            console.log("Audio visualizer init error:", err);
+                        }
+
                         this.mediaRecorder.start();
                         this.isRecording = true;
                         this.recordingTime = 0;
                         this.audioBlob = null;
                         this.showView('compose');
+                        
+                        this.drawVisualizer();
+
                         this.timerInterval = setInterval(() => {
                             this.recordingTime++;
                             if(this.recordingTime >= this.maxAudioTime) this.toggleRecord();
                             else {
-                                const timeDisplay = document.querySelector('.font-mono');
+                                const timeDisplay = document.getElementById('recordingTimerDisplay');
                                 if (timeDisplay) timeDisplay.textContent = `00:${String(this.recordingTime).padStart(2, '0')}`;
                             }
                         }, 1000);
