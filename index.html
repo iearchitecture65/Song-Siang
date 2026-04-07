@@ -112,6 +112,7 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
+            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -368,8 +369,32 @@
             audioAnalyser: null,
             visualizerFrame: null,
             audioHistory: [],
+            
+            // Watchdog Timer for fixing hang/freeze issues
+            watchdogTimer: null,
+
+            startWatchdog: function(ms = 4000) {
+                if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
+                this.watchdogTimer = setTimeout(() => {
+                    console.error("System hung. Auto-resetting...");
+                    this.emergencyReset();
+                }, ms);
+            },
+
+            stopWatchdog: function() {
+                if (this.watchdogTimer) {
+                    clearTimeout(this.watchdogTimer);
+                    this.watchdogTimer = null;
+                }
+            },
+
+            emergencyReset: function() {
+                localStorage.removeItem('songSiangProfile');
+                window.location.reload(true);
+            },
 
             init: async function() {
+                this.startWatchdog(5000); // Start watchdog for init process
                 try {
                     await signInAnonymously(auth);
                     
@@ -421,6 +446,7 @@
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
+                    this.emergencyReset();
                 }
             },
 
@@ -584,6 +610,8 @@
 
             showView: function(viewName) {
                 try {
+                    this.stopWatchdog(); // If we successfully reach rendering, cancel any pending reset
+                    
                     window.scrollTo(0, 0);
                     this.closeMobileMenu();
                     this.currentView = viewName;
@@ -640,23 +668,16 @@
                     }
                 } catch (error) {
                     console.error("View Render Error:", error);
-                    glassSwal.fire({
-                        title: 'พบข้อมูลเสียหาย',
-                        text: 'ระบบตรวจพบข้อมูลที่ไม่สมบูรณ์ (อาจเกิดจากการลบฐานข้อมูล) กรุณากดปุ่มด้านล่างเพื่อรีเซ็ตระบบให้กลับมาทำงานปกติ',
-                        icon: 'warning',
-                        confirmButtonText: '<i class="fa-solid fa-rotate-right mr-2"></i> รีเซ็ตระบบ',
-                        allowOutsideClick: false
-                    }).then(() => {
-                        localStorage.removeItem('songSiangProfile');
-                        window.location.reload();
-                    });
+                    this.emergencyReset(); // Force instant reset to avoid blank screens
                 }
             },
 
             loginSuccess: async function(userProfile) {
+                this.startWatchdog(4000); // Start watchdog for login process
                 try {
                     const isBlocked = await this.checkBlockStatus(userProfile.studentId);
                     if (isBlocked) {
+                        this.stopWatchdog();
                         return glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งาน', 'error');
                     }
 
@@ -684,16 +705,7 @@
                     this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
                 } catch (error) {
                     console.error("Login Error:", error);
-                    glassSwal.fire({
-                        title: 'เข้าสู่ระบบไม่สำเร็จ',
-                        text: 'เกิดข้อผิดพลาดหรือข้อมูลผู้ใช้เสียหาย กำลังรีเซ็ตระบบ...',
-                        icon: 'error',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        localStorage.removeItem('songSiangProfile');
-                        window.location.reload();
-                    });
+                    this.emergencyReset();
                 }
             },
 
@@ -718,6 +730,7 @@
                     cancelButtonText: 'ยกเลิก'
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        this.startWatchdog(3000); // Watchdog for logout
                         this.profile = null;
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
@@ -821,6 +834,7 @@
                 });
 
                 if (name) {
+                    this.startWatchdog(3000);
                     const guestId = 'G' + Math.random().toString(36).substring(2, 9).toUpperCase();
                     this.loginSuccess({ 
                         studentId: guestId, 
@@ -842,13 +856,15 @@
                 }
                 
                 if(idInput === '65030900') {
+                    this.startWatchdog(3000);
                     return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
                 }
 
                 if(idInput === '90030000') {
+                    this.startWatchdog(3000);
                     this.tempStudentId = idInput;
                     this.actualOtp = 'SKIP';
-                    document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                    this.showView('login3');
                     return;
                 }
 
@@ -864,20 +880,25 @@
                 const refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                 this.currentRef = refCode;
 
+                this.startWatchdog(10000); // Give API 10 seconds to respond before resetting
+
                 try {
                     const response = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(targetEmail)}&otp=${generatedOtp}&ref=${refCode}`);
                     const result = await response.json();
                     
                     if(result.status === 'success') {
                         this.actualOtp = generatedOtp;
+                        this.stopWatchdog();
                         document.getElementById('appRoot').innerHTML = this.renderLogin2();
                         setTimeout(() => document.getElementById('otp-0').focus(), 100);
                     } else {
+                        this.stopWatchdog();
                         glassSwal.fire('ข้อผิดพลาด', result.message, 'error');
                         btn.innerHTML = 'เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>';
                         btn.disabled = false;
                     }
                 } catch(e) {
+                    this.stopWatchdog();
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ส่งอีเมลได้', 'error');
                     btn.innerHTML = 'เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>';
                     btn.disabled = false;
@@ -935,11 +956,16 @@
                 }
                 
                 if(currentOtp.length === 6) {
+                    this.startWatchdog(3000);
                     if(currentOtp === this.actualOtp) {
                         const existingUser = predefinedUsers.find(u => u.studentId === this.tempStudentId);
                         if(existingUser) this.loginSuccess(existingUser);
-                        else document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                        else {
+                            this.stopWatchdog();
+                            document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                        }
                     } else {
+                        this.stopWatchdog();
                         glassSwal.fire({
                             iconHtml: '<i class="fa-solid fa-circle-xmark text-red-500 text-5xl"></i>',
                             title: 'รหัสไม่ถูกต้อง',
@@ -1012,6 +1038,7 @@
                 if(!name) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
                 if(!year) return glassSwal.fire('แจ้งเตือน', 'กรุณาเลือกชั้นปีของคุณ', 'warning');
                 
+                this.startWatchdog(3000);
                 const finalName = `${name}, ${year}`;
                 this.loginSuccess({ studentId: this.tempStudentId, name: finalName, isPredefined: false });
             },
@@ -1841,11 +1868,13 @@
                 const toDelete = this.messages.filter(msg => {
                     if (msg.from.name.toLowerCase().includes(queryStr) || msg.from.id.toLowerCase().includes(queryStr)) return true;
                     let foundInTo = false;
-                    msg.to.forEach(toId => {
-                        if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
-                        const preUser = predefinedUsers.find(u => u.studentId === toId);
-                        if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
-                    });
+                    if (msg.to && Array.isArray(msg.to)) {
+                        msg.to.forEach(toId => {
+                            if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
+                            const preUser = predefinedUsers.find(u => u.studentId === toId);
+                            if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
+                        });
+                    }
                     return foundInTo;
                 });
 
