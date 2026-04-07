@@ -112,7 +112,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
-            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -388,7 +387,15 @@
                     
                     const savedProfile = localStorage.getItem('songSiangProfile');
                     if (savedProfile) {
-                        this.profile = JSON.parse(savedProfile);
+                        try {
+                            this.profile = JSON.parse(savedProfile);
+                            if(!this.profile || !this.profile.studentId) throw new Error("Invalid Profile");
+                        } catch (err) {
+                            localStorage.removeItem('songSiangProfile');
+                            this.profile = null;
+                            this.showView(this.isSiteActive ? 'login' : 'site_closed');
+                            return;
+                        }
                         
                         // Check if site is closed and user is not admin
                         if (!this.isSiteActive && !this.profile.isAdmin) {
@@ -450,6 +457,8 @@
                 this.unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
                     this.registeredUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     if (this.currentView === 'manage_users') this.renderUserManagementUI();
+                }, (error) => {
+                    console.error("Users listener error:", error);
                 });
             },
 
@@ -574,59 +583,73 @@
             },
 
             showView: function(viewName) {
-                window.scrollTo(0, 0);
-                this.closeMobileMenu();
-                this.currentView = viewName;
-                const root = document.getElementById('appRoot');
-                const navDesk = document.getElementById('navMenuDesktop');
-                const navHam = document.getElementById('navHamburger');
-                
-                if(this.profile) {
-                    navDesk.classList.remove('md:hidden');
-                    navDesk.classList.add('md:flex');
-                    navHam.classList.remove('hidden');
+                try {
+                    window.scrollTo(0, 0);
+                    this.closeMobileMenu();
+                    this.currentView = viewName;
+                    const root = document.getElementById('appRoot');
+                    const navDesk = document.getElementById('navMenuDesktop');
+                    const navHam = document.getElementById('navHamburger');
                     
-                    const showAdmin = this.profile.isAdmin;
-                    const showFeed = this.profile.isPredefined || this.profile.isAdmin;
-                    const showInbox = this.profile.isPredefined || this.profile.isAdmin;
+                    if(this.profile) {
+                        navDesk.classList.remove('md:hidden');
+                        navDesk.classList.add('md:flex');
+                        navHam.classList.remove('hidden');
+                        
+                        const showAdmin = this.profile.isAdmin;
+                        const showFeed = this.profile.isPredefined || this.profile.isAdmin;
+                        const showInbox = this.profile.isPredefined || this.profile.isAdmin;
 
-                    document.getElementById('btnAdminDesk').classList.toggle('hidden', !showAdmin);
-                    document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
-                    document.getElementById('btnUsersDesk').classList.toggle('hidden', !showAdmin);
-                    document.getElementById('btnUsersMob').classList.toggle('hidden', !showAdmin);
+                        document.getElementById('btnAdminDesk').classList.toggle('hidden', !showAdmin);
+                        document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
+                        document.getElementById('btnUsersDesk').classList.toggle('hidden', !showAdmin);
+                        document.getElementById('btnUsersMob').classList.toggle('hidden', !showAdmin);
+                        
+                        document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
+                        document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
+
+                        document.getElementById('btnInboxDesk').classList.toggle('hidden', !showInbox);
+                        document.getElementById('btnInboxMob').classList.toggle('hidden', !showInbox);
+                    } else {
+                        navDesk.classList.add('md:hidden');
+                        navDesk.classList.remove('md:flex');
+                        navHam.classList.add('hidden');
+                    }
+
+                    if(viewName === 'login') root.innerHTML = this.renderLogin1();
+                    else if(viewName === 'site_closed') root.innerHTML = this.renderSiteClosed();
+                    else if(viewName === 'feed') { root.innerHTML = this.renderFeed(); this.updateFAB(); }
+                    else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
+                    else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
+                    else if(viewName === 'inbox') { 
+                        if (!(this.profile.isPredefined || this.profile.isAdmin)) { this.showView('home'); return; }
+                        this.adminSearchQuery = ''; 
+                        root.innerHTML = this.renderInbox(); 
+                        this.updateFAB(); 
+                    }
+                    else if(viewName === 'settings') { root.innerHTML = this.renderSettings(); this.updateFAB(); }
+                    else if(viewName === 'manage_users') { 
+                        this.memberSearchQuery = '';
+                        root.innerHTML = this.renderUserManagement(); 
+                        this.setupUsersListener(); 
+                    }
                     
-                    document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
-                    document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
-
-                    document.getElementById('btnInboxDesk').classList.toggle('hidden', !showInbox);
-                    document.getElementById('btnInboxMob').classList.toggle('hidden', !showInbox);
-                } else {
-                    navDesk.classList.add('md:hidden');
-                    navDesk.classList.remove('md:flex');
-                    navHam.classList.add('hidden');
-                }
-
-                if(viewName === 'login') root.innerHTML = this.renderLogin1();
-                else if(viewName === 'site_closed') root.innerHTML = this.renderSiteClosed();
-                else if(viewName === 'feed') { root.innerHTML = this.renderFeed(); this.updateFAB(); }
-                else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
-                else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
-                else if(viewName === 'inbox') { 
-                    if (!(this.profile.isPredefined || this.profile.isAdmin)) { this.showView('home'); return; }
-                    this.adminSearchQuery = ''; 
-                    root.innerHTML = this.renderInbox(); 
-                    this.updateFAB(); 
-                }
-                else if(viewName === 'settings') { root.innerHTML = this.renderSettings(); this.updateFAB(); }
-                else if(viewName === 'manage_users') { 
-                    this.memberSearchQuery = '';
-                    root.innerHTML = this.renderUserManagement(); 
-                    this.setupUsersListener(); 
-                }
-                
-                if (viewName !== 'home' && viewName !== 'feed') {
-                    const globalFab = document.getElementById('globalFabContainer');
-                    if (globalFab) globalFab.innerHTML = '';
+                    if (viewName !== 'home' && viewName !== 'feed') {
+                        const globalFab = document.getElementById('globalFabContainer');
+                        if (globalFab) globalFab.innerHTML = '';
+                    }
+                } catch (error) {
+                    console.error("View Render Error:", error);
+                    glassSwal.fire({
+                        title: 'พบข้อมูลเสียหาย',
+                        text: 'ระบบตรวจพบข้อมูลที่ไม่สมบูรณ์ (อาจเกิดจากการลบฐานข้อมูล) กรุณากดปุ่มด้านล่างเพื่อรีเซ็ตระบบให้กลับมาทำงานปกติ',
+                        icon: 'warning',
+                        confirmButtonText: '<i class="fa-solid fa-rotate-right mr-2"></i> รีเซ็ตระบบ',
+                        allowOutsideClick: false
+                    }).then(() => {
+                        localStorage.removeItem('songSiangProfile');
+                        window.location.reload();
+                    });
                 }
             },
 
@@ -661,7 +684,16 @@
                     this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
                 } catch (error) {
                     console.error("Login Error:", error);
-                    glassSwal.fire('ข้อผิดพลาด', 'เกิดปัญหาในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง', 'error');
+                    glassSwal.fire({
+                        title: 'เข้าสู่ระบบไม่สำเร็จ',
+                        text: 'เกิดข้อผิดพลาดหรือข้อมูลผู้ใช้เสียหาย กำลังรีเซ็ตระบบ...',
+                        icon: 'error',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        localStorage.removeItem('songSiangProfile');
+                        window.location.reload();
+                    });
                 }
             },
 
@@ -701,7 +733,9 @@
 
                 const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
                 this.unsubscribeMsgs = onSnapshot(msgsRef, (snapshot) => {
-                    const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                        .filter(msg => msg && msg.from && msg.timestamp); // ป้องกันข้อมูลเสียจากการลบแมนนวล
+                    
                     allMsgs.sort((a, b) => b.timestamp - a.timestamp);
                     this.allMessages = allMsgs; 
                     
@@ -716,6 +750,8 @@
                          const root = document.getElementById('appRoot');
                          if(root) root.innerHTML = this.renderFeed();
                     }
+                }, (error) => {
+                    console.error("Messages listener error:", error);
                 });
             },
 
