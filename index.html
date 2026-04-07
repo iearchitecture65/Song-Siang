@@ -109,11 +109,13 @@
         }
 
         .img-loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid #fddf31;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #fddf31;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 50%;
+            height: 50%;
+            max-width: 24px;
+            max-height: 24px;
             animation: spin 1s linear infinite;
         }
         .img-container img {
@@ -519,10 +521,9 @@
 
             renderImage: function(src, altText, extraClass = "") {
                 const isLoaded = this.imageCache[src];
-                const baseId = btoa(src).substring(0,10);
                 return `
                     <div class="img-container relative w-full h-full flex items-center justify-center bg-secondary/50 overflow-hidden">
-                        <div id="loader-${baseId}" class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
+                        <div class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
                         <img src="${src}" 
                              alt="${altText}"
                              class="w-full h-full object-cover relative z-20 ${isLoaded ? 'loaded' : ''} ${extraClass}"
@@ -535,16 +536,16 @@
             onImageLoaded: function(img, src) {
                 this.imageCache[src] = true;
                 img.classList.add('loaded');
-                const baseId = btoa(src).substring(0,10);
-                const loader = document.getElementById(`loader-${baseId}`);
-                if (loader) loader.classList.add('hidden');
                 
                 const container = img.parentElement;
                 if (container) {
+                    const loader = container.querySelector('.img-loading-spinner');
+                    if (loader) loader.classList.add('hidden');
+                    
                     const fallback = container.parentElement.querySelector('.fallback-name');
                     if (fallback) {
                         fallback.classList.add('hidden');
-                        fallback.classList.remove('flex');
+                        fallback.classList.remove('flex', 'flex-center-all');
                     }
                 }
             },
