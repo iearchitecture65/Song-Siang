@@ -112,7 +112,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
-            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -373,7 +372,7 @@
             // Watchdog Timer for fixing hang/freeze issues
             watchdogTimer: null,
 
-            startWatchdog: function(ms = 4000) {
+            startWatchdog: function(ms = 5000) {
                 if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
                 this.watchdogTimer = setTimeout(() => {
                     console.error("System hung. Auto-resetting...");
@@ -394,7 +393,7 @@
             },
 
             init: async function() {
-                this.startWatchdog(5000); // Start watchdog for init process
+                this.startWatchdog(8000); // Start watchdog for init process (allow extra time for Firebase init)
                 try {
                     await signInAnonymously(auth);
                     
@@ -673,7 +672,7 @@
             },
 
             loginSuccess: async function(userProfile) {
-                this.startWatchdog(4000); // Start watchdog for login process
+                this.startWatchdog(5000); // Start watchdog for login process (5 seconds)
                 try {
                     const isBlocked = await this.checkBlockStatus(userProfile.studentId);
                     if (isBlocked) {
@@ -730,7 +729,7 @@
                     cancelButtonText: 'ยกเลิก'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        this.startWatchdog(3000); // Watchdog for logout
+                        this.startWatchdog(5000); // Watchdog for logout
                         this.profile = null;
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
@@ -834,7 +833,7 @@
                 });
 
                 if (name) {
-                    this.startWatchdog(3000);
+                    this.startWatchdog(5000);
                     const guestId = 'G' + Math.random().toString(36).substring(2, 9).toUpperCase();
                     this.loginSuccess({ 
                         studentId: guestId, 
@@ -856,15 +855,14 @@
                 }
                 
                 if(idInput === '65030900') {
-                    this.startWatchdog(3000);
+                    this.startWatchdog(5000);
                     return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
                 }
 
                 if(idInput === '90030000') {
-                    this.startWatchdog(3000);
                     this.tempStudentId = idInput;
                     this.actualOtp = 'SKIP';
-                    this.showView('login3');
+                    document.getElementById('appRoot').innerHTML = this.renderLogin3();
                     return;
                 }
 
@@ -880,25 +878,20 @@
                 const refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                 this.currentRef = refCode;
 
-                this.startWatchdog(10000); // Give API 10 seconds to respond before resetting
-
                 try {
                     const response = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(targetEmail)}&otp=${generatedOtp}&ref=${refCode}`);
                     const result = await response.json();
                     
                     if(result.status === 'success') {
                         this.actualOtp = generatedOtp;
-                        this.stopWatchdog();
                         document.getElementById('appRoot').innerHTML = this.renderLogin2();
                         setTimeout(() => document.getElementById('otp-0').focus(), 100);
                     } else {
-                        this.stopWatchdog();
                         glassSwal.fire('ข้อผิดพลาด', result.message, 'error');
                         btn.innerHTML = 'เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>';
                         btn.disabled = false;
                     }
                 } catch(e) {
-                    this.stopWatchdog();
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ส่งอีเมลได้', 'error');
                     btn.innerHTML = 'เข้าสู่ระบบ <i class="fa-solid fa-right-to-bracket ml-2"></i>';
                     btn.disabled = false;
@@ -956,16 +949,16 @@
                 }
                 
                 if(currentOtp.length === 6) {
-                    this.startWatchdog(3000);
                     if(currentOtp === this.actualOtp) {
+                        this.startWatchdog(5000); // Start watchdog ONLY when OTP is correct
                         const existingUser = predefinedUsers.find(u => u.studentId === this.tempStudentId);
-                        if(existingUser) this.loginSuccess(existingUser);
-                        else {
-                            this.stopWatchdog();
+                        if(existingUser) {
+                            this.loginSuccess(existingUser);
+                        } else {
                             document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                            this.stopWatchdog(); // System successfully moved to the next frame
                         }
                     } else {
-                        this.stopWatchdog();
                         glassSwal.fire({
                             iconHtml: '<i class="fa-solid fa-circle-xmark text-red-500 text-5xl"></i>',
                             title: 'รหัสไม่ถูกต้อง',
@@ -1038,7 +1031,7 @@
                 if(!name) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
                 if(!year) return glassSwal.fire('แจ้งเตือน', 'กรุณาเลือกชั้นปีของคุณ', 'warning');
                 
-                this.startWatchdog(3000);
+                this.startWatchdog(5000);
                 const finalName = `${name}, ${year}`;
                 this.loginSuccess({ studentId: this.tempStudentId, name: finalName, isPredefined: false });
             },
