@@ -631,33 +631,38 @@
             },
 
             loginSuccess: async function(userProfile) {
-                const isBlocked = await this.checkBlockStatus(userProfile.studentId);
-                if (isBlocked) {
-                    return glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งาน', 'error');
+                try {
+                    const isBlocked = await this.checkBlockStatus(userProfile.studentId);
+                    if (isBlocked) {
+                        return glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งาน', 'error');
+                    }
+
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', userProfile.studentId), {
+                        name: userProfile.name,
+                        fullName: userProfile.fullName || userProfile.name,
+                        lastLogin: Date.now(),
+                        isPredefined: !!userProfile.isPredefined,
+                        isBlocked: false
+                    }, { merge: true });
+
+                    this.profile = userProfile;
+                    localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
+                    this.setupMessagesListener();
+                    this.setupUsersListener();
+                    
+                     glassSwal.fire({
+                        iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>',
+                        title: `ยินดีต้อนรับ ${userProfile.name}!`,
+                        html: 'เข้าสู่ระบบเรียบร้อยแล้ว',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    
+                    this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
+                } catch (error) {
+                    console.error("Login Error:", error);
+                    glassSwal.fire('ข้อผิดพลาด', 'เกิดปัญหาในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง', 'error');
                 }
-
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', userProfile.studentId), {
-                    name: userProfile.name,
-                    fullName: userProfile.fullName || userProfile.name,
-                    lastLogin: Date.now(),
-                    isPredefined: !!userProfile.isPredefined,
-                    isBlocked: false
-                }, { merge: true });
-
-                this.profile = userProfile;
-                localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
-                this.setupMessagesListener();
-                this.setupUsersListener();
-                
-                 glassSwal.fire({
-                    iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>',
-                    title: `ยินดีต้อนรับ ${userProfile.name}!`,
-                    html: 'เข้าสู่ระบบเรียบร้อยแล้ว',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-                
-                this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
             },
 
             logout: function(force = false) {
@@ -700,7 +705,7 @@
                     allMsgs.sort((a, b) => b.timestamp - a.timestamp);
                     this.allMessages = allMsgs; 
                     
-                    const myMsgs = allMsgs.filter(msg => this.profile.isAdmin || msg.to.includes(this.profile.studentId));
+                    const myMsgs = allMsgs.filter(msg => this.profile.isAdmin || (msg.to && Array.isArray(msg.to) && msg.to.includes(this.profile.studentId)));
                     this.messages = myMsgs; 
                     
                     if(this.currentView === 'inbox') {
@@ -1299,8 +1304,8 @@
                 const myStudentId = this.profile.studentId;
                 const filteredMessages = this.allMessages.filter(msg => {
                     if (this.profile.isAdmin) return true;
-                    const toMe = msg.to.includes(myStudentId);
-                    const toEveryone = msg.to.length >= predefinedUsers.length;
+                    const toMe = msg.to && Array.isArray(msg.to) && msg.to.includes(myStudentId);
+                    const toEveryone = msg.to && Array.isArray(msg.to) && msg.to.length >= predefinedUsers.length;
                     return toMe || toEveryone;
                 });
 
@@ -1897,7 +1902,7 @@
             },
 
             renderRecipientDisplay: function(msg) {
-                if (!msg.to || msg.to.length === 0) return `<span class="text-xs text-primary/40 italic">ไม่ระบุผู้รับ</span>`;
+                if (!msg.to || !Array.isArray(msg.to) || msg.to.length === 0) return `<span class="text-xs text-primary/40 italic">ไม่ระบุผู้รับ</span>`;
                 
                 const count = msg.to.length;
                 const isEveryone = count >= predefinedUsers.length;
@@ -1953,24 +1958,26 @@
                 const msg = this.messages.find(m => m.id === msgId);
                 if (!msg) return;
 
-                const count = msg.to.length;
+                const count = msg.to && Array.isArray(msg.to) ? msg.to.length : 0;
                 let listHTML = `<div class="grid grid-cols-1 gap-2 mt-4 max-h-[300px] overflow-y-auto px-2 custom-scrollbar">`;
                 
-                msg.to.forEach(tid => {
-                    const user = predefinedUsers.find(u => u.studentId === tid);
-                    const abbr = user ? this.getAbbr(user.name) : "??";
-                    listHTML += `
-                        <div class="flex items-center gap-3 p-2 bg-white/60 rounded-xl border border-white/50">
-                            <div class="w-10 h-10 rounded-full overflow-hidden bg-secondary border border-white shrink-0 relative flex-center-all">
-                                ${user ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-xs flex-center-all h-full w-full"></i>`}
-                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-xs h-full w-full">${abbr}</span>
-                            </div>
-                            <div class="text-left min-w-0">
-                                <div class="font-bold text-primary text-sm truncate">${user ? user.name : 'ไม่พบชื่อ'}</div>
-                                <div class="text-[10px] text-primary/60 font-medium">${tid}</div>
-                            </div>
-                        </div>`;
-                });
+                if (msg.to && Array.isArray(msg.to)) {
+                    msg.to.forEach(tid => {
+                        const user = predefinedUsers.find(u => u.studentId === tid);
+                        const abbr = user ? this.getAbbr(user.name) : "??";
+                        listHTML += `
+                            <div class="flex items-center gap-3 p-2 bg-white/60 rounded-xl border border-white/50">
+                                <div class="w-10 h-10 rounded-full overflow-hidden bg-secondary border border-white shrink-0 relative flex-center-all">
+                                    ${user ? app.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-xs flex-center-all h-full w-full"></i>`}
+                                    <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-xs h-full w-full">${abbr}</span>
+                                </div>
+                                <div class="text-left min-w-0">
+                                    <div class="font-bold text-primary text-sm truncate">${user ? user.name : 'ไม่พบชื่อ'}</div>
+                                    <div class="text-[10px] text-primary/60 font-medium">${tid}</div>
+                                </div>
+                            </div>`;
+                    });
+                }
                 listHTML += `</div>`;
 
                 glassSwal.fire({
@@ -1987,11 +1994,13 @@
                     displayMessages = this.messages.filter(msg => {
                         if (msg.from.name.toLowerCase().includes(queryStr) || msg.from.id.toLowerCase().includes(queryStr)) return true;
                         let foundInTo = false;
-                        msg.to.forEach(toId => {
-                            if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
-                            const preUser = predefinedUsers.find(u => u.studentId === toId);
-                            if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
-                        });
+                        if (msg.to && Array.isArray(msg.to)) {
+                            msg.to.forEach(toId => {
+                                if (toId.toLowerCase().includes(queryStr)) foundInTo = true;
+                                const preUser = predefinedUsers.find(u => u.studentId === toId);
+                                if (preUser && (preUser.name.toLowerCase().includes(queryStr) || preUser.fullName.toLowerCase().includes(queryStr))) foundInTo = true;
+                            });
+                        }
                         return foundInTo;
                     });
                 }
