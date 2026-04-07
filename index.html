@@ -224,7 +224,7 @@
                     <i class="fa-solid fa-envelope w-5 text-center text-white"></i> กล่องจดหมาย
                 </button>
                 <div class="h-px bg-white/20 my-1 mx-2"></div>
-                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-yellow-400/20 text-secondary transition-colors text-left font-bold text-sm">
+                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-400/20 text-red-100 hover:text-red-300 transition-colors text-left font-bold text-sm">
                     <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> ออกจากระบบ
                 </button>
             </div>
@@ -344,6 +344,7 @@
             maxChars: 500,
             maxAudioTime: 30,
             yearOptions: ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'],
+            isSiteActive: true,
             tempSelectedYear: '',
             
             mediaRecorder: null,
@@ -361,10 +362,31 @@
             init: async function() {
                 try {
                     await signInAnonymously(auth);
+                    
+                    // Fetch initial config status before making routing decisions
+                    const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config');
+                    const docSnap = await getDoc(settingsRef);
+                    if(docSnap.exists()) {
+                        const data = docSnap.data();
+                        this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
+                    } else {
+                        this.isSiteActive = true;
+                    }
+
                     this.loadGlobalSettings();
+                    
                     const savedProfile = localStorage.getItem('songSiangProfile');
                     if (savedProfile) {
                         this.profile = JSON.parse(savedProfile);
+                        
+                        // Check if site is closed and user is not admin
+                        if (!this.isSiteActive && !this.profile.isAdmin) {
+                            this.profile = null;
+                            localStorage.removeItem('songSiangProfile');
+                            this.showView('site_closed');
+                            return;
+                        }
+
                         const isBlocked = await this.checkBlockStatus(this.profile.studentId);
                         if (isBlocked) {
                             this.profile = null;
@@ -377,7 +399,7 @@
                             this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
                         }
                     } else {
-                        this.showView('login');
+                        this.showView(this.isSiteActive ? 'login' : 'site_closed');
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
@@ -394,6 +416,8 @@
 
             handleLogoClick: function() {
                 if (!this.profile) return;
+                if (!this.isSiteActive && !this.profile.isAdmin) return; // Cannot navigate if closed and not admin
+
                 if (this.profile.isPredefined || this.profile.isAdmin) {
                     this.showView('feed');
                 } else {
@@ -469,6 +493,11 @@
                         this.maxChars = data.maxChars || 500;
                         this.maxAudioTime = data.maxAudioTime || 30;
                         this.yearOptions = data.yearOptions || ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'];
+                        this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
+
+                        if (!this.isSiteActive && this.profile && !this.profile.isAdmin) {
+                            this.logout(true); // Force logout if site closes
+                        }
                     }
                 });
             },
@@ -568,6 +597,7 @@
                 }
 
                 if(viewName === 'login') root.innerHTML = this.renderLogin1();
+                else if(viewName === 'site_closed') root.innerHTML = this.renderSiteClosed();
                 else if(viewName === 'feed') { root.innerHTML = this.renderFeed(); this.updateFAB(); }
                 else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
                 else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
@@ -620,8 +650,19 @@
                 this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
             },
 
-            logout: function() {
+            logout: function(force = false) {
                 this.closeMobileMenu();
+
+                if (force) {
+                    this.profile = null;
+                    localStorage.removeItem('songSiangProfile');
+                    if(this.unsubscribeMsgs) this.unsubscribeMsgs();
+                    if(this.unsubscribeUsers) this.unsubscribeUsers();
+                    this.showView('site_closed');
+                    glassSwal.fire('ประกาศ', 'ขณะนี้ระบบถูกปิดใช้งานชั่วคราว', 'info');
+                    return;
+                }
+
                 glassSwal.fire({
                     title: 'ออกจากระบบ?',
                     iconHtml: '<i class="fa-solid fa-arrow-right-from-bracket text-red-400 text-5xl"></i>',
@@ -634,7 +675,7 @@
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
                         if(this.unsubscribeUsers) this.unsubscribeUsers();
-                        this.showView('login');
+                        this.showView(this.isSiteActive ? 'login' : 'site_closed');
                     }
                 });
             },
@@ -661,6 +702,26 @@
                          if(root) root.innerHTML = this.renderFeed();
                     }
                 });
+            },
+
+            renderSiteClosed: function() {
+                return `
+                <div class="max-w-md mx-auto glass-card rounded-[2rem] overflow-hidden mt-10 mb-20 animate-slide-up relative text-center border-t-4 border-t-red-500">
+                    <div class="p-8">
+                        <div class="w-24 h-24 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-6 border-4 border-red-500/30">
+                            <i class="fa-solid fa-lock text-red-500 text-4xl drop-shadow-md"></i>
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-white drop-shadow-sm mb-2">ระบบปิดให้บริการ</h2>
+                        <p class="text-blue-100 text-sm font-medium mb-8 bg-black/20 p-4 rounded-xl border border-white/10 shadow-inner">
+                            ขณะนี้ผู้ดูแลระบบได้ทำการปิดระบบชั่วคราว<br>ขออภัยในความไม่สะดวก
+                        </p>
+                        <div class="pt-4 border-t border-white/20">
+                             <button onclick="app.showView('login')" class="text-xs text-white/50 hover:text-white transition-colors underline">
+                                สำหรับผู้ดูแลระบบ
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
             },
 
             renderLogin1: function() {
@@ -691,6 +752,10 @@
             },
 
             loginAsGuestPrompt: async function() {
+                if (!this.isSiteActive) {
+                    return this.showView('site_closed');
+                }
+
                 const { value: name } = await glassSwal.fire({
                     title: 'บุคคลทั่วไป',
                     text: 'กรุณากรอกชื่อเรียกของคุณเพื่อใช้งานระบบ',
@@ -719,6 +784,11 @@
             requestOTP: async function() {
                 const idInput = document.getElementById('inputId').value.replace(/[^0-9]/g, '');
                 if(idInput.length !== 8) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกรหัสนักศึกษาให้ครบ 8 หลัก', 'warning');
+
+                // Check if site is active. Admin bypasses this.
+                if (!this.isSiteActive && idInput !== '65030900') {
+                    return this.showView('site_closed');
+                }
                 
                 if(idInput === '65030900') {
                     return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
@@ -897,7 +967,7 @@
 
             renderSettings: function() {
                 return `
-                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-md mx-auto animate-slide-up mt-6 mb-20">
+                <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-w-md mx-auto animate-slide-up mt-6 mb-20">
                     <div class="flex items-center mb-6 pb-3 border-b border-white/40">
                         <button onclick="app.showView('home')" class="p-2 bg-white/20 hover:bg-white/40 rounded-full mr-3 transition text-white shadow-sm flex-shrink-0">
                             <i class="fa-solid fa-arrow-left"></i>
@@ -905,6 +975,18 @@
                         <h2 class="text-xl font-extrabold text-white truncate"><i class="fa-solid fa-gear mr-2"></i> ตั้งค่าระบบ</h2>
                     </div>
                     <div class="space-y-6">
+                        
+                        <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner flex justify-between items-center">
+                            <div>
+                                <label class="block text-sm font-bold text-white mb-1">สถานะระบบ</label>
+                                <p class="text-[10px] text-white/70 leading-tight">เปิด/ปิด การเข้าใช้งาน<br>ของสมาชิกทั่วไป</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="inpSiteActive" class="sr-only peer" ${this.isSiteActive ? 'checked' : ''}>
+                                <div class="w-11 h-6 bg-white/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary border border-white/50 shadow-inner"></div>
+                            </label>
+                        </div>
+
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
                             <label class="block text-sm font-bold text-white mb-2">จำกัดจำนวนตัวอักษรต่อข้อความ (ตัว)</label>
                             <input type="number" id="inpMaxChars" value="${this.maxChars}" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
@@ -930,17 +1012,21 @@
                 const a = parseInt(document.getElementById('inpMaxAudio').value);
                 const yText = document.getElementById('inpYearOptions').value;
                 const years = yText.split(',').map(y => y.trim()).filter(y => y !== '');
+                const isActive = document.getElementById('inpSiteActive').checked;
 
                 if (c > 0 && a > 0 && years.length > 0) {
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { 
                             maxChars: c, 
                             maxAudioTime: a,
-                            yearOptions: years
-                        });
+                            yearOptions: years,
+                            isSiteActive: isActive
+                        }, { merge: true });
+                        
                         this.maxChars = c;
                         this.maxAudioTime = a;
                         this.yearOptions = years;
+                        this.isSiteActive = isActive;
 
                         glassSwal.fire({ 
                             iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', 
