@@ -1541,11 +1541,15 @@
                 this.audioAnalyser.getByteFrequencyData(dataArray);
                 
                 let sum = 0;
+                let maxVal = 0;
                 for(let i = 0; i < bufferLength; i++) {
                     sum += dataArray[i];
+                    if (dataArray[i] > maxVal) maxVal = dataArray[i];
                 }
                 const average = sum / bufferLength;
-                const vol = Math.min(1, average / 128); 
+                
+                // ปรับความไวให้คลื่นเสียงขึ้นลงได้สูงและกว้างขึ้นโดยดึงค่าเสียงสูงสุดในจังหวะนั้นมาผสม
+                const vol = Math.min(1, ((average * 1.5 + maxVal * 0.8) / 128) * 1.5); 
 
                 this.audioHistory.push(vol);
 
@@ -1566,8 +1570,9 @@
 
                 for (let i = 0; i < this.audioHistory.length; i++) {
                     const v = this.audioHistory[i];
-                    const smoothV = Math.max(0.05, Math.pow(v, 1.5));
-                    const barHeight = Math.max(barWidth, smoothV * height * 0.9);
+                    // ลดการหน่วงของกราฟ ให้มันพุ่งสูงขึ้นอย่างเต็มที่
+                    const smoothV = Math.max(0.05, Math.pow(v, 1.1));
+                    const barHeight = Math.max(barWidth, smoothV * height * 0.95);
                     
                     const x = i * (barWidth + barGap) + barWidth / 2;
                     
