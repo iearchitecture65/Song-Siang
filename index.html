@@ -1318,11 +1318,23 @@
                                 `<div class="w-full h-full flex-center-all text-primary font-bold text-lg bg-secondary">${abbr}</div>`;
                         }
                         
-                        const baseSize = Math.floor(Math.random() * (120 - 70 + 1) + 70); 
-                        const animDelay = (Math.random() * 2).toFixed(1);
-                        const animDuration = (3.5 + Math.random() * 2.5).toFixed(1);
-                        const randomX = (Math.random() * 20 - 10).toFixed(1);
-                        const randomY = (Math.random() * 20 - 10).toFixed(1);
+                        // เพิ่มขนาดให้หลากหลายขึ้น 70px - 160px
+                        const baseSize = Math.floor(Math.random() * (160 - 70 + 1) + 70); 
+                        const animDelay = (Math.random() * 3).toFixed(1);
+                        const animDuration = (4 + Math.random() * 3).toFixed(1);
+                        
+                        // ระยะกระจัดกระจาย (Scatter) - สุ่มให้ออกซ้ายขวา บนล่างมากขึ้น
+                        const randomX = Math.floor(Math.random() * 100) - 50; 
+                        const randomY = Math.floor(Math.random() * 80) - 40;
+                        
+                        // สุ่ม margin เพื่อทำลายความเป็น Grid
+                        const marginL = Math.floor(Math.random() * 40);
+                        const marginR = Math.floor(Math.random() * 40);
+                        const marginT = Math.floor(Math.random() * 30);
+                        const marginB = Math.floor(Math.random() * 30);
+
+                        // สุ่ม Z-index เพื่อให้เวลาทับกันดูมีมิติ
+                        const zIndex = Math.floor(Math.random() * 20) + 10;
                         
                         let badgeContent = '';
                         if (isAudio) {
@@ -1333,8 +1345,8 @@
                         }
 
                         msgsHTML += `
-                        <div class="flex justify-center float-anim p-3" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s; transform: translate(${randomX}px, ${randomY}px);">
-                            <div onclick="app.viewFeedMessage('${msg.id}')" class="relative rounded-full shadow-xl border-2 border-white/60 ${isAnonymous ? 'bg-slate-700' : 'bg-secondary'} group transform transition-transform hover:scale-110 cursor-pointer" style="width: ${baseSize}px; height: ${baseSize}px;">
+                        <div class="flex justify-center float-anim relative" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s; transform: translate(${randomX}px, ${randomY}px); margin: ${marginT}px ${marginR}px ${marginB}px ${marginL}px; z-index: ${zIndex};">
+                            <div onclick="app.viewFeedMessage('${msg.id}')" class="relative rounded-full shadow-2xl border-2 border-white/60 ${isAnonymous ? 'bg-slate-700' : 'bg-secondary'} group transform transition-transform hover:scale-110 cursor-pointer" style="width: ${baseSize}px; height: ${baseSize}px;">
                                 <div class="w-full h-full rounded-full overflow-hidden relative">
                                     ${senderImg}
                                 </div>
@@ -1352,7 +1364,7 @@
                         <h2 class="text-2xl md:text-4xl font-bold text-white drop-shadow-md">ข้อความ</h2>
                         <p class="text-blue-100 text-xs md:text-sm mt-2 opacity-80">เฉพาะข้อความที่ส่งถึงคุณและข้อความสาธารณะ</p>
                     </div>
-                    <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8 px-2 max-w-5xl mx-auto">
+                    <div class="flex flex-wrap justify-center items-center px-4 max-w-5xl mx-auto relative" style="padding-top: 2rem;">
                         ${msgsHTML}
                     </div>
                 </div>`;
