@@ -112,6 +112,7 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
+            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -375,7 +376,7 @@
             startWatchdog: function(ms = 5000) {
                 if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
                 this.watchdogTimer = setTimeout(() => {
-                    console.error("System hung. Auto-resetting...");
+                    console.error("System hung. Executing Hard Reset...");
                     this.emergencyReset();
                 }, ms);
             },
@@ -387,17 +388,49 @@
                 }
             },
 
-            emergencyReset: function() {
-                localStorage.removeItem('songSiangProfile');
-                window.location.reload(true);
+            emergencyReset: async function() {
+                console.warn("Initiating Hard Reset to fix frozen state...");
+                
+                // 1. Try to find the UID that caused the issue
+                let uidToWipe = null;
+                if (this.profile && this.profile.studentId) {
+                    uidToWipe = this.profile.studentId;
+                } else if (this.tempStudentId) {
+                    uidToWipe = this.tempStudentId;
+                } else {
+                    try {
+                        const saved = localStorage.getItem('songSiangProfile');
+                        if (saved) uidToWipe = JSON.parse(saved).studentId;
+                    } catch(e) {}
+                }
+
+                // 2. Try to wipe the corrupted user status from Firebase
+                if (uidToWipe) {
+                    try {
+                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uidToWipe);
+                        // Race against a 2-second timeout to avoid hanging during the reset itself
+                        await Promise.race([
+                            deleteDoc(ref),
+                            new Promise(r => setTimeout(r, 2000))
+                        ]);
+                        console.log(`Cleared corrupted data for ${uidToWipe}`);
+                    } catch(e) {
+                        console.error("Failed to wipe DB on reset:", e);
+                    }
+                }
+
+                // 3. Clear all local storage to completely reset the client
+                localStorage.clear();
+                
+                // 4. Force reload page
+                window.location.href = window.location.href.split('?')[0];
             },
 
             init: async function() {
-                this.startWatchdog(8000); // Start watchdog for init process (allow extra time for Firebase init)
+                this.startWatchdog(8000); 
                 try {
                     await signInAnonymously(auth);
                     
-                    // Fetch initial config status before making routing decisions
                     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config');
                     const docSnap = await getDoc(settingsRef);
                     if(docSnap.exists()) {
@@ -421,7 +454,6 @@
                             return;
                         }
                         
-                        // Check if site is closed and user is not admin
                         if (!this.isSiteActive && !this.profile.isAdmin) {
                             this.profile = null;
                             localStorage.removeItem('songSiangProfile');
@@ -459,7 +491,7 @@
 
             handleLogoClick: function() {
                 if (!this.profile) return;
-                if (!this.isSiteActive && !this.profile.isAdmin) return; // Cannot navigate if closed and not admin
+                if (!this.isSiteActive && !this.profile.isAdmin) return;
 
                 if (this.profile.isPredefined || this.profile.isAdmin) {
                     this.showView('feed');
@@ -667,12 +699,12 @@
                     }
                 } catch (error) {
                     console.error("View Render Error:", error);
-                    this.emergencyReset(); // Force instant reset to avoid blank screens
+                    this.emergencyReset(); 
                 }
             },
 
             loginSuccess: async function(userProfile) {
-                this.startWatchdog(5000); // Start watchdog for login process (5 seconds)
+                this.startWatchdog(5000); 
                 try {
                     const isBlocked = await this.checkBlockStatus(userProfile.studentId);
                     if (isBlocked) {
@@ -729,7 +761,7 @@
                     cancelButtonText: 'ยกเลิก'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        this.startWatchdog(5000); // Watchdog for logout
+                        this.startWatchdog(3000); // Watchdog for logout
                         this.profile = null;
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
@@ -746,7 +778,7 @@
                 const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
                 this.unsubscribeMsgs = onSnapshot(msgsRef, (snapshot) => {
                     const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                        .filter(msg => msg && msg.from && msg.timestamp); // ป้องกันข้อมูลเสียจากการลบแมนนวล
+                        .filter(msg => msg && msg.from && msg.timestamp); 
                     
                     allMsgs.sort((a, b) => b.timestamp - a.timestamp);
                     this.allMessages = allMsgs; 
@@ -860,9 +892,10 @@
                 }
 
                 if(idInput === '90030000') {
+                    this.startWatchdog(5000);
                     this.tempStudentId = idInput;
                     this.actualOtp = 'SKIP';
-                    document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                    this.showView('login3');
                     return;
                 }
 
