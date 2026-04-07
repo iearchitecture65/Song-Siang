@@ -1548,8 +1548,8 @@
                 }
                 const average = sum / bufferLength;
                 
-                // ปรับความไวให้คลื่นเสียงขึ้นลงได้สูงและกว้างขึ้นโดยดึงค่าเสียงสูงสุดในจังหวะนั้นมาผสม
-                const vol = Math.min(1, ((average * 1.5 + maxVal * 0.8) / 128) * 1.5); 
+                // ปรับความไวให้พอดี ไม่เซนซิทีฟเกินไป (ค่าสูงสุดของ dataArray คือ 255)
+                const vol = Math.min(1, (average * 1.5 + maxVal * 0.5) / 255); 
 
                 this.audioHistory.push(vol);
 
@@ -1570,9 +1570,9 @@
 
                 for (let i = 0; i < this.audioHistory.length; i++) {
                     const v = this.audioHistory[i];
-                    // ลดการหน่วงของกราฟ ให้มันพุ่งสูงขึ้นอย่างเต็มที่
-                    const smoothV = Math.max(0.05, Math.pow(v, 1.1));
-                    const barHeight = Math.max(barWidth, smoothV * height * 0.95);
+                    // ปรับความสมูท และกำหนดให้ความสูงสูงสุดไม่ชนขอบ (ใช้ height * 0.65)
+                    const smoothV = Math.max(0.08, Math.pow(v, 1.2));
+                    const barHeight = Math.max(barWidth, smoothV * height * 0.65);
                     
                     const x = i * (barWidth + barGap) + barWidth / 2;
                     
