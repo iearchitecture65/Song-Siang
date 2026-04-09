@@ -1548,20 +1548,188 @@
                     recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
                 }
 
+                const shareBtn = `<div class="mt-4 text-center border-t border-gray-200 pt-3"><button onclick="app.openSharePreview('${msg.id}')" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold shadow-sm transition"><i class="fa-solid fa-share-nodes mr-1.5"></i>แชร์ / บันทึกรูปภาพ</button></div>`;
+
                 if (msg.type === 'audio') {
                     glassSwal.fire({
                         title: `เสียงจาก ${displayName}`,
-                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>${recipientInfo}`,
+                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 } else {
                     glassSwal.fire({
                         title: `ข้อความจาก ${displayName}`,
-                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}`,
+                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
+                }
+            },
+
+            openSharePreview: function(msgId) {
+                const msg = this.allMessages.find(m => m.id === msgId);
+                if(!msg) return;
+                
+                const isAnonymous = msg.from.isAnonymous;
+                let displayName = isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : msg.from.name;
+                
+                if (this.profile.isAdmin && isAnonymous) {
+                     const realSender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                     if(realSender) displayName += ` (${realSender.name})`;
+                }
+
+                let senderImgInside = '';
+                const abbr = this.getAbbr(msg.from.name);
+                if (isAnonymous) {
+                    senderImgInside = `<i class="fa-solid fa-user-secret text-xl text-slate-700"></i>`;
+                } else {
+                    const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                    senderImgInside = sender ? 
+                        `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary font-bold text-lg bg-secondary">${abbr}</span>` : 
+                        `<span class="text-primary flex-center-all w-full h-full text-lg font-bold bg-secondary">${abbr}</span>`;
+                }
+                
+                const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
+
+                const cardHtml = `
+                    <div id="capture-card" class="bg-gradient-to-br from-[#1e5288] to-[#2b71b8] p-1.5 rounded-3xl shadow-xl w-full max-w-sm mx-auto text-left" style="font-family: 'Prompt', sans-serif;">
+                        <div class="bg-white/95 backdrop-blur-md p-5 rounded-[1.6rem] relative flex flex-col border border-white/40">
+                            <!-- รูปอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป -->
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-full overflow-hidden bg-secondary border-2 border-white relative flex items-center justify-center shadow-sm shrink-0">
+                                    ${senderImgInside}
+                                </div>
+                                <div class="flex flex-col justify-center min-w-0">
+                                    <span class="font-extrabold text-primary text-base sm:text-lg truncate block">${displayName}</span>
+                                    <span class="text-[9px] sm:text-[10px] text-gray-500 mt-0.5"><i class="fa-regular fa-clock mr-1"></i>${dateStr}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- ข้อความอยู่ด้านล่าง -->
+                            ${msg.type === 'text' ? `
+                                <div class="w-full p-4 bg-white/80 rounded-2xl text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-sm relative text-sm sm:text-base" style="line-height: 1.6;">
+                                    <i class="fa-solid fa-quote-left absolute top-3 left-3 text-lg text-primary/20"></i>
+                                    <div class="pl-6 pt-1 relative z-10">${msg.content.trim()}</div>
+                                </div>
+                            ` : `
+                                <div class="w-full p-3 bg-white/80 rounded-2xl border border-white/50 flex items-center justify-center gap-3 shadow-sm">
+                                    <div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary shadow-inner shrink-0">
+                                        <i class="fa-solid fa-play ml-1"></i>
+                                    </div>
+                                    <span class="font-bold text-primary text-sm truncate">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
+                                </div>
+                            `}
+                            
+                            <div class="mt-4 flex items-center justify-center opacity-40 gap-1.5">
+                                <img src="LOGO 65.png" class="h-3 grayscale" onerror="this.style.display='none'">
+                                <span class="text-[8px] font-bold text-slate-800 tracking-wider uppercase">Song Siang</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                glassSwal.fire({
+                    title: 'พรีวิว',
+                    html: `
+                        <div class="flex justify-center my-2">
+                            ${cardHtml}
+                        </div>
+                        <div class="mt-5 flex flex-wrap justify-center gap-2">
+                            <button onclick="app.downloadMessageImage(this)" class="flex-1 py-2.5 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 min-w-[120px]">
+                                <i class="fa-solid fa-image"></i> บันทึกรูป
+                            </button>
+                            <button onclick="app.shareMessageText('${msg.id}')" class="flex-1 py-2.5 px-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 min-w-[120px]">
+                                <i class="fa-solid fa-share-nodes"></i> แชร์
+                            </button>
+                        </div>
+                    `,
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    customClass: {
+                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-md bg-white/95 px-4 py-6',
+                        title: 'text-primary font-bold text-lg mb-0 pb-0'
+                    }
+                });
+            },
+
+            downloadMessageImage: async function(btnElement) {
+                const card = document.getElementById('capture-card');
+                if (!card) return;
+                
+                const originalHtml = btnElement.innerHTML;
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+                btnElement.disabled = true;
+
+                try {
+                    const dataUrl = await htmlToImage.toPng(card, {
+                        quality: 1,
+                        pixelRatio: 3, 
+                        style: {
+                            transform: 'none', 
+                            margin: '0',
+                        }
+                    });
+                    
+                    const link = document.createElement('a');
+                    link.download = `SongSiang_${Date.now()}.png`;
+                    link.href = dataUrl;
+                    link.click();
+                    
+                    glassSwal.fire({
+                        iconHtml: '<i class="fa-solid fa-circle-check text-green-500 text-5xl"></i>',
+                        title: 'บันทึกรูปภาพสำเร็จ!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } catch (err) {
+                    console.error("Capture error:", err);
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกรูปภาพได้', 'error');
+                } finally {
+                    btnElement.innerHTML = originalHtml;
+                    btnElement.disabled = false;
+                }
+            },
+
+            shareMessageText: async function(msgId) {
+                const msg = this.allMessages.find(m => m.id === msgId);
+                if(!msg) return;
+                
+                let displayName = msg.from.isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : msg.from.name;
+                let shareText = '';
+                
+                if (msg.type === 'text') {
+                    shareText = `"${msg.content.trim()}"\n\n- ส่งเสียงจาก ${displayName}\n[ส่งจาก Song Siang]`;
+                } else {
+                    shareText = `ส่งเสียงจาก ${displayName} (ข้อความเสียง ${msg.audioDuration || '?'} วิ)\n\n[ส่งจาก Song Siang]`;
+                }
+
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: 'ส่งเสียง | Song Siang',
+                            text: shareText
+                        });
+                    } catch (err) {
+                        console.log('Share failed:', err);
+                    }
+                } else {
+                    try {
+                        await navigator.clipboard.writeText(shareText);
+                        glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', icon: 'success', timer: 1000, showConfirmButton: false });
+                    } catch (e) {
+                         const textArea = document.createElement("textarea");
+                         textArea.value = shareText;
+                         document.body.appendChild(textArea);
+                         textArea.select();
+                         try {
+                             document.execCommand('copy');
+                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', icon: 'success', timer: 1000, showConfirmButton: false });
+                         } catch (err) {
+                             glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถแชร์ได้', 'error');
+                         }
+                         document.body.removeChild(textArea);
+                    }
                 }
             },
 
