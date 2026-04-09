@@ -113,7 +113,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
-            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -389,18 +388,13 @@
             isMobileMenuOpen: false,
             imageCache: {},
 
-            // Audio Visualizer Context
             audioContext: null,
             audioAnalyser: null,
             visualizerFrame: null,
             audioHistory: [],
             
-            // Watchdog Timer for fixing hang/freeze issues
             watchdogTimer: null,
-            
             isLoadingData: true,
-
-            // Quota Data
             quotaData: null,
             isFetchingQuota: false,
 
@@ -421,7 +415,6 @@
 
             emergencyReset: async function() {
                 console.warn("Initiating Hard Reset to fix frozen state...");
-                
                 let uidToWipe = null;
                 if (this.profile && this.profile.studentId) {
                     uidToWipe = this.profile.studentId;
@@ -608,16 +601,12 @@
                 });
             },
 
-            // เอาการดึงรูปแบบหน่วงเน็ตออก ให้โหลดตามธรรมชาติ
-            preloadImages: function() {
-                // Not queuing all 45 images at once anymore to let Firestore load messages first.
-            },
+            preloadImages: function() {},
 
             getRelationshipLabel: function() {
                 return "คน";
             },
 
-            // เพิ่ม loading="lazy" เพื่อให้รูปไม่ขัดจังหวะการโหลดข้อความ
             renderImage: function(src, altText, extraClass = "") {
                 const isLoaded = this.imageCache[src];
                 return `
@@ -665,8 +654,7 @@
 
             showView: function(viewName) {
                 try {
-                    this.stopWatchdog(); // If we successfully reach rendering, cancel any pending reset
-                    
+                    this.stopWatchdog();
                     window.scrollTo(0, 0);
                     this.closeMobileMenu();
                     this.currentView = viewName;
@@ -798,7 +786,7 @@
                     cancelButtonText: 'ยกเลิก'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        this.startWatchdog(5000); // Watchdog for logout
+                        this.startWatchdog(5000); 
                         if (this.profile && !this.profile.isGuest) {
                             localStorage.setItem('lastLogoutId', this.profile.studentId);
                             localStorage.setItem('lastLogoutTime', Date.now().toString());
@@ -870,12 +858,36 @@
                 if (this.currentView === 'quota') this.showView('quota'); 
             },
             
+            showUserQuotaTimes: function(email) {
+                if (!this.quotaData || !this.quotaData.sentDetails) return;
+                const data = this.quotaData.sentDetails.find(d => d.email === email);
+                if (!data || !data.times) return;
+                
+                const timesHtml = data.times.map((t, idx) => `
+                    <div class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">${idx + 1}</div>
+                        <div class="text-sm font-medium text-gray-700">${t}</div>
+                    </div>
+                `).join('');
+
+                glassSwal.fire({
+                    title: 'เวลาที่ส่งรหัส OTP',
+                    html: `<div class="max-h-64 overflow-y-auto mt-2 text-left rounded-xl border border-gray-200 custom-scrollbar">${timesHtml}</div>`,
+                    confirmButtonText: 'ปิด',
+                    customClass: {
+                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm sm:max-w-md',
+                        title: 'text-primary font-extrabold text-xl md:text-2xl',
+                        confirmButton: 'bg-secondary text-primary rounded-xl px-6 md:px-8 py-2 md:py-3 font-bold shadow-lg transition hover:scale-105',
+                    }
+                });
+            },
+
             renderQuota: function() {
                 if (this.isFetchingQuota) {
                     return `
                     <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[50vh] mb-20 animate-slide-up flex flex-col items-center justify-center">
                         <i class="fa-solid fa-circle-notch fa-spin text-5xl text-white/40 mb-4"></i>
-                        <p class="text-white font-bold text-lg">กำลังโหลดข้อมูลโควต้า...</p>
+                        <p class="text-white font-bold text-lg mt-3">กำลังโหลดข้อมูลโควต้า...</p>
                     </div>`;
                 }
 
@@ -884,11 +896,12 @@
                     return `
                     <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[50vh] mb-20 animate-slide-up flex flex-col items-center justify-center">
                         <i class="fa-solid fa-circle-notch fa-spin text-5xl text-white/40 mb-4"></i>
-                        <p class="text-white font-bold text-lg">เตรียมข้อมูลโควต้า...</p>
+                        <p class="text-white font-bold text-lg mt-3">เตรียมข้อมูลโควต้า...</p>
                     </div>`;
                 }
 
                 const data = this.quotaData;
+                const updateDate = data.date ? new Date(data.date).toLocaleString('th-TH') : '-';
                 
                 let detailsHtml = '';
                 if (data.sentDetails && data.sentDetails.length > 0) {
@@ -899,24 +912,27 @@
                         const fullName = user ? user.fullName : item.email;
 
                         detailsHtml += `
-                            <div class="bg-white/60 p-4 rounded-2xl flex items-center justify-between border border-white/40 hover:bg-white/80 transition-all">
+                            <div onclick="app.showUserQuotaTimes('${item.email}')" class="bg-white/60 p-4 rounded-2xl flex items-center justify-between border border-white/40 hover:bg-white/80 transition-all cursor-pointer shadow-sm">
                                 <div class="flex items-center gap-3 min-w-0">
                                     <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">
                                         ${index + 1}
                                     </div>
-                                    <div class="min-w-0">
-                                        <div class="font-extrabold text-primary text-sm truncate">${displayName}</div>
-                                        <div class="text-[10px] text-primary/70 truncate">${fullName}</div>
+                                    <div class="min-w-0 flex flex-col items-start text-left">
+                                        <div class="font-extrabold text-primary text-sm truncate w-full">${displayName}</div>
+                                        <div class="text-[10px] text-primary/70 truncate w-full">${item.email}</div>
                                     </div>
                                 </div>
-                                <div class="bg-secondary text-primary font-bold px-3 py-1 rounded-full text-xs shrink-0 shadow-sm border border-white">
-                                    ${item.count} ครั้ง
+                                <div class="flex items-center gap-2">
+                                    <div class="bg-secondary text-primary font-bold px-3 py-1 rounded-full text-xs shrink-0 shadow-sm border border-white">
+                                        ${item.count} ครั้ง
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
                                 </div>
                             </div>
                         `;
                     });
                 } else {
-                    detailsHtml = `<p class="text-center text-white/70 py-4">ไม่มีประวัติการส่ง</p>`;
+                    detailsHtml = `<p class="text-center text-white/70 py-4">ไม่มีประวัติการขอ OTP</p>`;
                 }
 
                 return `
@@ -931,9 +947,12 @@
                                 <p class="text-blue-100 text-xs font-bold">ข้อมูลการส่ง OTP ยืนยันตัวตน</p>
                             </div>
                         </div>
-                        <button onclick="app.fetchQuota()" class="bg-white/20 hover:bg-white/40 text-white p-3 rounded-2xl shadow-sm transition-all">
-                            <i class="fa-solid fa-rotate-right"></i>
-                        </button>
+                        <div class="flex flex-col items-end">
+                            <button onclick="app.fetchQuota()" class="bg-white/20 hover:bg-white/40 text-white p-3 rounded-2xl shadow-sm transition-all mb-1">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                            <span class="text-[8px] text-white/70 font-medium whitespace-nowrap">อัปเดต: ${updateDate}</span>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 mb-6">
@@ -949,7 +968,7 @@
                         </div>
                     </div>
 
-                    <h3 class="text-white font-bold text-sm mb-3 pl-2"><i class="fa-solid fa-ranking-star mr-2 text-secondary"></i>อันดับการขอรหัส OTP</h3>
+                    <h3 class="text-white font-bold text-sm mb-3 pl-2"><i class="fa-solid fa-ranking-star mr-2 text-secondary"></i>อันดับการขอรหัส OTP (คลิกเพื่อดูเวลา)</h3>
                     <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
                         ${detailsHtml}
                     </div>
@@ -1038,7 +1057,6 @@
                 const idInput = document.getElementById('inputId').value.replace(/[^0-9]/g, '');
                 if(idInput.length !== 8) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกรหัสนักศึกษาให้ครบ 8 หลัก', 'warning');
 
-                // Check if site is active. Admin bypasses this.
                 if (!this.isSiteActive && idInput !== '65030900') {
                     return this.showView('site_closed');
                 }
@@ -1056,7 +1074,6 @@
                     return;
                 }
 
-                // Check OTP Skip for normal users
                 const lastLogoutId = localStorage.getItem('lastLogoutId');
                 const lastLogoutTime = localStorage.getItem('lastLogoutTime');
                 
@@ -1209,7 +1226,7 @@
             },
 
             renderLogin3: function() {
-                this.tempSelectedYear = ''; // Reset
+                this.tempSelectedYear = ''; 
                 const yearBtns = this.yearOptions.map(y => `
                     <button onclick="app.selectYearChoice('${y}')" id="year-choice-${y}"
                             class="year-choice-btn flex-1 py-2 rounded-xl text-[10px] sm:text-xs font-bold border-2 border-white/40 text-white hover:bg-white/20 transition-all">
@@ -1643,10 +1660,9 @@
             },
 
             openSharePreview: async function(msgId) {
-                // Show Swal Loading immediately
                 glassSwal.fire({
                     title: 'กำลังเตรียมรูปภาพ...',
-                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-500">กรุณารอสักครู่ ระบบกำลังจัดเตรียมภาพให้สมบูรณ์</p></div>',
+                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-500">กรุณารอสักครู่...</p></div>',
                     showConfirmButton: false,
                     allowOutsideClick: false
                 });
@@ -1665,9 +1681,8 @@
                 let senderImgInside = '';
                 const abbr = this.getAbbr(msg.from.name);
                 
-                // Fetch image as Base64 to strictly bypass any CORS or loading delay issues in html-to-image
                 if (isAnonymous) {
-                    senderImgInside = `<div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-gray-200 relative z-10"><svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg></div>`;
+                    senderImgInside = `<div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-gray-200 relative z-10" style="background-color: #334155;"><svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg></div>`;
                 } else {
                     const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                     if (sender) {
@@ -1686,19 +1701,20 @@
                                 throw new Error("Fetch failed");
                             }
                         } catch (err) {
-                            senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
+                            senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
                         }
                     } else {
-                        senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
+                        senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
                     }
                 }
                 
+                await document.fonts.ready;
+
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
 
-                // New Card Layout without shadows to prevent black borders and with proper word-wrapping
                 const cardHtml = `
-                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full mx-auto text-left flex flex-col relative overflow-hidden" style="font-family: 'Prompt', sans-serif; box-sizing: border-box; width: 340px;">
-                        <div class="p-5 flex flex-col h-full bg-white relative z-10">
+                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full mx-auto text-left flex flex-col relative" style="font-family: 'Prompt', sans-serif; box-sizing: border-box; width: 340px;">
+                        <div class="p-5 flex flex-col h-full bg-white rounded-[1.8rem]">
                             
                             <!-- Header: รูปอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป (แนบชิด) -->
                             <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
@@ -1721,7 +1737,7 @@
                                     </div>
                                 ` : `
                                     <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 border border-gray-100 flex items-center justify-start gap-3" style="box-sizing: border-box;">
-                                        <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shrink-0">
+                                        <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shrink-0" style="background-color: #fddf31;">
                                             <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
                                         </div>
                                         <span class="font-bold text-[#2b71b8] text-[14px] whitespace-nowrap">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
@@ -1738,20 +1754,18 @@
                 `;
                 
                 const offscreenContainer = document.createElement('div');
-                offscreenContainer.style.position = 'fixed'; 
+                offscreenContainer.style.position = 'absolute'; 
                 offscreenContainer.style.top = '-9999px';
-                offscreenContainer.style.left = '0';
+                offscreenContainer.style.left = '-9999px';
                 offscreenContainer.style.zIndex = '-1000';
                 offscreenContainer.style.opacity = '0';
+                offscreenContainer.style.pointerEvents = 'none';
                 offscreenContainer.innerHTML = cardHtml;
                 document.body.appendChild(offscreenContainer);
 
                 try {
-                    await document.fonts.ready;
-
                     const cardToCapture = offscreenContainer.querySelector('#capture-card');
                     
-                    // Await all internal images to be loaded
                     const images = cardToCapture.querySelectorAll('img');
                     await Promise.all(Array.from(images).map(img => {
                         if (img.complete) return Promise.resolve();
@@ -1761,8 +1775,7 @@
                         });
                     }));
 
-                    // เพิ่มเวลาโหลดเพื่อให้ฟอนต์และรูปติด 100% แน่นอน
-                    await new Promise(r => setTimeout(r, 1500));
+                    await new Promise(r => setTimeout(r, 1000));
                     
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
@@ -1779,12 +1792,11 @@
                     
                     document.body.removeChild(offscreenContainer);
 
-                    // Show exactly the pre-rendered image as the preview
                     glassSwal.fire({
                         title: 'พรีวิว',
                         html: `
-                            <div class="flex justify-center my-2 rounded-[2rem] shadow-[0_5px_20px_rgba(0,0,0,0.15)] overflow-hidden bg-transparent mx-auto" style="max-width: 340px;">
-                                <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[2rem]" alt="Preview">
+                            <div class="flex justify-center my-2 rounded-[2rem] overflow-hidden bg-transparent mx-auto border-[3px] border-[#2b71b8] shadow-md" style="max-width: 340px;">
+                                <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[1.8rem]" alt="Preview">
                             </div>
                             <div class="mt-5 flex flex-wrap justify-center gap-2">
                                 <button onclick="app.triggerDownload()" class="flex-1 py-3 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
@@ -1885,7 +1897,7 @@
                         <div class="w-full flex justify-center py-20 animate-fade-in">
                             <div class="text-center">
                                 <i class="fa-solid fa-circle-notch fa-spin text-5xl text-white/30 mb-4"></i>
-                                <p class="text-white/70 font-medium">กำลังโหลดข้อความ...</p>
+                                <p class="text-white/70 font-medium mt-3">กำลังโหลดข้อความ...</p>
                             </div>
                         </div>`;
                 } else if(filteredMessages.length === 0) {
