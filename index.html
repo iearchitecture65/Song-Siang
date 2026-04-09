@@ -1827,7 +1827,7 @@
             openSharePreview: async function(msgId) {
                 glassSwal.fire({
                     title: 'กำลังเตรียมรูปภาพ...',
-                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-600 font-bold">กำลังประมวลผลรูปภาพขั้นสูง...</p><p class="text-[10px] text-gray-400 mt-1">(อาจใช้เวลา 3-4 วินาที เพื่อภาพที่สมบูรณ์ที่สุด)</p></div>',
+                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-600 font-bold">กำลังประมวลผลรูปภาพขั้นสูง...</p><p class="text-[10px] text-gray-400 mt-1">(อาจใช้เวลา 5-6 วินาที เพื่อภาพที่คมชัดและสมบูรณ์ที่สุด)</p></div>',
                     showConfirmButton: false,
                     allowOutsideClick: false
                 });
@@ -1963,9 +1963,17 @@
                     } catch (e) { console.warn('Warmup 2 skipped'); }
 
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                    await new Promise(r => setTimeout(r, 1500)); // Second longer delay
+                    await new Promise(r => setTimeout(r, 1000)); // Second delay
 
-                    // FINAL RENDER: Full HD
+                    // WARM-UP RENDER 3: Make it even more robust
+                    try {
+                        await htmlToImage.toPng(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 3 });
+                    } catch (e) { console.warn('Warmup 3 skipped'); }
+
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before the final 4th render
+
+                    // FINAL RENDER (4th): Full HD
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
                         pixelRatio: 3,
