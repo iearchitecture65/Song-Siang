@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" href="iconLOGO 65.png">
     <link rel="apple-touch-icon" href="iconLOGO 65.png">
     
-    <!-- Google Fonts (Added crossorigin to fix html-to-image SecurityError) -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
@@ -599,12 +599,6 @@
                         }
                     }
                 });
-            },
-
-            preloadImages: function() {},
-
-            getRelationshipLabel: function() {
-                return "คน";
             },
 
             renderImage: function(src, altText, extraClass = "") {
@@ -1667,6 +1661,12 @@
                     allowOutsideClick: false
                 });
 
+                // Ensure font is fully loaded
+                try {
+                    await document.fonts.load('12px "Prompt"');
+                    await document.fonts.ready;
+                } catch(e) { console.warn("Font loading wait failed"); }
+
                 const msg = this.allMessages.find(m => m.id === msgId);
                 if(!msg) { glassSwal.close(); return; }
                 
@@ -1681,26 +1681,28 @@
                 let senderImgInside = '';
                 const abbr = this.getAbbr(msg.from.name);
                 
+                const fetchAsBase64 = async (url) => {
+                    try {
+                        const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+                        const blob = await response.blob();
+                        return new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch (e) { return null; }
+                };
+
                 if (isAnonymous) {
                     senderImgInside = `<div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-gray-200 relative z-10" style="background-color: #334155;"><svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg></div>`;
                 } else {
                     const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                     if (sender) {
                         const imgSrc = `${GITHUB_IMG_BASE_URL}/${sender.id}.png`;
-                        try {
-                            const res = await fetch(imgSrc);
-                            if (res.ok) {
-                                const blob = await res.blob();
-                                const base64 = await new Promise(r => {
-                                    const reader = new FileReader();
-                                    reader.onload = () => r(reader.result);
-                                    reader.readAsDataURL(blob);
-                                });
-                                senderImgInside = `<img src="${base64}" class="w-12 h-12 rounded-full object-cover shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;">`;
-                            } else {
-                                throw new Error("Fetch failed");
-                            }
-                        } catch (err) {
+                        const base64 = await fetchAsBase64(imgSrc);
+                        if (base64) {
+                            senderImgInside = `<img src="${base64}" class="w-12 h-12 rounded-full object-cover shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;">`;
+                        } else {
                             senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
                         }
                     } else {
@@ -1708,15 +1710,11 @@
                     }
                 }
                 
-                await document.fonts.ready;
-
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
 
                 const cardHtml = `
-                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full mx-auto text-left flex flex-col relative" style="font-family: 'Prompt', sans-serif; box-sizing: border-box; width: 340px;">
+                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full mx-auto text-left flex flex-col relative" style="font-family: 'Prompt', sans-serif !important; box-sizing: border-box; width: 340px; visibility: visible;">
                         <div class="p-5 flex flex-col h-full bg-white rounded-[1.8rem]">
-                            
-                            <!-- Header: รูปอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป (แนบชิด) -->
                             <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
                                 ${senderImgInside}
                                 <div class="flex flex-col justify-center min-w-0 flex-1">
@@ -1727,8 +1725,6 @@
                                     </span>
                                 </div>
                             </div>
-                            
-                            <!-- Content -->
                             <div class="relative flex-1 flex flex-col justify-center w-full">
                                 ${msg.type === 'text' ? `
                                     <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 pt-5 pb-4 relative border border-gray-100" style="box-sizing: border-box;">
@@ -1744,8 +1740,6 @@
                                     </div>
                                 `}
                             </div>
-                            
-                            <!-- Footer -->
                             <div class="mt-4 flex items-center justify-center opacity-30 text-center">
                                 <span class="text-[9px] font-black text-slate-800 tracking-[0.3em] uppercase">SONG SIANG</span>
                             </div>
@@ -1754,46 +1748,39 @@
                 `;
                 
                 const offscreenContainer = document.createElement('div');
-                offscreenContainer.style.position = 'absolute'; 
-                offscreenContainer.style.top = '-9999px';
-                offscreenContainer.style.left = '-9999px';
-                offscreenContainer.style.zIndex = '-1000';
-                offscreenContainer.style.opacity = '0';
-                offscreenContainer.style.pointerEvents = 'none';
+                offscreenContainer.style.position = 'fixed'; 
+                offscreenContainer.style.top = '0';
+                offscreenContainer.style.left = '-1000vw';
+                offscreenContainer.style.zIndex = '-9999';
                 offscreenContainer.innerHTML = cardHtml;
                 document.body.appendChild(offscreenContainer);
 
                 try {
                     const cardToCapture = offscreenContainer.querySelector('#capture-card');
                     
-                    const images = cardToCapture.querySelectorAll('img');
-                    await Promise.all(Array.from(images).map(img => {
+                    // Wait for any internal images to decode
+                    const imgs = cardToCapture.querySelectorAll('img');
+                    await Promise.all(Array.from(imgs).map(img => {
                         if (img.complete) return Promise.resolve();
-                        return new Promise((resolve) => {
-                            img.onload = resolve;
-                            img.onerror = resolve;
-                        });
+                        return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
                     }));
 
-                    await new Promise(r => setTimeout(r, 5000));
-                    
+                    // Short double rAF to ensure layout & font application
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    await new Promise(r => setTimeout(r, 800)); // Small safety buffer for mobile
+
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
                         pixelRatio: 3,
+                        cacheBust: true,
                         useCORS: true,
-                        filter: (node) => {
-                            if (node.tagName === 'LINK' && node.rel === 'stylesheet' && node.href && node.href.includes('font-awesome')) {
-                                return false; 
-                            }
-                            return true;
-                        },
                         style: { transform: 'none', margin: '0' }
                     });
                     
                     document.body.removeChild(offscreenContainer);
 
                     glassSwal.fire({
-                        title: 'พรีวิว',
+                        title: 'พรีวิวรูปภาพ',
                         html: `
                             <div class="flex justify-center my-2 rounded-[2rem] overflow-hidden bg-transparent mx-auto border-[3px] border-[#2b71b8] shadow-md" style="max-width: 340px;">
                                 <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[1.8rem]" alt="Preview">
@@ -1819,7 +1806,7 @@
                 } catch (err) {
                     console.error("Capture error:", err);
                     if(document.body.contains(offscreenContainer)) document.body.removeChild(offscreenContainer);
-                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างรูปภาพพรีวิวได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างรูปภาพได้ กรุณาลองใหม่อีกครั้ง', 'error');
                 }
             },
 
@@ -2143,8 +2130,6 @@
                     if (dataArray[i] > maxVal) maxVal = dataArray[i];
                 }
                 const average = sum / bufferLength;
-                
-                // ปรับความไวให้พอดี ไม่เซนซิทีฟเกินไป (ค่าสูงสุดของ dataArray คือ 255)
                 const vol = Math.min(1, (average * 1.5 + maxVal * 0.5) / 255); 
 
                 this.audioHistory.push(vol);
@@ -2166,12 +2151,9 @@
 
                 for (let i = 0; i < this.audioHistory.length; i++) {
                     const v = this.audioHistory[i];
-                    // ปรับความสมูท และกำหนดให้ความสูงสูงสุดไม่ชนขอบ (ใช้ height * 0.65)
                     const smoothV = Math.max(0.08, Math.pow(v, 1.2));
                     const barHeight = Math.max(barWidth, smoothV * height * 0.65);
-                    
                     const x = i * (barWidth + barGap) + barWidth / 2;
-                    
                     ctx.beginPath();
                     ctx.moveTo(x, y - barHeight / 2);
                     ctx.lineTo(x, y + barHeight / 2);
@@ -2304,10 +2286,9 @@
                         this.isRecording = true;
                         this.recordingTime = 0;
                         this.audioBlob = null;
-                        this.audioHistory = []; // ล้างประวัติคลื่นเสียง
+                        this.audioHistory = [];
                         this.showView('compose');
-                        
-                        this.drawVisualizer(); // เริ่มต้นวาดคลื่นเสียง
+                        this.drawVisualizer();
 
                         this.timerInterval = setInterval(() => {
                             this.recordingTime++;
