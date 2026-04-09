@@ -359,6 +359,7 @@
             messages: [],
             unsubscribeMsgs: null,
             unsubscribeUsers: null,
+            unsubscribeUserStatus: null,
             actualOtp: '',
             tempStudentId: '',
             currentRef: '',
@@ -498,6 +499,7 @@
                             glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งานกรุณาติดต่อผู้ดูแลระบบ', 'error');
                             this.showView('login');
                         } else {
+                            this.setupUserStatusListener();
                             this.setupMessagesListener();
                             this.setupUsersListener();
                             this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
@@ -659,6 +661,53 @@
                     if (this.currentView === 'manage_users') this.renderUserManagementUI();
                 }, (error) => {
                     console.error("Users listener error:", error);
+                });
+            },
+            
+            setupUserStatusListener: function() {
+                if (this.unsubscribeUserStatus) this.unsubscribeUserStatus();
+                if (!this.profile || !this.profile.studentId) return;
+
+                // Protect master admin from lockout if needed
+                if (this.profile.studentId === '65030900') return;
+
+                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', this.profile.studentId);
+                this.unsubscribeUserStatus = onSnapshot(userRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        this.forceLogoutWithMessage('บัญชีถูกลบจากระบบ', 'เซสชั่นการล็อกอินของคุณถูกล้างโดยผู้ดูแลระบบ');
+                    } else {
+                        const data = snapshot.data();
+                        if (data.isBlocked) {
+                            this.forceLogoutWithMessage('บัญชีถูกระงับการใช้งาน', 'คุณไม่สามารถใช้งานระบบได้ในขณะนี้ กรุณาติดต่อผู้ดูแลระบบ');
+                        }
+                    }
+                }, (error) => {
+                    console.error("User status listener error:", error);
+                });
+            },
+
+            forceLogoutWithMessage: function(title, text) {
+                this.closeMobileMenu();
+                if (this.profile && !this.profile.isGuest) {
+                    localStorage.setItem('lastLogoutId', this.profile.studentId);
+                    localStorage.setItem('lastLogoutTime', Date.now().toString());
+                }
+                this.profile = null;
+                localStorage.removeItem('songSiangProfile');
+                
+                if (this.unsubscribeMsgs) this.unsubscribeMsgs();
+                if (this.unsubscribeUsers) this.unsubscribeUsers();
+                if (this.unsubscribeUserStatus) this.unsubscribeUserStatus();
+                
+                this.showView('login');
+                
+                glassSwal.fire({
+                    iconHtml: '<i class="fa-solid fa-triangle-exclamation text-red-500 text-5xl"></i>',
+                    title: title,
+                    text: text,
+                    confirmButtonText: 'รับทราบ',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
                 });
             },
 
@@ -862,6 +911,7 @@
 
                     this.profile = userProfile;
                     localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
+                    this.setupUserStatusListener();
                     this.setupMessagesListener();
                     this.setupUsersListener();
                     
@@ -892,6 +942,7 @@
                     localStorage.removeItem('songSiangProfile');
                     if(this.unsubscribeMsgs) this.unsubscribeMsgs();
                     if(this.unsubscribeUsers) this.unsubscribeUsers();
+                    if(this.unsubscribeUserStatus) this.unsubscribeUserStatus();
                     this.showView('site_closed');
                     glassSwal.fire('ประกาศ', 'ขณะนี้ระบบถูกปิดใช้งานชั่วคราว', 'info');
                     return;
@@ -914,6 +965,7 @@
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
                         if(this.unsubscribeUsers) this.unsubscribeUsers();
+                        if(this.unsubscribeUserStatus) this.unsubscribeUserStatus();
                         this.showView(this.isSiteActive ? 'login' : 'site_closed');
                     }
                 });
