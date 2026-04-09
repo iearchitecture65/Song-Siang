@@ -113,6 +113,7 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
+            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -1645,7 +1646,7 @@
                 // Show Swal Loading immediately
                 glassSwal.fire({
                     title: 'กำลังเตรียมรูปภาพ...',
-                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4"></i>',
+                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-500">กรุณารอสักครู่ ระบบกำลังจัดเตรียมภาพให้สมบูรณ์</p></div>',
                     showConfirmButton: false,
                     allowOutsideClick: false
                 });
@@ -1680,7 +1681,6 @@
                                     reader.onload = () => r(reader.result);
                                     reader.readAsDataURL(blob);
                                 });
-                                // Apply rounded-full directly to IMG to avoid clipping bugs
                                 senderImgInside = `<img src="${base64}" class="w-12 h-12 rounded-full object-cover shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;">`;
                             } else {
                                 throw new Error("Fetch failed");
@@ -1693,17 +1693,11 @@
                     }
                 }
                 
-                await document.fonts.ready;
-
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
 
-                // New Card Layout strictly adhering to user instructions:
-                // 1. No shadows on #capture-card to avoid weird artifacts.
-                // 2. Name wraps, doesn't truncate.
-                // 3. Very little white space above/below text, just enough for the quote.
-                // 4. White background, rounded border with primary color.
+                // New Card Layout without shadows to prevent black borders and with proper word-wrapping
                 const cardHtml = `
-                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full max-w-sm mx-auto text-left flex flex-col relative overflow-hidden" style="font-family: 'Prompt', sans-serif; box-sizing: border-box; width: 340px; min-height: 200px;">
+                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full mx-auto text-left flex flex-col relative overflow-hidden" style="font-family: 'Prompt', sans-serif; box-sizing: border-box; width: 340px;">
                         <div class="p-5 flex flex-col h-full bg-white relative z-10">
                             
                             <!-- Header: รูปอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป (แนบชิด) -->
@@ -1719,18 +1713,18 @@
                             </div>
                             
                             <!-- Content -->
-                            <div class="relative flex-1 flex flex-col justify-center">
+                            <div class="relative flex-1 flex flex-col justify-center w-full">
                                 ${msg.type === 'text' ? `
-                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 pt-5 relative border border-gray-100 shadow-sm" style="box-sizing: border-box;">
+                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 pt-5 pb-4 relative border border-gray-100" style="box-sizing: border-box;">
                                         <svg class="absolute top-2 left-3 w-4 h-4 text-[#2b71b8]/20 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 216C0 149.7 53.7 96 120 96h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320 288 216zm256 0c0-66.3 53.7-120 120-120h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H320c-35.3 0-64-28.7-64-64V320 288 216z"/></svg>
-                                        <div class="text-[#2b71b8] text-[14px] font-medium leading-relaxed whitespace-pre-wrap break-words pl-5 pr-1 pb-1 relative z-10">${msg.content.trim()}</div>
+                                        <div class="text-[#2b71b8] text-[14px] font-medium leading-relaxed whitespace-pre-wrap break-words pl-5 relative z-10">${msg.content.trim()}</div>
                                     </div>
                                 ` : `
-                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 border border-gray-100 flex items-center justify-start gap-3 shadow-sm" style="box-sizing: border-box;">
-                                        <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shadow-inner shrink-0">
+                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 border border-gray-100 flex items-center justify-start gap-3" style="box-sizing: border-box;">
+                                        <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shrink-0">
                                             <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
                                         </div>
-                                        <span class="font-bold text-[#2b71b8] text-sm">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
+                                        <span class="font-bold text-[#2b71b8] text-[14px] whitespace-nowrap">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
                                     </div>
                                 `}
                             </div>
@@ -1744,20 +1738,36 @@
                 `;
                 
                 const offscreenContainer = document.createElement('div');
-                offscreenContainer.style.position = 'absolute'; 
+                offscreenContainer.style.position = 'fixed'; 
                 offscreenContainer.style.top = '-9999px';
-                offscreenContainer.style.left = '-9999px';
-                offscreenContainer.style.zIndex = '-100';
+                offscreenContainer.style.left = '0';
+                offscreenContainer.style.zIndex = '-1000';
+                offscreenContainer.style.opacity = '0';
                 offscreenContainer.innerHTML = cardHtml;
                 document.body.appendChild(offscreenContainer);
 
                 try {
-                    await new Promise(r => setTimeout(r, 100));
-                    
+                    await document.fonts.ready;
+
                     const cardToCapture = offscreenContainer.querySelector('#capture-card');
+                    
+                    // Await all internal images to be loaded
+                    const images = cardToCapture.querySelectorAll('img');
+                    await Promise.all(Array.from(images).map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+                    }));
+
+                    // เพิ่มเวลาโหลดเพื่อให้ฟอนต์และรูปติด 100% แน่นอน
+                    await new Promise(r => setTimeout(r, 1500));
+                    
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
                         pixelRatio: 3,
+                        useCORS: true,
                         filter: (node) => {
                             if (node.tagName === 'LINK' && node.rel === 'stylesheet' && node.href && node.href.includes('font-awesome')) {
                                 return false; 
@@ -1784,6 +1794,7 @@
                                     <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96s-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.9-.7 11.9c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.9 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg> แชร์
                                 </button>
                             </div>
+                            <p class="mt-3 text-[10px] text-gray-400 font-medium text-center">หรือแตะค้างที่รูปเพื่อบันทึกรูป</p>
                         `,
                         showConfirmButton: false,
                         showCloseButton: true,
