@@ -738,7 +738,8 @@
                         fullName: userProfile.fullName || userProfile.name,
                         lastLogin: Date.now(),
                         isPredefined: !!userProfile.isPredefined,
-                        isBlocked: false
+                        isBlocked: false,
+                        isGuest: !!userProfile.isGuest
                     }, { merge: true });
 
                     this.profile = userProfile;
@@ -999,7 +1000,8 @@
                                     studentId: idInput,
                                     name: data.name,
                                     fullName: data.fullName,
-                                    isPredefined: false
+                                    isPredefined: false,
+                                    isGuest: data.isGuest || false
                                 });
                             }
                         } catch(err) {
@@ -1084,7 +1086,7 @@
                     if (prevEl) prevEl.focus();
                 }
             },
-            checkFullOtp: function() {
+            checkFullOtp: async function() {
                 let currentOtp = "";
                 for(let i=0; i<6; i++) {
                     const val = document.getElementById(`otp-${i}`).value;
@@ -1093,13 +1095,31 @@
                 
                 if(currentOtp.length === 6) {
                     if(currentOtp === this.actualOtp) {
-                        this.startWatchdog(5000); // Start watchdog ONLY when OTP is correct
+                        this.startWatchdog(5000); 
                         const existingUser = predefinedUsers.find(u => u.studentId === this.tempStudentId);
                         if(existingUser) {
                             this.loginSuccess(existingUser);
                         } else {
-                            document.getElementById('appRoot').innerHTML = this.renderLogin3();
-                            this.stopWatchdog(); // System successfully moved to the next frame
+                            try {
+                                const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', this.tempStudentId);
+                                const userSnap = await getDoc(userDocRef);
+                                if (userSnap.exists()) {
+                                    const data = userSnap.data();
+                                    this.loginSuccess({
+                                        studentId: this.tempStudentId,
+                                        name: data.name,
+                                        fullName: data.fullName,
+                                        isPredefined: false,
+                                        isGuest: data.isGuest || false
+                                    });
+                                } else {
+                                    document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                                    this.stopWatchdog(); 
+                                }
+                            } catch(err) {
+                                document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                                this.stopWatchdog();
+                            }
                         }
                     } else {
                         glassSwal.fire({
