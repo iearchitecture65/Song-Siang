@@ -202,6 +202,12 @@
                     </div>
                     <span class="text-[10px] font-medium whitespace-nowrap">กล่องจดหมาย</span>
                 </button>
+                <button id="btnSentDesk" onclick="app.showView('sent_history')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+                    </div>
+                    <span class="text-[10px] font-medium whitespace-nowrap">ประวัติการส่ง</span>
+                </button>
                 <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-right-from-bracket text-xl"></i>
@@ -227,6 +233,9 @@
                 </button>
                 <button id="btnInboxMob" onclick="app.showView('inbox')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm relative text-white">
                     <i class="fa-solid fa-envelope w-5 text-center text-white"></i> กล่องจดหมาย
+                </button>
+                <button id="btnSentMob" onclick="app.showView('sent_history')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
+                    <i class="fa-solid fa-clock-rotate-left w-5 text-center text-white"></i> ประวัติการส่ง
                 </button>
                 <div class="h-px bg-white/20 my-1 mx-2"></div>
                 <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-400/20 text-red-100 hover:text-red-300 transition-colors text-left font-bold text-sm">
@@ -351,6 +360,7 @@
             yearOptions: ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'],
             guestOptions: ['อาจารย์', 'เจ้าหน้าที่', 'บุคลากร', 'ผู้ปกครอง', 'บุคคลภายนอก'],
             isSiteActive: true,
+            allowUserDelete: true,
             tempSelectedYear: '',
             tempSelectedGuestRole: '',
             
@@ -574,6 +584,7 @@
                         this.yearOptions = data.yearOptions || ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'];
                         this.guestOptions = data.guestOptions || ['อาจารย์', 'เจ้าหน้าที่', 'บุคลากร', 'ผู้ปกครอง', 'บุคคลภายนอก'];
                         this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
+                        this.allowUserDelete = data.allowUserDelete !== undefined ? data.allowUserDelete : true;
 
                         if (!this.isSiteActive && this.profile && !this.profile.isAdmin) {
                             this.logout(true); // Force logout if site closes
@@ -672,6 +683,9 @@
 
                         document.getElementById('btnInboxDesk').classList.toggle('hidden', !showInbox);
                         document.getElementById('btnInboxMob').classList.toggle('hidden', !showInbox);
+                        
+                        document.getElementById('btnSentDesk').classList.remove('hidden');
+                        document.getElementById('btnSentMob').classList.remove('hidden');
                     } else {
                         navDesk.classList.add('md:hidden');
                         navDesk.classList.remove('md:flex');
@@ -684,6 +698,7 @@
                     else if(viewName === 'feed') { root.innerHTML = this.renderFeed(); this.updateFAB(); }
                     else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
                     else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
+                    else if(viewName === 'sent_history') { root.innerHTML = this.renderSentHistory(); this.updateFAB(); }
                     else if(viewName === 'inbox') { 
                         if (!(this.profile.isPredefined || this.profile.isAdmin)) { this.showView('home'); return; }
                         this.adminSearchQuery = ''; 
@@ -797,6 +812,10 @@
                     else if(this.currentView === 'feed') {
                          const root = document.getElementById('appRoot');
                          if(root) root.innerHTML = this.renderFeed();
+                    }
+                    else if(this.currentView === 'sent_history') {
+                         const container = document.getElementById('sentMessageContainer');
+                         if(container) container.innerHTML = this.renderSentMessagesList();
                     }
                 }, (error) => {
                     console.error("Messages listener error:", error);
@@ -1141,6 +1160,17 @@
                             </label>
                         </div>
 
+                        <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner flex justify-between items-center">
+                            <div>
+                                <label class="block text-sm font-bold text-white mb-1">การลบข้อความ</label>
+                                <p class="text-[10px] text-white/70 leading-tight">อนุญาตให้สมาชิกลบข้อความ<br>ที่ตนเองส่งได้</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="inpAllowUserDelete" class="sr-only peer" ${this.allowUserDelete ? 'checked' : ''}>
+                                <div class="w-11 h-6 bg-white/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary border border-white/50 shadow-inner"></div>
+                            </label>
+                        </div>
+
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
                             <label class="block text-sm font-bold text-white mb-2">จำกัดจำนวนตัวอักษรต่อข้อความ (ตัว)</label>
                             <input type="number" id="inpMaxChars" value="${this.maxChars}" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
@@ -1178,6 +1208,7 @@
                 const gRoles = gText.split(',').map(y => y.trim()).filter(y => y !== '');
                 
                 const isActive = document.getElementById('inpSiteActive').checked;
+                const isAllowDelete = document.getElementById('inpAllowUserDelete').checked;
 
                 if (c > 0 && a > 0 && years.length > 0 && gRoles.length > 0) {
                     try {
@@ -1186,7 +1217,8 @@
                             maxAudioTime: a,
                             yearOptions: years,
                             guestOptions: gRoles,
-                            isSiteActive: isActive
+                            isSiteActive: isActive,
+                            allowUserDelete: isAllowDelete
                         }, { merge: true });
                         
                         this.maxChars = c;
@@ -1194,6 +1226,7 @@
                         this.yearOptions = years;
                         this.guestOptions = gRoles;
                         this.isSiteActive = isActive;
+                        this.allowUserDelete = isAllowDelete;
 
                         glassSwal.fire({ 
                             iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', 
@@ -1434,17 +1467,27 @@
                      if(realSender) displayName += ` (${realSender.name})`;
                 }
 
+                let recipientInfo = '';
+                const toCount = msg.to && Array.isArray(msg.to) ? msg.to.length : 0;
+                const isEveryone = toCount >= predefinedUsers.length;
+                
+                if (isEveryone) {
+                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
+                } else if (toCount > 1) {
+                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
+                }
+
                 if (msg.type === 'audio') {
                     glassSwal.fire({
                         title: `เสียงจาก ${displayName}`,
-                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>`,
+                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>${recipientInfo}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 } else {
                     glassSwal.fire({
                         title: `ข้อความจาก ${displayName}`,
-                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>`,
+                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
@@ -2293,6 +2336,87 @@
                         ${this.renderInboxMessagesList()}
                     </div>
                 </div>`;
+            },
+
+            renderSentHistory: function() {
+                return `
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-3xl mx-auto min-h-[75vh] mb-20 animate-slide-up relative flex flex-col">
+                    <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
+                        <div class="flex items-center">
+                            <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
+                                <i class="fa-solid fa-arrow-left text-xl"></i>
+                            </button>
+                            <div>
+                                <h2 class="text-xl font-extrabold text-white drop-shadow-md">ประวัติการส่ง</h2>
+                                <p class="text-blue-100 text-xs font-bold">ข้อความทั้งหมดที่คุณส่งออกไป</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="sentMessageContainer" class="flex-1 overflow-y-auto pr-1 space-y-4 relative z-10 custom-scrollbar">
+                        ${this.renderSentMessagesList()}
+                    </div>
+                </div>`;
+            },
+
+            renderSentMessagesList: function() {
+                const myStudentId = this.profile.studentId;
+                const mySentMessages = this.allMessages.filter(msg => msg.from && msg.from.id === myStudentId);
+
+                if(mySentMessages.length === 0) {
+                    return `
+                        <div class="text-center py-20 flex flex-col items-center justify-center animate-fade-in">
+                            <i class="fa-solid fa-clock-rotate-left text-5xl text-white/30 mb-4"></i>
+                            <p class="text-white/90 font-bold text-lg">ยังไม่มีประวัติการส่งข้อความ</p>
+                        </div>`;
+                }
+
+                let msgsHTML = '';
+                mySentMessages.forEach((msg, idx) => {
+                    const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
+                    const isAudio = msg.type === 'audio';
+                    const isAnonymous = msg.from.isAnonymous;
+                    
+                    const deleteBtn = (this.profile.isAdmin || this.allowUserDelete) ? `
+                        <button onclick="app.deleteMsg('${msg.id}')" class="text-red-400 hover:text-red-600 bg-white/80 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center h-8 w-8">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>` : '';
+
+                    const journeyHTML = `
+                        <div class="flex items-center gap-3 mb-3 pb-3 border-b border-white/40 overflow-x-auto no-scrollbar">
+                            <div class="flex flex-col items-start shrink-0">
+                                ${this.renderRecipientDisplay(msg)}
+                                <span class="text-[8px] font-bold text-primary mt-1 opacity-70">ส่งถึง</span>
+                            </div>
+                        </div>
+                    `;
+
+                    msgsHTML += `
+                    <div class="bg-white/60 backdrop-blur-md border border-white/60 p-4 rounded-[2rem] flex flex-col gap-1 shadow-lg hover:shadow-xl transition-all group animate-slide-up w-full" style="animation-delay: ${idx * 15}ms">
+                        ${journeyHTML}
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <div class="flex-1 w-full min-w-0">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="min-w-0 flex-1">
+                                        <span class="font-extrabold text-primary text-sm truncate block">
+                                            ${isAnonymous ? '<i class="fa-solid fa-user-secret mr-1"></i> ส่งแบบไม่ระบุตัวตน' : '<i class="fa-solid fa-user mr-1"></i> ส่งแบบระบุตัวตน'}
+                                        </span>
+                                        <div class="text-[10px] text-primary/60"><i class="fa-regular fa-clock mr-1"></i> ${dateStr}</div>
+                                    </div>
+                                    <div class="shrink-0 ml-2">${deleteBtn}</div>
+                                </div>
+                                ${isAudio ? `
+                                    <div class="bg-white/90 p-2 rounded-xl border border-white w-fit shadow-sm max-w-full">
+                                        <audio src="${msg.content}" controls class="h-8 w-[200px] max-w-full"></audio>
+                                    </div>` : `
+                                    <div class="text-primary bg-white/80 border border-white/50 px-5 py-3 rounded-2xl shadow-sm text-sm relative font-medium w-fit max-w-full">
+                                        <i class="fa-solid fa-quote-left absolute top-2 left-3 text-xl text-primary/20"></i>
+                                        <div class="pl-6 pt-1 break-words">${msg.content.trim()}</div>
+                                    </div>`}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                return msgsHTML;
             }
         };
 
