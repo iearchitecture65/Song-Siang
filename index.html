@@ -368,6 +368,7 @@
             
             maxChars: 500,
             maxAudioTime: 30,
+            shareExpiryHours: 24, // Default share link expiry
             yearOptions: ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'],
             guestOptions: ['อาจารย์', 'เจ้าหน้าที่', 'บุคลากร', 'ผู้ปกครอง', 'บุคคลภายนอก'],
             isSiteActive: true,
@@ -455,11 +456,21 @@
                     if(docSnap.exists()) {
                         const data = docSnap.data();
                         this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
+                        this.shareExpiryHours = data.shareExpiryHours || 24;
                     } else {
                         this.isSiteActive = true;
                     }
 
                     this.loadGlobalSettings();
+
+                    // Check for Shared Message first
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sharedMsgId = urlParams.get('m');
+                    if (sharedMsgId) {
+                        await this.handleSharedMessage(sharedMsgId);
+                        this.stopWatchdog();
+                        return; 
+                    }
                     
                     const savedProfile = localStorage.getItem('songSiangProfile');
                     if (savedProfile) {
@@ -498,6 +509,116 @@
                     console.error("Auth error:", e);
                     this.emergencyReset();
                 }
+            },
+
+            handleSharedMessage: async function(msgId) {
+                const root = document.getElementById('appRoot');
+                root.innerHTML = `
+                    <div class="flex flex-col items-center justify-center min-h-[60vh] text-white">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4"></i>
+                        <p class="font-bold">กำลังโหลดข้อความที่แชร์...</p>
+                    </div>`;
+
+                try {
+                    const msgRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', msgId);
+                    const snap = await getDoc(msgRef);
+                    
+                    if (!snap.exists()) {
+                        root.innerHTML = this.renderSharedError("ไม่พบข้อความนี้ในระบบ หรืออาจถูกลบไปแล้ว");
+                        return;
+                    }
+
+                    const msg = { id: snap.id, ...snap.data() };
+                    const now = Date.now();
+                    const expiryTime = msg.timestamp + (this.shareExpiryHours * 60 * 60 * 1000);
+
+                    if (now > expiryTime) {
+                        root.innerHTML = this.renderSharedError("ลิ้งก์นี้หมดอายุการใช้งานแล้ว");
+                        return;
+                    }
+
+                    this.renderSharedMessage(msg, expiryTime);
+
+                } catch (err) {
+                    root.innerHTML = this.renderSharedError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+                }
+            },
+
+            renderSharedError: function(text) {
+                return `
+                <div class="max-w-md mx-auto glass-card rounded-[2.5rem] p-10 text-center animate-slide-up mt-10">
+                    <i class="fa-solid fa-link-slash text-red-400 text-6xl mb-6"></i>
+                    <h2 class="text-2xl font-black text-white mb-4">ลิ้งก์ไม่สามารถใช้งานได้</h2>
+                    <p class="text-blue-100 font-medium mb-8">${text}</p>
+                    <button onclick="window.location.href=window.location.pathname" class="w-full py-4 bg-secondary text-primary rounded-2xl font-black shadow-lg">
+                        เข้าสู่หน้าหลัก
+                    </button>
+                </div>`;
+            },
+
+            renderSharedMessage: function(msg, expiryTime) {
+                const root = document.getElementById('appRoot');
+                const isAnonymous = msg.from.isAnonymous;
+                const displayName = isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : msg.from.name;
+                const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
+                const isAudio = msg.type === 'audio';
+
+                root.innerHTML = `
+                <div class="max-w-xl mx-auto animate-slide-up mt-6 mb-20 px-4">
+                    <div class="text-center mb-8">
+                        <div class="inline-block bg-white/20 backdrop-blur-md px-6 py-2 rounded-full border border-white/30 text-white font-bold text-sm shadow-xl">
+                            <i class="fa-solid fa-clock-rotate-left mr-2 text-secondary"></i> จะหมดอายุใน: <span id="shareTimer" class="font-mono text-secondary">--:--:--</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white/20">
+                        <div class="p-8 md:p-10 flex flex-col items-center text-center bg-white/10">
+                            <div class="w-24 h-24 rounded-full bg-secondary shadow-2xl mb-6 border-4 border-white flex-center-all overflow-hidden relative">
+                                ${isAnonymous ? '<i class="fa-solid fa-user-secret text-4xl text-primary"></i>' : 
+                                    (msg.from.id ? `<img src="${GITHUB_IMG_BASE_URL}/${predefinedUsers.find(u=>u.studentId===msg.from.id)?.id || 'default'}.png" class="w-full h-full object-cover" onerror="this.innerHTML='${this.getAbbr(msg.from.name)}'">` : `<span class="text-3xl font-black text-primary">${this.getAbbr(msg.from.name)}</span>`)}
+                            </div>
+                            <h2 class="text-2xl font-black text-white drop-shadow-md mb-1">${displayName}</h2>
+                            <p class="text-blue-100 text-xs font-bold opacity-70 uppercase tracking-widest mb-8">${dateStr}</p>
+                            
+                            <div class="w-full bg-white/90 rounded-[2rem] p-8 shadow-inner border border-white relative min-h-[150px] flex items-center justify-center">
+                                <i class="fa-solid fa-quote-left absolute top-4 left-6 text-4xl text-primary/10"></i>
+                                ${isAudio ? `
+                                    <div class="w-full flex flex-col items-center">
+                                        <audio src="${msg.content}" controls autoplay class="w-full"></audio>
+                                        <p class="mt-4 text-primary font-black text-sm">คลิปเสียงความยาว ${msg.audioDuration || '?'} วินาที</p>
+                                    </div>
+                                ` : `
+                                    <p class="text-primary font-bold text-lg md:text-xl leading-relaxed whitespace-pre-wrap">${msg.content.trim()}</p>
+                                `}
+                            </div>
+                        </div>
+                        <div class="bg-black/20 p-6 text-center border-t border-white/10">
+                             <button onclick="window.location.href=window.location.pathname" class="text-white/60 hover:text-white text-xs font-bold underline transition-colors">
+                                อยากส่งเสียงบ้าง? คลิกเพื่อเข้าสู่ระบบ
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-10 flex items-center justify-center opacity-30 text-center">
+                        <h1 class="text-lg font-black text-white tracking-[0.4em] uppercase">SONG SIANG</h1>
+                    </div>
+                </div>`;
+
+                const timerFunc = () => {
+                    const remaining = expiryTime - Date.now();
+                    if (remaining <= 0) {
+                        clearInterval(this.shareTimerInt);
+                        window.location.reload();
+                    } else {
+                        const hours = Math.floor(remaining / (1000 * 60 * 60));
+                        const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                        const secs = Math.floor((remaining % (1000 * 60)) / 1000);
+                        const display = document.getElementById('shareTimer');
+                        if(display) display.innerText = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    }
+                };
+                timerFunc();
+                this.shareTimerInt = setInterval(timerFunc, 1000);
             },
 
             getAbbr: function(name) {
@@ -588,6 +709,7 @@
                         const data = docSnap.data();
                         this.maxChars = data.maxChars || 500;
                         this.maxAudioTime = data.maxAudioTime || 30;
+                        this.shareExpiryHours = data.shareExpiryHours || 24;
                         this.yearOptions = data.yearOptions || ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'];
                         this.guestOptions = data.guestOptions || ['อาจารย์', 'เจ้าหน้าที่', 'บุคลากร', 'ผู้ปกครอง', 'บุคคลภายนอก'];
                         this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
@@ -595,7 +717,7 @@
                         this.otpSkipTime = data.otpSkipTime !== undefined ? data.otpSkipTime : 1;
 
                         if (!this.isSiteActive && this.profile && !this.profile.isAdmin) {
-                            this.logout(true); // Force logout if site closes
+                            this.logout(true); 
                         }
                     }
                 });
@@ -1060,11 +1182,13 @@
                     return this.loginSuccess({ studentId: '65030900', fullName: 'ผู้ดูแลระบบ', name: 'Admin', isPredefined: true, isAdmin: true });
                 }
 
+                // 90030000 Special Access - Bypass OTP like Guest
                 if(idInput === '90030000') {
                     this.startWatchdog(5000);
                     this.tempStudentId = idInput;
                     this.actualOtp = 'SKIP';
-                    this.showView('login3');
+                    document.getElementById('appRoot').innerHTML = this.renderLogin3();
+                    this.stopWatchdog();
                     return;
                 }
 
@@ -1319,6 +1443,11 @@
                         </div>
 
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
+                            <label class="block text-sm font-bold text-white mb-2">เวลาหมดอายุลิ้งก์แชร์ (ชั่วโมง)</label>
+                            <input type="number" id="inpShareExpiry" value="${this.shareExpiryHours}" min="1" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
+                        </div>
+
+                        <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
                             <label class="block text-sm font-bold text-white mb-2">เวลาที่ไม่ต้องใช้ OTP หลังออกระบบ (ชั่วโมง)</label>
                             <input type="number" id="inpOtpSkipTime" value="${this.otpSkipTime}" step="0.5" min="0" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
                             <p class="text-[9px] text-white/70 mt-2 font-medium">* ใส่ 0 หากต้องการให้กรอก OTP ทุกครั้ง</p>
@@ -1354,6 +1483,7 @@
             saveAdminSettings: async function() {
                 const c = parseInt(document.getElementById('inpMaxChars').value);
                 const a = parseInt(document.getElementById('inpMaxAudio').value);
+                const ex = parseInt(document.getElementById('inpShareExpiry').value);
                 const yText = document.getElementById('inpYearOptions').value;
                 const years = yText.split(',').map(y => y.trim()).filter(y => y !== '');
                 
@@ -1365,11 +1495,12 @@
                 const isActive = document.getElementById('inpSiteActive').checked;
                 const isAllowDelete = document.getElementById('inpAllowUserDelete').checked;
 
-                if (c > 0 && a > 0 && years.length > 0 && gRoles.length > 0 && sTime >= 0) {
+                if (c > 0 && a > 0 && ex > 0 && years.length > 0 && gRoles.length > 0 && sTime >= 0) {
                     try {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { 
                             maxChars: c, 
                             maxAudioTime: a,
+                            shareExpiryHours: ex,
                             yearOptions: years,
                             guestOptions: gRoles,
                             isSiteActive: isActive,
@@ -1379,6 +1510,7 @@
                         
                         this.maxChars = c;
                         this.maxAudioTime = a;
+                        this.shareExpiryHours = ex;
                         this.yearOptions = years;
                         this.guestOptions = gRoles;
                         this.isSiteActive = isActive;
@@ -1634,7 +1766,15 @@
                     recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
                 }
 
-                const shareBtn = `<div class="mt-4 text-center border-t border-gray-200 pt-3"><button onclick="app.openSharePreview('${msg.id}')" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold shadow-sm transition"><i class="fa-solid fa-share-nodes mr-1.5"></i> แชร์ / บันทึกรูปภาพ</button></div>`;
+                const shareBtn = `
+                <div class="mt-4 flex flex-col gap-2 border-t border-gray-200 pt-3">
+                    <button onclick="app.copyShareLink('${msg.id}')" class="text-[11px] bg-secondary hover:bg-yellow-400 text-primary px-4 py-2 rounded-full font-bold shadow-sm transition">
+                        <i class="fa-solid fa-link mr-1.5"></i> คัดลอกลิงก์แชร์ (${this.shareExpiryHours} ชม.)
+                    </button>
+                    <button onclick="app.openSharePreview('${msg.id}')" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold shadow-sm transition">
+                        <i class="fa-solid fa-share-nodes mr-1.5"></i> บันทึกรูปภาพพรีวิว
+                    </button>
+                </div>`;
 
                 if (msg.type === 'audio') {
                     glassSwal.fire({
@@ -1651,6 +1791,21 @@
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 }
+            },
+
+            copyShareLink: function(msgId) {
+                const link = `${window.location.origin}${window.location.pathname}?m=${msgId}`;
+                const textArea = document.createElement("textarea");
+                textArea.value = link;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    glassSwal.fire({ title: 'คัดลอกลิงก์แล้ว!', icon: 'success', timer: 1200, showConfirmButton: false });
+                } catch (err) {
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถคัดลอกลิงก์ได้', 'error');
+                }
+                document.body.removeChild(textArea);
             },
 
             openSharePreview: async function(msgId) {
@@ -1758,16 +1913,14 @@
                 try {
                     const cardToCapture = offscreenContainer.querySelector('#capture-card');
                     
-                    // Wait for any internal images to decode
                     const imgs = cardToCapture.querySelectorAll('img');
                     await Promise.all(Array.from(imgs).map(img => {
                         if (img.complete) return Promise.resolve();
                         return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
                     }));
 
-                    // Short double rAF to ensure layout & font application
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                    await new Promise(r => setTimeout(r, 800)); // Small safety buffer for mobile
+                    await new Promise(r => setTimeout(r, 800));
 
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
@@ -1914,15 +2067,12 @@
                         const baseSize = Math.floor(Math.random() * (160 - 70 + 1) + 70); 
                         const animDelay = (Math.random() * 3).toFixed(1);
                         const animDuration = (4 + Math.random() * 3).toFixed(1);
-                        
                         const randomX = Math.floor(Math.random() * 100) - 50; 
                         const randomY = Math.floor(Math.random() * 80) - 40;
-                        
                         const marginL = Math.floor(Math.random() * 40);
                         const marginR = Math.floor(Math.random() * 40);
                         const marginT = Math.floor(Math.random() * 30);
                         const marginB = Math.floor(Math.random() * 30);
-
                         const zIndex = Math.floor(Math.random() * 20) + 10;
                         
                         let badgeContent = '';
@@ -2061,14 +2211,12 @@
                     </div>`;
                 });
 
-                const label = this.getRelationshipLabel();
-
                 return `
                 <div class="animate-fade-in pb-32 relative h-full">
                     <div class="flex flex-row justify-between items-center sm:items-end mb-8 text-white glass-panel p-4 sm:p-6 rounded-3xl border border-white/10 gap-3 shadow-xl">
                         <div class="flex-1 min-w-0">
                             <h2 class="text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md truncate">สวัสดี, ${this.profile.name} <i class="fa-solid fa-sparkles text-secondary ml-1 animate-pulse text-lg md:text-2xl"></i></h2>
-                            <p class="text-blue-100 mt-1 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือก${label}ที่คุณต้องการส่งเสียงถึงได้เลย</p>
+                            <p class="text-blue-100 mt-1 opacity-90 font-light text-[10px] sm:text-xs md:text-sm truncate"><i class="fa-solid fa-hand-pointer mr-1"></i> เลือกคนที่คุณต้องการส่งเสียงถึงได้เลย</p>
                         </div>
                         <button id="btnSelectAll" onclick="app.selectAllUsers()" class="bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-3 sm:px-5 py-2 rounded-full text-[10px] sm:text-sm font-bold transition shadow-lg flex items-center whitespace-nowrap">
                             <i class="fa-solid fa-users sm:mr-2"></i> 
@@ -2403,8 +2551,6 @@
                         await batch.commit();
                         glassSwal.fire({ iconHtml: '<i class="fa-solid fa-check text-primary text-5xl"></i>', title: 'ลบสำเร็จ!', showConfirmButton: false, timer: 1500 });
                         this.setAdminSearch('');
-                        const searchInput = document.querySelector('input[placeholder*="แอดมิน: ค้นหา"]');
-                        if(searchInput) searchInput.value = '';
                     }
                 });
             },
@@ -2529,7 +2675,7 @@
             },
 
             showRecipientList: function(msgId) {
-                const msg = this.messages.find(m => m.id === msgId);
+                const msg = this.allMessages.find(m => m.id === msgId);
                 if (!msg) return;
 
                 const count = msg.to && Array.isArray(msg.to) ? msg.to.length : 0;
