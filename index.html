@@ -113,7 +113,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
-            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -608,27 +607,22 @@
                 });
             },
 
+            // เอาการดึงรูปแบบหน่วงเน็ตออก ให้โหลดตามธรรมชาติ
             preloadImages: function() {
-                if(this.preloadedImages) return;
-                predefinedUsers.forEach(u => {
-                    const imgUrl = `${GITHUB_IMG_BASE_URL}/${u.id}.png`;
-                    const img = new Image();
-                    img.src = imgUrl;
-                    img.onload = () => { this.imageCache[imgUrl] = true; };
-                });
-                this.preloadedImages = true;
+                // Not queuing all 45 images at once anymore to let Firestore load messages first.
             },
 
             getRelationshipLabel: function() {
                 return "คน";
             },
 
+            // เพิ่ม loading="lazy" เพื่อให้รูปไม่ขัดจังหวะการโหลดข้อความ
             renderImage: function(src, altText, extraClass = "") {
                 const isLoaded = this.imageCache[src];
                 return `
                     <div class="img-container relative w-full h-full flex items-center justify-center bg-secondary/50 overflow-hidden">
                         <div class="img-loading-spinner absolute z-10 ${isLoaded ? 'hidden' : ''}"></div>
-                        <img src="${src}" crossorigin="anonymous"
+                        <img src="${src}" crossorigin="anonymous" loading="lazy"
                              alt="${altText}"
                              class="w-full h-full object-cover relative z-20 ${isLoaded ? 'loaded' : ''} ${extraClass}"
                              onload="app.onImageLoaded(this, '${src}')"
@@ -1097,8 +1091,6 @@
                 const btn = document.getElementById('btnReqOTP');
                 btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังส่งรหัส...';
                 btn.disabled = true;
-
-                this.preloadImages();
 
                 const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
                 const targetEmail = `${idInput}@kmitl.ac.th`;
@@ -1649,9 +1641,17 @@
                 }
             },
 
-            openSharePreview: function(msgId) {
+            openSharePreview: async function(msgId) {
+                // Show Swal Loading immediately
+                glassSwal.fire({
+                    title: 'กำลังเตรียมรูปภาพ...',
+                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4"></i>',
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+
                 const msg = this.allMessages.find(m => m.id === msgId);
-                if(!msg) return;
+                if(!msg) { glassSwal.close(); return; }
                 
                 const isAnonymous = msg.from.isAnonymous;
                 let displayName = isAnonymous ? 'ผู้ไม่ประสงค์ออกนาม' : msg.from.name;
@@ -1664,18 +1664,37 @@
                 let senderImgInside = '';
                 const abbr = this.getAbbr(msg.from.name);
                 
+                // Fetch image as Base64 to strictly bypass any CORS or loading delay issues in html-to-image
                 if (isAnonymous) {
-                    senderImgInside = `<svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>`;
+                    senderImgInside = `<div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-gray-200 relative z-10"><svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg></div>`;
                 } else {
                     const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
                     if (sender) {
                         const imgSrc = `${GITHUB_IMG_BASE_URL}/${sender.id}.png`;
-                        senderImgInside = `<img src="${imgSrc}" crossorigin="anonymous" class="w-full h-full object-cover z-20" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="absolute inset-0 z-10 flex items-center justify-center text-[#2b71b8] font-bold text-xl bg-[#fddf31]" style="display:none;">${abbr}</span>`;
+                        try {
+                            const res = await fetch(imgSrc);
+                            if (res.ok) {
+                                const blob = await res.blob();
+                                const base64 = await new Promise(r => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => r(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                // Apply rounded-full directly to IMG to avoid clipping bugs
+                                senderImgInside = `<img src="${base64}" class="w-12 h-12 rounded-full object-cover shrink-0 border border-gray-200 relative z-10" style="background-color: #fddf31;">`;
+                            } else {
+                                throw new Error("Fetch failed");
+                            }
+                        } catch (err) {
+                            senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
+                        }
                     } else {
-                        senderImgInside = `<span class="text-[#2b71b8] flex items-center justify-center w-full h-full text-xl font-bold bg-[#fddf31]">${abbr}</span>`;
+                        senderImgInside = `<div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center shrink-0 border border-gray-200 relative z-10"><span class="text-[#2b71b8] font-bold text-lg">${abbr}</span></div>`;
                     }
                 }
                 
+                await document.fonts.ready;
+
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
 
                 // New Card Layout strictly adhering to user instructions:
@@ -1689,9 +1708,7 @@
                             
                             <!-- Header: รูปอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป (แนบชิด) -->
                             <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
-                                <div class="w-12 h-12 rounded-full overflow-hidden ${isAnonymous ? 'bg-slate-700' : 'bg-[#fddf31]'} border border-gray-200 relative flex items-center justify-center shrink-0">
-                                    ${senderImgInside}
-                                </div>
+                                ${senderImgInside}
                                 <div class="flex flex-col justify-center min-w-0 flex-1">
                                     <span class="font-extrabold text-[#2b71b8] text-[16px] leading-tight" style="word-break: break-word;">${displayName}</span>
                                     <span class="text-[10px] text-gray-500 mt-0.5 flex items-center">
@@ -1709,7 +1726,7 @@
                                         <div class="text-[#2b71b8] text-[14px] font-medium leading-relaxed whitespace-pre-wrap break-words pl-5 pr-1 pb-1 relative z-10">${msg.content.trim()}</div>
                                     </div>
                                 ` : `
-                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 border border-gray-100 flex items-center justify-center gap-3 shadow-sm" style="box-sizing: border-box;">
+                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 border border-gray-100 flex items-center justify-start gap-3 shadow-sm" style="box-sizing: border-box;">
                                         <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shadow-inner shrink-0">
                                             <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
                                         </div>
@@ -1727,85 +1744,60 @@
                 `;
                 
                 const offscreenContainer = document.createElement('div');
-                offscreenContainer.style.position = 'absolute'; // Changed from fixed to prevent rendering bugs on some mobiles
+                offscreenContainer.style.position = 'absolute'; 
                 offscreenContainer.style.top = '-9999px';
                 offscreenContainer.style.left = '-9999px';
                 offscreenContainer.style.zIndex = '-100';
                 offscreenContainer.innerHTML = cardHtml;
                 document.body.appendChild(offscreenContainer);
 
-                // Show Swal Loading first
-                glassSwal.fire({
-                    title: 'กำลังเตรียมรูปภาพ...',
-                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4"></i>',
-                    showConfirmButton: false,
-                    allowOutsideClick: false
-                });
-
-                const cardToCapture = offscreenContainer.querySelector('#capture-card');
-
-                // Delay to allow images to load
-                setTimeout(async () => {
-                    try {
-                        // Ensure images are loaded
-                        const images = cardToCapture.querySelectorAll('img');
-                        await Promise.all(Array.from(images).map(img => {
-                            if (img.complete) return Promise.resolve();
-                            return new Promise(resolve => {
-                                img.onload = resolve;
-                                img.onerror = resolve;
-                            });
-                        }));
-
-                        const dataUrl = await htmlToImage.toPng(cardToCapture, {
-                            quality: 1,
-                            pixelRatio: 3,
-                            useCORS: true,
-                            // Filter out external stylesheets like FontAwesome that cause SecurityErrors
-                            filter: (node) => {
-                                if (node.tagName === 'LINK' && node.rel === 'stylesheet' && node.href.includes('font-awesome')) {
-                                    return false; 
-                                }
-                                return true;
-                            },
-                            style: {
-                                transform: 'none',
-                                margin: '0',
+                try {
+                    await new Promise(r => setTimeout(r, 100));
+                    
+                    const cardToCapture = offscreenContainer.querySelector('#capture-card');
+                    const dataUrl = await htmlToImage.toPng(cardToCapture, {
+                        quality: 1,
+                        pixelRatio: 3,
+                        filter: (node) => {
+                            if (node.tagName === 'LINK' && node.rel === 'stylesheet' && node.href && node.href.includes('font-awesome')) {
+                                return false; 
                             }
-                        });
-                        
-                        document.body.removeChild(offscreenContainer);
+                            return true;
+                        },
+                        style: { transform: 'none', margin: '0' }
+                    });
+                    
+                    document.body.removeChild(offscreenContainer);
 
-                        // Show preview and download button
-                        glassSwal.fire({
-                            title: 'พรีวิว',
-                            html: `
-                                <div class="flex justify-center my-2 rounded-[2rem] shadow-xl overflow-hidden bg-transparent mx-auto" style="max-width: 340px;">
-                                    <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[2rem]" alt="Preview">
-                                </div>
-                                <div class="mt-5 flex flex-wrap justify-center gap-2">
-                                    <button onclick="app.triggerDownload()" class="flex-1 py-3 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
-                                        <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg> บันทึกรูป
-                                    </button>
-                                    <button onclick="app.shareMessageText('${msg.id}')" class="flex-1 py-3 px-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
-                                        <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96s-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.9-.7 11.9c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.9 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg> แชร์
-                                    </button>
-                                </div>
-                            `,
-                            showConfirmButton: false,
-                            showCloseButton: true,
-                            customClass: {
-                                popup: 'rounded-[2.5rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-md bg-white/95 px-3 py-6 sm:px-5',
-                                title: 'text-primary font-extrabold text-xl mb-1 pb-0'
-                            }
-                        });
+                    // Show exactly the pre-rendered image as the preview
+                    glassSwal.fire({
+                        title: 'พรีวิว',
+                        html: `
+                            <div class="flex justify-center my-2 rounded-[2rem] shadow-[0_5px_20px_rgba(0,0,0,0.15)] overflow-hidden bg-transparent mx-auto" style="max-width: 340px;">
+                                <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[2rem]" alt="Preview">
+                            </div>
+                            <div class="mt-5 flex flex-wrap justify-center gap-2">
+                                <button onclick="app.triggerDownload()" class="flex-1 py-3 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
+                                    <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg> บันทึกรูป
+                                </button>
+                                <button onclick="app.shareMessageText('${msg.id}')" class="flex-1 py-3 px-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
+                                    <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96s-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.9-.7 11.9c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.9 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg> แชร์
+                                </button>
+                            </div>
+                        `,
+                        showConfirmButton: false,
+                        showCloseButton: true,
+                        customClass: {
+                            popup: 'rounded-[2.5rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-md bg-white/95 px-3 py-6 sm:px-5',
+                            title: 'text-primary font-extrabold text-xl mb-1 pb-0'
+                        }
+                    });
 
-                    } catch (err) {
-                        console.error("Capture error:", err);
-                        if(document.body.contains(offscreenContainer)) document.body.removeChild(offscreenContainer);
-                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างรูปภาพพรีวิวได้ กรุณาลองใหม่อีกครั้ง', 'error');
-                    }
-                }, 800); // Increased delay slightly to ensure font is completely skipped/applied
+                } catch (err) {
+                    console.error("Capture error:", err);
+                    if(document.body.contains(offscreenContainer)) document.body.removeChild(offscreenContainer);
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างรูปภาพพรีวิวได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                }
             },
 
             triggerDownload: function() {
