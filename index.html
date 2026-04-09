@@ -1827,14 +1827,15 @@
             openSharePreview: async function(msgId) {
                 glassSwal.fire({
                     title: 'กำลังเตรียมรูปภาพ...',
-                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-500">กรุณารอสักครู่...</p></div>',
+                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-600 font-bold">กำลังประมวลผลรูปภาพและแบบอักษร...</p><p class="text-[10px] text-gray-400 mt-1">ตรวจสอบความสมบูรณ์ 100% ก่อนแสดงผล</p></div>',
                     showConfirmButton: false,
                     allowOutsideClick: false
                 });
 
                 // Ensure font is fully loaded
                 try {
-                    await document.fonts.load('12px "Prompt"');
+                    await document.fonts.load('400 16px "Prompt"');
+                    await document.fonts.load('800 16px "Prompt"');
                     await document.fonts.ready;
                 } catch(e) { console.warn("Font loading wait failed"); }
 
@@ -1935,8 +1936,18 @@
                         return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
                     }));
 
+                    // Force browser reflow to ensure styles are applied
+                    void cardToCapture.offsetWidth;
+
+                    // WARM-UP RENDER: 
+                    // html-to-image often misses fonts or external assets on the very first render in Safari/iOS.
+                    // Doing a dummy render first forces the browser to fetch and cache everything in the SVG context.
+                    try {
+                        await htmlToImage.toCanvas(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 0.5 });
+                    } catch (e) { console.warn('Warmup render skipped'); }
+
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                    await new Promise(r => setTimeout(r, 800));
+                    await new Promise(r => setTimeout(r, 1200)); // Give it time to fully settle
 
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
