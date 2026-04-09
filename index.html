@@ -113,7 +113,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
-            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -623,7 +622,6 @@
                 return "คน";
             },
 
-            // เพิ่ม crossorigin="anonymous" เพื่อช่วยเรื่อง html-to-image
             renderImage: function(src, altText, extraClass = "") {
                 const isLoaded = this.imageCache[src];
                 return `
@@ -1665,122 +1663,146 @@
                 let senderImgInside = '';
                 const abbr = this.getAbbr(msg.from.name);
                 
-                // รูปภาพโปรไฟล์จะถูกโหลดผ่าน renderImage ซึ่งถูกฝัง crossorigin="anonymous" ให้แล้ว
                 if (isAnonymous) {
-                    // ใช้ Inline SVG แทน FontAwesome ป้องกัน CORS issue ตอนเซฟรูป
                     senderImgInside = `<svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>`;
                 } else {
                     const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
-                    senderImgInside = sender ? 
-                        `${app.renderImage(`${GITHUB_IMG_BASE_URL}/${sender.id}.png`, msg.from.name)}<span class="fallback-name absolute inset-0 z-10 hidden flex-center-all text-primary font-bold text-lg bg-secondary">${abbr}</span>` : 
-                        `<span class="text-primary flex-center-all w-full h-full text-lg font-bold bg-secondary">${abbr}</span>`;
+                    if (sender) {
+                        const imgSrc = `${GITHUB_IMG_BASE_URL}/${sender.id}.png`;
+                        senderImgInside = `<img src="${imgSrc}" crossorigin="anonymous" class="w-full h-full object-cover z-20" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="absolute inset-0 z-10 flex items-center justify-center text-[#2b71b8] font-bold text-xl bg-[#fddf31]" style="display:none;">${abbr}</span>`;
+                    } else {
+                        senderImgInside = `<span class="text-[#2b71b8] flex items-center justify-center w-full h-full text-xl font-bold bg-[#fddf31]">${abbr}</span>`;
+                    }
                 }
                 
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
 
-                // โครงสร้างหน้าพรีวิวให้ตรงตามที่ขอดู (แบบเดียวกับกล่องข้อความแต่รูปอยู่ขวา ชื่อซ้าย ไม่มีกรอบสีน้ำเงินใหญ่)
+                // สร้าง HTML สำหรับดึงรูปภาพแบบ Off-screen (ซ่อนไว้จากหน้าจอ)
+                const offscreenContainer = document.createElement('div');
+                offscreenContainer.style.position = 'fixed';
+                offscreenContainer.style.top = '-9999px';
+                offscreenContainer.style.left = '-9999px';
+                offscreenContainer.style.width = '380px'; 
+                offscreenContainer.style.padding = '20px'; 
+                offscreenContainer.style.background = 'transparent';
+                
                 const cardHtml = `
-                    <div id="capture-card" class="bg-white w-full max-w-sm mx-auto text-left relative overflow-hidden" style="font-family: 'Prompt', sans-serif; border-radius: 1.5rem;">
-                        <div class="p-6 relative flex flex-col">
-                            
-                            <!-- รูปผู้ส่งอยู่ขวา ชื่ออยู่ซ้าย -->
-                            <div class="flex items-center justify-between gap-3 mb-4">
-                                <div class="flex flex-col min-w-0 flex-1">
-                                    <span class="font-extrabold text-[#2b71b8] text-lg truncate block leading-tight">${displayName}</span>
-                                    <span class="text-[10px] text-gray-500 mt-0.5 flex items-center">
-                                        <svg class="w-3 h-3 fill-current mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
-                                        ${dateStr}
-                                    </span>
-                                </div>
-                                <div class="w-12 h-12 rounded-full overflow-hidden ${isAnonymous ? 'bg-slate-700' : 'bg-[#fddf31]'} border-2 border-white relative flex items-center justify-center shadow-sm shrink-0">
-                                    ${senderImgInside}
-                                </div>
+                    <div id="capture-card" class="bg-white rounded-[2.5rem] border-[5px] border-[#2b71b8] p-7 shadow-lg w-[340px] flex flex-col relative mx-auto" style="font-family: 'Prompt', sans-serif; box-sizing: border-box;">
+                        
+                        <!-- Header: รูปอยู่ซ้าย ชื่ออยู่ขวา -->
+                        <div class="flex items-center gap-4 border-b-2 border-gray-100 pb-5">
+                            <div class="w-16 h-16 rounded-full overflow-hidden bg-[#fddf31] flex items-center justify-center shrink-0 shadow-sm relative z-10 border border-gray-100">
+                                ${senderImgInside}
                             </div>
-                            
-                            <!-- ข้อความอยู่ด้านล่าง แบบใสๆ -->
+                            <div class="flex flex-col min-w-0 flex-1">
+                                <span class="font-extrabold text-[#2b71b8] text-[20px] leading-tight truncate block w-full text-left">${displayName}</span>
+                                <span class="text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 justify-start">
+                                    <svg class="w-3 h-3 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+                                    ${dateStr}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="mt-6 relative">
                             ${msg.type === 'text' ? `
-                                <div class="w-full text-[#2b71b8] whitespace-pre-wrap break-words font-medium relative text-[15px]" style="line-height: 1.6;">
-                                    <svg class="absolute -top-1 -left-2 w-5 h-5 text-[#2b71b8]/20 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 216C0 149.7 53.7 96 120 96h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320 288 216zm256 0c0-66.3 53.7-120 120-120h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H320c-35.3 0-64-28.7-64-64V320 288 216z"/></svg>
-                                    <div class="pl-4 pt-4 relative z-10 leading-relaxed">${msg.content.trim()}</div>
+                                <div class="bg-[#f8f9fa] rounded-[1.5rem] p-5 pt-8 relative border border-gray-100 w-full" style="box-sizing: border-box;">
+                                    <svg class="absolute top-4 left-4 w-6 h-6 text-[#2b71b8]/20 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 216C0 149.7 53.7 96 120 96h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320 288 216zm256 0c0-66.3 53.7-120 120-120h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H320c-35.3 0-64-28.7-64-64V320 288 216z"/></svg>
+                                    <div class="text-[#2b71b8] text-[15px] font-medium leading-relaxed whitespace-pre-wrap break-words mt-1 w-full text-left" style="word-break: break-word;">${msg.content.trim()}</div>
                                 </div>
                             ` : `
-                                <div class="w-full py-4 flex items-center justify-start gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shadow-inner shrink-0">
-                                        <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
+                                <div class="bg-[#f8f9fa] rounded-[1.5rem] p-4 border border-gray-100 flex items-center justify-center gap-3 w-full" style="box-sizing: border-box;">
+                                    <div class="w-12 h-12 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8]">
+                                        <svg class="w-5 h-5 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
                                     </div>
-                                    <span class="font-bold text-[#2b71b8] text-sm truncate">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
+                                    <span class="font-bold text-[#2b71b8] text-base">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
                                 </div>
                             `}
-                            
-                            <div class="mt-6 flex items-center justify-center opacity-30 gap-1.5 border-t border-gray-100 pt-3">
-                                <span class="text-[9px] font-black text-slate-800 tracking-[0.2em] uppercase">SONG SIANG</span>
-                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div class="mt-8 mb-2 flex justify-center items-center opacity-40 text-center">
+                            <span class="text-[11px] font-black text-slate-800 tracking-[0.3em] uppercase">SONG SIANG</span>
                         </div>
                     </div>
                 `;
+                
+                offscreenContainer.innerHTML = cardHtml;
+                document.body.appendChild(offscreenContainer);
 
+                // แสดง Swal Loading ก่อน
                 glassSwal.fire({
-                    title: 'พรีวิว',
-                    html: `
-                        <div class="flex justify-center my-2 rounded-[1.5rem] shadow-[0_0_15px_rgba(0,0,0,0.1)] border-2 border-[#2b71b8] p-1 bg-gray-50 overflow-hidden">
-                            ${cardHtml}
-                        </div>
-                        <div class="mt-5 flex flex-wrap justify-center gap-2">
-                            <button onclick="app.downloadMessageImage(this)" class="flex-1 py-2.5 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 min-w-[120px]">
-                                <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M0 96C0 60.7 28.7 32 64 32H448c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V96zM323.8 202.5c-4.5-6.6-11.9-10.5-19.8-10.5s-15.4 3.9-19.8 10.5l-87 127.6L170.7 297c-4.6-5.7-11.5-9-18.7-9s-14.2 3.3-18.7 9l-64 80c-5.8 7.2-6.9 17.1-2.9 25.4s12.4 13.6 21.6 13.6h96 32H424c8.9 0 17.1-4.9 21.2-12.8s3.6-17.4-1.4-24.7l-120-176zM112 192a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"/></svg> บันทึกรูป
-                            </button>
-                            <button onclick="app.shareMessageText('${msg.id}')" class="flex-1 py-2.5 px-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1 min-w-[120px]">
-                                <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96s-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.9-.7 11.9c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.9 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg> แชร์
-                            </button>
-                        </div>
-                    `,
+                    title: 'กำลังเตรียมรูปภาพ...',
+                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4"></i>',
                     showConfirmButton: false,
-                    showCloseButton: true,
-                    customClass: {
-                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-md bg-white/95 px-4 py-6',
-                        title: 'text-primary font-bold text-lg mb-0 pb-0'
-                    }
+                    allowOutsideClick: false
                 });
+
+                const cardToCapture = offscreenContainer.querySelector('#capture-card');
+
+                // รอให้ Layout สร้างเสร็จก่อนค่อยแคปรูป (หน่วงเวลา 500ms)
+                setTimeout(async () => {
+                    try {
+                        const dataUrl = await htmlToImage.toPng(cardToCapture, {
+                            quality: 1,
+                            pixelRatio: 3,
+                            useCORS: true,
+                            skipFonts: true, // ข้ามฟอนต์แก้ปัญหา CORS บนมือถือ
+                            style: {
+                                transform: 'none',
+                                margin: '0',
+                            }
+                        });
+                        
+                        document.body.removeChild(offscreenContainer);
+
+                        // โชว์หน้าพรีวิวพร้อมปุ่มดาวน์โหลด
+                        glassSwal.fire({
+                            title: 'พรีวิว',
+                            html: `
+                                <div class="flex justify-center my-2 rounded-[2.5rem] shadow-[0_5px_20px_rgba(0,0,0,0.15)] overflow-hidden bg-transparent mx-auto" style="max-width: 340px;">
+                                    <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[2.5rem]" alt="Preview">
+                                </div>
+                                <div class="mt-5 flex flex-wrap justify-center gap-2">
+                                    <button onclick="app.triggerDownload()" class="flex-1 py-3 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
+                                        <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg> บันทึกรูป
+                                    </button>
+                                    <button onclick="app.shareMessageText('${msg.id}')" class="flex-1 py-3 px-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
+                                        <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M352 224c53 0 96-43 96-96s-43-96-96-96s-96 43-96 96c0 4 .2 8 .7 11.9l-94.1 47C145.4 170.2 121.9 160 96 160c-53 0-96 43-96 96s43 96 96 96c25.9 0 49.4-10.2 66.6-26.9l94.1 47c-.5 3.9-.7 7.9-.7 11.9c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-25.9 0-49.4 10.2-66.6 26.9l-94.1-47c.5-3.9 .7-7.9 .7-11.9s-.2-8-.7-11.9l94.1-47C302.6 213.8 326.1 224 352 224z"/></svg> แชร์
+                                    </button>
+                                </div>
+                            `,
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            customClass: {
+                                popup: 'rounded-[2.5rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-md bg-white/95 px-3 py-6 sm:px-5',
+                                title: 'text-primary font-extrabold text-xl mb-1 pb-0'
+                            }
+                        });
+
+                    } catch (err) {
+                        console.error("Capture error:", err);
+                        document.body.removeChild(offscreenContainer);
+                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างรูปภาพพรีวิวได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                    }
+                }, 500); // ดีเลย์ให้รูปและ CSS โหลดเสร็จ
             },
 
-            downloadMessageImage: async function(btnElement) {
-                const card = document.getElementById('capture-card');
-                if (!card) return;
+            triggerDownload: function() {
+                const img = document.getElementById('generated-preview-img');
+                if (!img) return;
                 
-                const originalHtml = btnElement.innerHTML;
-                btnElement.innerHTML = '<svg class="w-4 h-4 fill-current animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M304 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zm0 416a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM48 304a48 48 0 1 0 0-96 48 48 0 1 0 0 96zm464-48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM142.9 437A48 48 0 1 0 75 369.1 48 48 0 1 0 142.9 437zm0-294.2A48 48 0 1 0 75 75a48 48 0 1 0 67.9 67.9zM369.1 437A48 48 0 1 0 437 369.1 48 48 0 1 0 369.1 437z"/></svg> กำลังบันทึก...';
-                btnElement.disabled = true;
-
-                try {
-                    // ใช้ skipFonts เพื่อแก้ปัญหา CORS (Failed to read cssRules) 100%
-                    const dataUrl = await htmlToImage.toPng(card, {
-                        quality: 1,
-                        pixelRatio: 3, 
-                        skipFonts: true, 
-                        style: {
-                            transform: 'none', 
-                            margin: '0',
-                        }
-                    });
-                    
-                    const link = document.createElement('a');
-                    link.download = `SongSiang_${Date.now()}.png`;
-                    link.href = dataUrl;
-                    link.click();
-                    
-                    glassSwal.fire({
-                        iconHtml: '<svg class="w-16 h-16 fill-current text-green-500 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>',
-                        title: 'บันทึกรูปภาพสำเร็จ!',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } catch (err) {
-                    console.error("Capture error:", err);
-                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกรูปภาพได้', 'error');
-                } finally {
-                    btnElement.innerHTML = originalHtml;
-                    btnElement.disabled = false;
-                }
+                const link = document.createElement('a');
+                link.download = `SongSiang_${Date.now()}.png`;
+                link.href = img.src;
+                link.click();
+                
+                glassSwal.fire({
+                    iconHtml: '<svg class="w-16 h-16 fill-current text-green-500 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>',
+                    title: 'บันทึกรูปภาพสำเร็จ!',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
 
             shareMessageText: async function(msgId) {
@@ -1888,21 +1910,10 @@
                         } else {
                             badgeContent = `<span class="truncate text-[10px] font-bold text-primary max-w-[80px]">${msg.content.trim()}</span>`;
                         }
-                        
-                        let recipientBadge = '';
-                        const toCount = msg.to && Array.isArray(msg.to) ? msg.to.length : 0;
-                        const isEveryone = toCount >= predefinedUsers.length;
-                        
-                        if (isEveryone) {
-                            recipientBadge = `<div onclick="event.stopPropagation(); app.showRecipientList('${msg.id}')" class="absolute -top-1 -left-2 bg-primary/90 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full border border-white/50 shadow-lg z-40 hover:scale-110 transition-transform font-bold cursor-pointer whitespace-nowrap"><i class="fa-solid fa-users mr-1"></i>ทุกคน</div>`;
-                        } else if (toCount > 1) {
-                            recipientBadge = `<div onclick="event.stopPropagation(); app.showRecipientList('${msg.id}')" class="absolute -top-1 -left-2 bg-primary/90 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full border border-white/50 shadow-lg z-40 hover:scale-110 transition-transform font-bold cursor-pointer whitespace-nowrap"><i class="fa-solid fa-user mr-1"></i>${toCount} คน</div>`;
-                        }
 
                         msgsHTML += `
                         <div class="flex justify-center float-anim relative" style="animation-duration: ${animDuration}s; animation-delay: ${animDelay}s; transform: translate(${randomX}px, ${randomY}px); margin: ${marginT}px ${marginR}px ${marginB}px ${marginL}px; z-index: ${zIndex};">
                             <div onclick="app.viewFeedMessage('${msg.id}')" class="relative rounded-full shadow-2xl border-2 border-white/60 ${isAnonymous ? 'bg-slate-700' : 'bg-secondary'} group transform transition-transform hover:scale-110 cursor-pointer" style="width: ${baseSize}px; height: ${baseSize}px;">
-                                ${recipientBadge}
                                 <div class="w-full h-full rounded-full overflow-hidden relative">
                                     ${senderImg}
                                 </div>
