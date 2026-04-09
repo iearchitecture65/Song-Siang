@@ -113,7 +113,6 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fddf31;
             border-radius: 50%;
-            /* ให้ยืดหยุ่นตามความกว้างของกรอบ แต่มีขีดจำกัดเพื่อไม่ให้เล็กหรือใหญ่เกินไป */
             width: 40%;
             height: 40%;
             min-width: 12px;
@@ -192,6 +191,12 @@
                     </div>
                     <span class="text-[10px] font-medium whitespace-nowrap">ตั้งค่า</span>
                 </button>
+                <button id="btnQuotaDesk" onclick="app.fetchQuota()" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
+                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
+                        <i class="fa-solid fa-chart-pie text-xl"></i>
+                    </div>
+                    <span class="text-[10px] font-medium whitespace-nowrap">โควต้า</span>
+                </button>
                 <button id="btnFeedDesk" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
                     <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
                         <i class="fa-solid fa-earth-asia text-xl"></i>
@@ -230,6 +235,9 @@
                 </button>
                 <button id="btnAdminMob" onclick="app.showView('settings')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
                     <i class="fa-solid fa-gear w-5 text-center text-white"></i> ตั้งค่าระบบ
+                </button>
+                <button id="btnQuotaMob" onclick="app.fetchQuota()" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
+                    <i class="fa-solid fa-chart-pie w-5 text-center text-white"></i> โควต้าส่งเมล
                 </button>
                 <button id="btnFeedMob" onclick="app.showView('feed')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
                     <i class="fa-solid fa-earth-asia w-5 text-center text-white"></i> ภาพรวม
@@ -390,6 +398,10 @@
             watchdogTimer: null,
             
             isLoadingData: true,
+
+            // Quota Data
+            quotaData: null,
+            isFetchingQuota: false,
 
             startWatchdog: function(ms = 5000) {
                 if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
@@ -685,6 +697,8 @@
                         document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
                         document.getElementById('btnUsersDesk').classList.toggle('hidden', !showAdmin);
                         document.getElementById('btnUsersMob').classList.toggle('hidden', !showAdmin);
+                        document.getElementById('btnQuotaDesk').classList.toggle('hidden', !showAdmin);
+                        document.getElementById('btnQuotaMob').classList.toggle('hidden', !showAdmin);
                         
                         document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
                         document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
@@ -707,6 +721,7 @@
                     else if(viewName === 'home') { root.innerHTML = this.renderHome(); this.updateFAB(); }
                     else if(viewName === 'compose') { root.innerHTML = this.renderCompose(); this.updateFAB(); }
                     else if(viewName === 'sent_history') { root.innerHTML = this.renderSentHistory(); this.updateFAB(); }
+                    else if(viewName === 'quota') { root.innerHTML = this.renderQuota(); this.updateFAB(); }
                     else if(viewName === 'inbox') { 
                         if (!(this.profile.isPredefined || this.profile.isAdmin)) { this.showView('home'); return; }
                         this.adminSearchQuery = ''; 
@@ -842,6 +857,113 @@
                     console.error("Messages listener error:", error);
                     this.isLoadingData = false;
                 });
+            },
+            
+            fetchQuota: async function() {
+                this.isFetchingQuota = true;
+                this.showView('quota'); 
+                try {
+                    const res = await fetch('https://script.google.com/macros/s/AKfycbxyIsym0jDtFwIzwpuuaqzre3UGF2Ws0S67aFf74EqaOY7VgKPJTyVCzL_NO7PZa4AD/exec');
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        if (data.sentDetails && Array.isArray(data.sentDetails)) {
+                            data.sentDetails.sort((a, b) => b.count - a.count);
+                        }
+                        this.quotaData = data;
+                    } else {
+                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลโควต้าได้', 'error');
+                    }
+                } catch (e) {
+                    glassSwal.fire('ข้อผิดพลาด', 'เกิดปัญหาการเชื่อมต่อเครือข่าย', 'error');
+                }
+                this.isFetchingQuota = false;
+                if (this.currentView === 'quota') this.showView('quota'); 
+            },
+            
+            renderQuota: function() {
+                if (this.isFetchingQuota) {
+                    return `
+                    <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[50vh] mb-20 animate-slide-up flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-circle-notch fa-spin text-5xl text-white/40 mb-4"></i>
+                        <p class="text-white font-bold text-lg">กำลังโหลดข้อมูลโควต้า...</p>
+                    </div>`;
+                }
+
+                if (!this.quotaData) {
+                    setTimeout(() => this.fetchQuota(), 0);
+                    return `
+                    <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[50vh] mb-20 animate-slide-up flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-circle-notch fa-spin text-5xl text-white/40 mb-4"></i>
+                        <p class="text-white font-bold text-lg">เตรียมข้อมูลโควต้า...</p>
+                    </div>`;
+                }
+
+                const data = this.quotaData;
+                
+                let detailsHtml = '';
+                if (data.sentDetails && data.sentDetails.length > 0) {
+                    data.sentDetails.forEach((item, index) => {
+                        const studentId = item.email.split('@')[0];
+                        const user = predefinedUsers.find(u => u.studentId === studentId);
+                        const displayName = user ? user.name : studentId;
+                        const fullName = user ? user.fullName : item.email;
+
+                        detailsHtml += `
+                            <div class="bg-white/60 p-4 rounded-2xl flex items-center justify-between border border-white/40 hover:bg-white/80 transition-all">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                        ${index + 1}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="font-extrabold text-primary text-sm truncate">${displayName}</div>
+                                        <div class="text-[10px] text-primary/70 truncate">${fullName}</div>
+                                    </div>
+                                </div>
+                                <div class="bg-secondary text-primary font-bold px-3 py-1 rounded-full text-xs shrink-0 shadow-sm border border-white">
+                                    ${item.count} ครั้ง
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    detailsHtml = `<p class="text-center text-white/70 py-4">ไม่มีประวัติการส่ง</p>`;
+                }
+
+                return `
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[75vh] mb-20 animate-slide-up flex flex-col">
+                    <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
+                        <div class="flex items-center">
+                            <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
+                                <i class="fa-solid fa-arrow-left text-xl"></i>
+                            </button>
+                            <div>
+                                <h2 class="text-xl font-extrabold text-white drop-shadow-md">โควต้าส่งอีเมล</h2>
+                                <p class="text-blue-100 text-xs font-bold">ข้อมูลการส่ง OTP ยืนยันตัวตน</p>
+                            </div>
+                        </div>
+                        <button onclick="app.fetchQuota()" class="bg-white/20 hover:bg-white/40 text-white p-3 rounded-2xl shadow-sm transition-all">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-gradient-to-br from-blue-500 to-primary p-5 rounded-[1.5rem] shadow-inner text-white border border-white/20 flex flex-col justify-center items-center relative overflow-hidden">
+                            <i class="fa-solid fa-envelope-open-text absolute -right-4 -bottom-4 text-6xl opacity-10"></i>
+                            <span class="text-xs font-medium opacity-80 mb-1 text-center">โควต้าคงเหลือวันนี้</span>
+                            <span class="text-4xl font-black drop-shadow-md">${data.remainingQuota}</span>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-500 to-emerald-600 p-5 rounded-[1.5rem] shadow-inner text-white border border-white/20 flex flex-col justify-center items-center relative overflow-hidden">
+                            <i class="fa-solid fa-users absolute -left-2 -bottom-4 text-6xl opacity-10"></i>
+                            <span class="text-xs font-medium opacity-80 mb-1 text-center">จำนวนผู้ใช้งาน (ที่ไม่ซ้ำ)</span>
+                            <span class="text-4xl font-black drop-shadow-md">${data.totalUniqueRecipients}</span>
+                        </div>
+                    </div>
+
+                    <h3 class="text-white font-bold text-sm mb-3 pl-2"><i class="fa-solid fa-ranking-star mr-2 text-secondary"></i>อันดับการขอรหัส OTP</h3>
+                    <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                        ${detailsHtml}
+                    </div>
+                </div>`;
             },
 
             renderSiteClosed: function() {
@@ -1513,7 +1635,7 @@
                     recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
                 }
 
-                const shareBtn = `<div class="mt-4 text-center border-t border-gray-200 pt-3"><button onclick="app.openSharePreview('${msg.id}')" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold shadow-sm transition"><i class="fa-solid fa-share-nodes mr-1.5"></i> แชร์ / บันทึกรูปภาพ</button></div>`;
+                const shareBtn = `<div class="mt-4 text-center border-t border-gray-200 pt-3"><button onclick="app.openSharePreview('${msg.id}')" class="text-[11px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full font-bold shadow-sm transition"><i class="fa-solid fa-share-nodes mr-1.5"></i>แชร์ / บันทึกรูปภาพ</button></div>`;
 
                 if (msg.type === 'audio') {
                     glassSwal.fire({
@@ -1577,12 +1699,12 @@
                             
                             <!-- ข้อความอยู่ด้านล่าง -->
                             ${msg.type === 'text' ? `
-                                <div class="w-full p-4 bg-white/80 rounded-2xl text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-sm relative text-sm sm:text-base" style="line-height: 1.6;">
+                                <div class="w-full p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative text-[15px] sm:text-base">
                                     <svg class="absolute top-3 left-3 w-5 h-5 text-primary/20 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 216C0 149.7 53.7 96 120 96h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320 288 216zm256 0c0-66.3 53.7-120 120-120h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H320c-35.3 0-64-28.7-64-64V320 288 216z"/></svg>
-                                    <div class="pl-6 pt-1 relative z-10">${msg.content.trim()}</div>
+                                    <div class="pl-6 pt-1 relative z-10 leading-relaxed">${msg.content.trim()}</div>
                                 </div>
                             ` : `
-                                <div class="w-full p-3 bg-white/80 rounded-2xl border border-white/50 flex items-center justify-center gap-3 shadow-sm">
+                                <div class="w-full p-3 bg-white/70 rounded-2xl border border-white/50 flex items-center justify-center gap-3 shadow-sm">
                                     <div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary shadow-inner shrink-0">
                                         <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
                                     </div>
@@ -1590,10 +1712,8 @@
                                 </div>
                             `}
                             
-                            <div class="mt-4 flex items-center justify-center opacity-40 gap-1.5">
-                                <!-- ใช้ Base64 หรือลิงก์ตรงสำหรับ Logo เพื่อหลีกเลี่ยง CORS ใน html-to-image -->
-                                <img src="LOGO 65.png" class="h-3 grayscale" onerror="this.style.display='none'">
-                                <span class="text-[8px] font-bold text-slate-800 tracking-wider uppercase">Song Siang</span>
+                            <div class="mt-4 flex items-center justify-center opacity-30 gap-1.5">
+                                <span class="text-[9px] font-black text-slate-800 tracking-[0.2em] uppercase">SONG SIANG</span>
                             </div>
                         </div>
                     </div>
