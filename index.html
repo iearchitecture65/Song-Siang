@@ -1853,16 +1853,25 @@
                 let senderImgInside = '';
                 const abbr = this.getAbbr(msg.from.name);
                 
-                const fetchAsBase64 = async (url) => {
-                    try {
-                        const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
-                        const blob = await response.blob();
-                        return new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result);
-                            reader.readAsDataURL(blob);
-                        });
-                    } catch (e) { return null; }
+                const fetchAsBase64 = (url) => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = () => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                resolve(canvas.toDataURL('image/png'));
+                            } catch (e) {
+                                resolve(null);
+                            }
+                        };
+                        img.onerror = () => resolve(null);
+                        img.src = url;
+                    });
                 };
 
                 if (isAnonymous) {
@@ -1932,7 +1941,7 @@
                     
                     const imgs = cardToCapture.querySelectorAll('img');
                     await Promise.all(Array.from(imgs).map(img => {
-                        if (img.complete) return Promise.resolve();
+                        if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
                         return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
                     }));
 
@@ -1943,7 +1952,7 @@
                     // html-to-image often misses fonts or external assets on the very first render in Safari/iOS.
                     // Doing a dummy render first forces the browser to fetch and cache everything in the SVG context.
                     try {
-                        await htmlToImage.toCanvas(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 0.5 });
+                        await htmlToImage.toPng(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 1 });
                     } catch (e) { console.warn('Warmup render skipped'); }
 
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
