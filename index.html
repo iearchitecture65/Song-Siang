@@ -1664,9 +1664,7 @@
                 let senderImgInside = '';
                 const abbr = this.getAbbr(msg.from.name);
                 
-                // รูปภาพโปรไฟล์จะถูกโหลดผ่าน renderImage ซึ่งถูกฝัง crossorigin="anonymous" ให้แล้ว
                 if (isAnonymous) {
-                    // ใช้ Inline SVG แทน FontAwesome ป้องกัน CORS issue ตอนเซฟรูป
                     senderImgInside = `<svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>`;
                 } else {
                     const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
@@ -1680,59 +1678,63 @@
                 
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
 
-                // โครงสร้างหน้าพรีวิวให้ตรงตามที่ขอดู (แบบเดียวกับกล่องข้อความแต่รูปอยู่ขวา ชื่อซ้าย ไม่มีกรอบสีน้ำเงินใหญ่)
+                // New Card Layout strictly adhering to user instructions:
+                // 1. No shadows on #capture-card to avoid weird artifacts.
+                // 2. Name wraps, doesn't truncate.
+                // 3. Very little white space above/below text, just enough for the quote.
+                // 4. White background, rounded border with primary color.
                 const cardHtml = `
-                    <div id="capture-card" class="bg-white w-full max-w-sm mx-auto text-left relative overflow-hidden" style="font-family: 'Prompt', sans-serif; border-radius: 1.5rem;">
-                        <div class="p-6 relative flex flex-col">
+                    <div id="capture-card" class="bg-white border-[3px] border-[#2b71b8] rounded-[2rem] w-full max-w-sm mx-auto text-left flex flex-col relative overflow-hidden" style="font-family: 'Prompt', sans-serif; box-sizing: border-box; width: 340px; min-height: 200px;">
+                        <div class="p-5 flex flex-col h-full bg-white relative z-10">
                             
-                            <!-- รูปผู้ส่งอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป (แนบชิด) -->
-                            <div class="flex items-center gap-3 mb-4">
-                                <div class="w-12 h-12 rounded-full overflow-hidden bg-secondary border-2 border-white relative flex items-center justify-center shadow-sm shrink-0">
+                            <!-- Header: รูปอยู่ซ้าย ชื่ออยู่ขวาถัดจากรูป (แนบชิด) -->
+                            <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
+                                <div class="w-12 h-12 rounded-full overflow-hidden ${isAnonymous ? 'bg-slate-700' : 'bg-[#fddf31]'} border border-gray-200 relative flex items-center justify-center shrink-0">
                                     ${senderImgInside}
                                 </div>
-                                <div class="flex flex-col justify-center min-w-0">
-                                    <span class="font-extrabold text-[#2b71b8] text-lg block leading-tight truncate" style="max-width: 100%;">${displayName}</span>
+                                <div class="flex flex-col justify-center min-w-0 flex-1">
+                                    <span class="font-extrabold text-[#2b71b8] text-[16px] leading-tight" style="word-break: break-word;">${displayName}</span>
                                     <span class="text-[10px] text-gray-500 mt-0.5 flex items-center">
-                                        <svg class="w-3 h-3 fill-current mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+                                        <svg class="w-3 h-3 fill-current mr-1 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
                                         ${dateStr}
                                     </span>
                                 </div>
                             </div>
                             
-                            <!-- ข้อความอยู่ด้านล่าง แบบใสๆ -->
-                            ${msg.type === 'text' ? `
-                                <div class="w-full text-[#2b71b8] whitespace-pre-wrap break-words font-medium relative text-[14px]" style="line-height: 1.6;">
-                                    <svg class="absolute -top-1 -left-2 w-5 h-5 text-[#2b71b8]/20 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 216C0 149.7 53.7 96 120 96h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320 288 216zm256 0c0-66.3 53.7-120 120-120h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H320c-35.3 0-64-28.7-64-64V320 288 216z"/></svg>
-                                    <div class="pl-4 pt-4 relative z-10 leading-relaxed">${msg.content.trim()}</div>
-                                </div>
-                            ` : `
-                                <div class="w-full py-4 flex items-center justify-start gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shadow-inner shrink-0">
-                                        <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
+                            <!-- Content -->
+                            <div class="relative flex-1 flex flex-col justify-center">
+                                ${msg.type === 'text' ? `
+                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 pt-5 relative border border-gray-100 shadow-sm" style="box-sizing: border-box;">
+                                        <svg class="absolute top-2 left-3 w-4 h-4 text-[#2b71b8]/20 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 216C0 149.7 53.7 96 120 96h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320 288 216zm256 0c0-66.3 53.7-120 120-120h8c17.7 0 32 14.3 32 32s-14.3 32-32 32h-8c-30.9 0-56 25.1-56 56v8h64c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H320c-35.3 0-64-28.7-64-64V320 288 216z"/></svg>
+                                        <div class="text-[#2b71b8] text-[14px] font-medium leading-relaxed whitespace-pre-wrap break-words pl-5 pr-1 pb-1 relative z-10">${msg.content.trim()}</div>
                                     </div>
-                                    <span class="font-bold text-[#2b71b8] text-sm whitespace-nowrap">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
-                                </div>
-                            `}
+                                ` : `
+                                    <div class="w-full bg-[#f8f9fa] rounded-2xl p-4 border border-gray-100 flex items-center justify-center gap-3 shadow-sm" style="box-sizing: border-box;">
+                                        <div class="w-10 h-10 rounded-full bg-[#fddf31] flex items-center justify-center text-[#2b71b8] shadow-inner shrink-0">
+                                            <svg class="w-4 h-4 fill-current ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
+                                        </div>
+                                        <span class="font-bold text-[#2b71b8] text-sm">คลิปเสียง (${msg.audioDuration || '?'} วิ)</span>
+                                    </div>
+                                `}
+                            </div>
                             
-                            <div class="mt-6 flex items-center justify-center opacity-30 gap-1.5 border-t border-gray-100 pt-3">
-                                <span class="text-[9px] font-black text-slate-800 tracking-[0.2em] uppercase">SONG SIANG</span>
+                            <!-- Footer -->
+                            <div class="mt-4 flex items-center justify-center opacity-30 text-center">
+                                <span class="text-[9px] font-black text-slate-800 tracking-[0.3em] uppercase">SONG SIANG</span>
                             </div>
                         </div>
                     </div>
                 `;
                 
                 const offscreenContainer = document.createElement('div');
-                offscreenContainer.style.position = 'fixed';
+                offscreenContainer.style.position = 'absolute'; // Changed from fixed to prevent rendering bugs on some mobiles
                 offscreenContainer.style.top = '-9999px';
                 offscreenContainer.style.left = '-9999px';
-                offscreenContainer.style.width = '380px'; 
-                offscreenContainer.style.padding = '20px'; 
-                offscreenContainer.style.background = 'transparent';
-                
+                offscreenContainer.style.zIndex = '-100';
                 offscreenContainer.innerHTML = cardHtml;
                 document.body.appendChild(offscreenContainer);
 
-                // แสดง Swal Loading ก่อน
+                // Show Swal Loading first
                 glassSwal.fire({
                     title: 'กำลังเตรียมรูปภาพ...',
                     html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4"></i>',
@@ -1742,13 +1744,30 @@
 
                 const cardToCapture = offscreenContainer.querySelector('#capture-card');
 
-                // รอให้ Layout สร้างเสร็จก่อนค่อยแคปรูป (หน่วงเวลา 500ms)
+                // Delay to allow images to load
                 setTimeout(async () => {
                     try {
+                        // Ensure images are loaded
+                        const images = cardToCapture.querySelectorAll('img');
+                        await Promise.all(Array.from(images).map(img => {
+                            if (img.complete) return Promise.resolve();
+                            return new Promise(resolve => {
+                                img.onload = resolve;
+                                img.onerror = resolve;
+                            });
+                        }));
+
                         const dataUrl = await htmlToImage.toPng(cardToCapture, {
                             quality: 1,
                             pixelRatio: 3,
                             useCORS: true,
+                            // Filter out external stylesheets like FontAwesome that cause SecurityErrors
+                            filter: (node) => {
+                                if (node.tagName === 'LINK' && node.rel === 'stylesheet' && node.href.includes('font-awesome')) {
+                                    return false; 
+                                }
+                                return true;
+                            },
                             style: {
                                 transform: 'none',
                                 margin: '0',
@@ -1757,12 +1776,12 @@
                         
                         document.body.removeChild(offscreenContainer);
 
-                        // โชว์หน้าพรีวิวพร้อมปุ่มดาวน์โหลด
+                        // Show preview and download button
                         glassSwal.fire({
                             title: 'พรีวิว',
                             html: `
-                                <div class="flex justify-center my-2 rounded-[1.5rem] shadow-[0_5px_20px_rgba(0,0,0,0.15)] overflow-hidden bg-transparent mx-auto" style="max-width: 340px;">
-                                    <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[1.5rem]" alt="Preview">
+                                <div class="flex justify-center my-2 rounded-[2rem] shadow-xl overflow-hidden bg-transparent mx-auto" style="max-width: 340px;">
+                                    <img id="generated-preview-img" src="${dataUrl}" class="w-full h-auto block rounded-[2rem]" alt="Preview">
                                 </div>
                                 <div class="mt-5 flex flex-wrap justify-center gap-2">
                                     <button onclick="app.triggerDownload()" class="flex-1 py-3 px-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 min-w-[120px]">
@@ -1783,10 +1802,10 @@
 
                     } catch (err) {
                         console.error("Capture error:", err);
-                        document.body.removeChild(offscreenContainer);
+                        if(document.body.contains(offscreenContainer)) document.body.removeChild(offscreenContainer);
                         glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างรูปภาพพรีวิวได้ กรุณาลองใหม่อีกครั้ง', 'error');
                     }
-                }, 500); // ดีเลย์ให้รูปและ CSS โหลดเสร็จ
+                }, 800); // Increased delay slightly to ensure font is completely skipped/applied
             },
 
             triggerDownload: function() {
