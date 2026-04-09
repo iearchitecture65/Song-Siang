@@ -1827,7 +1827,7 @@
             openSharePreview: async function(msgId) {
                 glassSwal.fire({
                     title: 'กำลังเตรียมรูปภาพ...',
-                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-600 font-bold">กำลังประมวลผลรูปภาพและแบบอักษร...</p><p class="text-[10px] text-gray-400 mt-1">ตรวจสอบความสมบูรณ์ 100% ก่อนแสดงผล</p></div>',
+                    html: '<div class="flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-sm text-gray-600 font-bold">กำลังประมวลผลรูปภาพขั้นสูง...</p><p class="text-[10px] text-gray-400 mt-1">(อาจใช้เวลา 3-4 วินาที เพื่อภาพที่สมบูรณ์ที่สุด)</p></div>',
                     showConfirmButton: false,
                     allowOutsideClick: false
                 });
@@ -1947,17 +1947,25 @@
 
                     // Force browser reflow to ensure styles are applied
                     void cardToCapture.offsetWidth;
+                    await new Promise(r => setTimeout(r, 500)); // Wait for DOM to truly settle
 
-                    // WARM-UP RENDER: 
-                    // html-to-image often misses fonts or external assets on the very first render in Safari/iOS.
-                    // Doing a dummy render first forces the browser to fetch and cache everything in the SVG context.
+                    // WARM-UP RENDER 1: Force cache fetch
                     try {
                         await htmlToImage.toPng(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 1 });
-                    } catch (e) { console.warn('Warmup render skipped'); }
+                    } catch (e) { console.warn('Warmup 1 skipped'); }
 
                     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                    await new Promise(r => setTimeout(r, 1200)); // Give it time to fully settle
+                    await new Promise(r => setTimeout(r, 1000)); // First delay
 
+                    // WARM-UP RENDER 2: Emulate the "second click" automatically
+                    try {
+                        await htmlToImage.toPng(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 2 });
+                    } catch (e) { console.warn('Warmup 2 skipped'); }
+
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    await new Promise(r => setTimeout(r, 1500)); // Second longer delay
+
+                    // FINAL RENDER: Full HD
                     const dataUrl = await htmlToImage.toPng(cardToCapture, {
                         quality: 1,
                         pixelRatio: 3,
