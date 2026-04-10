@@ -454,6 +454,19 @@
                             glassSwal.fire('การเข้าถึงถูกจำกัด', 'บัญชีของคุณถูกระงับการใช้งานกรุณาติดต่อผู้ดูแลระบบ', 'error');
                             this.showView('login');
                         } else {
+                            try {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', this.profile.studentId), {
+                                    lastLogin: Date.now()
+                                }, { merge: true });
+                                
+                                let currentSessionId = localStorage.getItem('currentSessionId');
+                                if (!currentSessionId) {
+                                    const sessionData = { uid: this.profile.studentId, loginAt: Date.now(), logoutAt: null };
+                                    const sessionRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions'), sessionData);
+                                    localStorage.setItem('currentSessionId', sessionRef.id);
+                                }
+                            } catch(e) {}
+
                             this.setupUserStatusListener();
                             this.setupMessagesListener();
                             this.setupUsersListener();
@@ -1653,9 +1666,14 @@
                                 <p class="text-blue-100 text-xs font-bold">ควบคุมการเข้าถึงระบบ</p>
                             </div>
                         </div>
-                        <button onclick="app.exportUsersToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-file-excel text-sm"></i> <span class="hidden sm:inline">โหลดรายชื่อ (.csv)</span>
-                        </button>
+                        <div class="flex gap-2 flex-col sm:flex-row">
+                            <button onclick="app.viewAllHistory()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-sm"></i> <span class="hidden sm:inline">ประวัติรวม</span>
+                            </button>
+                            <button onclick="app.exportUsersToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-excel text-sm"></i> <span class="hidden sm:inline">โหลดรายชื่อ</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="mb-6">
@@ -1896,6 +1914,110 @@
                 } catch (err) {
                     console.error("Error fetching history:", err);
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลประวัติได้', 'error');
+                }
+            },
+
+            viewAllHistory: async function() {
+                glassSwal.fire({
+                    title: 'กำลังโหลดข้อมูล...',
+                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i>',
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+
+                try {
+                    const sessionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions');
+                    const sessionsSnap = await getDocs(sessionsRef);
+                    
+                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    sessions.sort((a, b) => b.loginAt - a.loginAt); 
+                    sessions = sessions.slice(0, 100); // Limit to latest 100 sessions
+                    
+                    let html = `<div class="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar text-left mt-2">`;
+                    html += `<div class="mb-4 text-center"><span class="bg-secondary text-primary font-bold px-3 py-1 rounded-full text-xs shadow-sm">ประวัติล่าสุด (100 รายการ)</span></div>`;
+
+                    if (sessions.length === 0) {
+                        html += `<p class="text-center text-gray-500 py-6 font-medium">ไม่พบประวัติการเข้าใช้งาน</p>`;
+                    } else {
+                        sessions.forEach((s) => {
+                            const loginDate = new Date(s.loginAt).toLocaleString('th-TH');
+                            let durationStr = "ไม่ระบุเวลาออก";
+                            
+                            const userSessions = sessions.filter(ses => ses.uid === s.uid).sort((a, b) => a.loginAt - b.loginAt);
+                            const currentIdx = userSessions.findIndex(ses => ses.id === s.id);
+                            const nextSession = userSessions[currentIdx + 1];
+                            const endTime = s.logoutAt || (nextSession ? nextSession.loginAt : Date.now());
+
+                            const sessionMessages = this.allMessages.filter(m => m.from.id === s.uid && m.timestamp >= s.loginAt && m.timestamp <= endTime);
+                            sessionMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+                            if (s.logoutAt) {
+                                const diffMins = Math.max(1, Math.round((s.logoutAt - s.loginAt) / 60000));
+                                durationStr = `${diffMins} นาที`;
+                            } else if (sessionMessages.length > 0) {
+                                const lastMsgTime = sessionMessages[sessionMessages.length - 1].timestamp;
+                                const diffMins = Math.max(1, Math.round((lastMsgTime - s.loginAt) / 60000));
+                                durationStr = `~${diffMins} นาที (อิงจากข้อความล่าสุด)`;
+                            } else {
+                                 const diffNow = Math.round((Date.now() - s.loginAt) / 60000);
+                                 if (diffNow < 120) durationStr = `กำลังใช้งาน (~${diffNow} นาที)`;
+                            }
+
+                            let msgsHtml = '';
+                            if (sessionMessages.length > 0) {
+                                msgsHtml = `<div class="mt-2 space-y-2 border-l-2 border-primary/30 pl-3 py-1">`;
+                                sessionMessages.forEach(m => {
+                                    const mTime = new Date(m.timestamp).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+                                    const contentPreview = m.type === 'audio' ? 
+                                        `<i class="fa-solid fa-microphone text-secondary mr-1 drop-shadow-sm"></i> เสียง (${m.audioDuration}วิ)` : 
+                                        `"${m.content.substring(0, 30)}${m.content.length > 30 ? '...' : ''}"`;
+                                    msgsHtml += `
+                                        <div class="text-xs bg-white/70 p-2 rounded-lg border border-gray-200 shadow-sm">
+                                            <span class="font-extrabold text-primary mr-1 text-[10px] bg-primary/10 px-1.5 py-0.5 rounded">[${mTime}]</span> 
+                                            <span class="text-gray-700 font-medium">${contentPreview}</span>
+                                        </div>`;
+                                });
+                                msgsHtml += `</div>`;
+                            } else {
+                                msgsHtml = `<p class="text-xs text-gray-400 italic mt-2 ml-2">- ไม่มีการส่งข้อความ -</p>`;
+                            }
+
+                            const user = predefinedUsers.find(u => u.studentId === s.uid) || this.registeredUsers.find(r => r.id === s.uid);
+                            const userName = user ? user.name : s.uid;
+                            const isGuest = s.uid.startsWith('G');
+                            const badge = isGuest ? '<span class="bg-blue-500 text-white px-1.5 py-0.5 rounded text-[8px] ml-1">Guest</span>' : '';
+
+                            html += `
+                            <div class="mb-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-secondary"></div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="font-extrabold text-primary text-sm flex items-center">
+                                        <i class="fa-solid fa-user-circle mr-2 text-secondary text-lg"></i>
+                                        ${userName} ${badge}
+                                    </div>
+                                    <div class="text-[10px] bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-bold shadow-sm whitespace-nowrap ml-2"><i class="fa-regular fa-hourglass-half mr-1"></i> ${durationStr}</div>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mb-2 font-medium"><i class="fa-solid fa-right-to-bracket mr-1"></i> เข้าสู่ระบบ: ${loginDate}</div>
+                                ${msgsHtml}
+                            </div>`;
+                        });
+                    }
+                    html += `</div>`;
+
+                    glassSwal.fire({
+                        title: `ประวัติการใช้งานรวม`,
+                        html: html,
+                        confirmButtonText: 'ปิดหน้าต่าง',
+                        customClass: {
+                            popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-lg bg-white/95',
+                            title: 'text-primary font-extrabold text-xl md:text-2xl mt-2',
+                            confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-3 font-bold shadow-lg transition hover:scale-105 w-full mt-2',
+                        }
+                    });
+
+                } catch (err) {
+                    console.error("Error fetching all history:", err);
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลประวัติรวมได้', 'error');
                 }
             },
 
