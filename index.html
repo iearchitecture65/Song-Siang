@@ -178,58 +178,13 @@
                 <p class="text-[9px] md:text-xs font-light tracking-[0.2em] md:tracking-[0.3em] opacity-80 uppercase">Song Siang</p>
             </div>
             
-            <div id="navMenuDesktop" class="absolute top-6 right-6 hidden md:flex items-center gap-2 lg:gap-4 flex-nowrap">
-                <button id="btnUsersDesk" onclick="app.showView('manage_users')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-users-gear text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">สมาชิก</span>
-                </button>
-                <button id="btnAdminDesk" onclick="app.showView('settings')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-gear text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">ตั้งค่า</span>
-                </button>
-                <button id="btnQuotaDesk" onclick="app.fetchQuota()" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-chart-pie text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">โควต้า</span>
-                </button>
-                <button id="btnFeedDesk" onclick="app.showView('feed')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-earth-asia text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">ภาพรวม</span>
-                </button>
-                <button id="btnInboxDesk" onclick="app.showView('inbox')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors relative">
-                        <i class="fa-solid fa-envelope text-xl"></i>
-                        <span id="unreadBadgeDesk" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">กล่องจดหมาย</span>
-                </button>
-                <button id="btnSentDesk" onclick="app.showView('sent_history')" class="group flex flex-col items-center text-white/80 hover:text-secondary transition-all hidden">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-clock-rotate-left text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">ประวัติการส่ง</span>
-                </button>
-                <button onclick="app.logout()" class="group flex flex-col items-center text-white/80 hover:text-red-400 transition-all">
-                    <div class="p-2.5 rounded-full group-hover:bg-white/10 transition-colors">
-                        <i class="fa-solid fa-right-from-bracket text-xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium whitespace-nowrap">ออกระบบ</span>
-                </button>
-            </div>
-
-            <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-4 right-4 md:hidden text-white/90 hover:text-secondary hidden z-[60] transition-all duration-300 transform">
+            <!-- Hamburger Menu (Always visible when logged in) -->
+            <button id="navHamburger" onclick="app.toggleMobileMenu()" class="absolute top-1/2 -translate-y-1/2 right-4 md:right-6 text-white/90 hover:text-secondary hidden z-[60] transition-all duration-300 transform">
                 <i class="fa-solid fa-bars text-2xl drop-shadow-md"></i>
                 <span id="unreadBadgeMobile" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden border border-white"></span>
             </button>
             
-            <div id="mobileDropdown" class="hidden absolute top-14 right-4 bg-white/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 p-2 flex flex-col gap-1 z-[60] w-48 transform transition-all origin-top-right">
+            <div id="mobileDropdown" class="hidden absolute top-[110%] right-4 md:right-6 bg-white/30 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 p-2 flex flex-col gap-1 z-[60] w-52 transform transition-all origin-top-right">
                 <button id="btnUsersMob" onclick="app.showView('manage_users')" class="hidden flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/20 transition-colors text-left font-semibold text-sm text-white">
                     <i class="fa-solid fa-users-gear w-5 text-center text-white"></i> จัดการสมาชิก
                 </button>
@@ -249,7 +204,7 @@
                     <i class="fa-solid fa-clock-rotate-left w-5 text-center text-white"></i> ประวัติการส่ง
                 </button>
                 <div class="h-px bg-white/20 my-1 mx-2"></div>
-                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-400/20 text-red-100 hover:text-red-300 transition-colors text-left font-bold text-sm">
+                <button onclick="app.logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-secondary hover:text-yellow-300 transition-colors text-left font-bold text-sm">
                     <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> ออกจากระบบ
                 </button>
             </div>
@@ -692,6 +647,16 @@
                     localStorage.setItem('lastLogoutId', this.profile.studentId);
                     localStorage.setItem('lastLogoutTime', Date.now().toString());
                 }
+                
+                // End current session if exists
+                const sessionId = localStorage.getItem('currentSessionId');
+                if (sessionId) {
+                    try {
+                        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions', sessionId), { logoutAt: Date.now() });
+                    } catch(e) {}
+                    localStorage.removeItem('currentSessionId');
+                }
+
                 this.profile = null;
                 localStorage.removeItem('songSiangProfile');
                 
@@ -827,36 +792,22 @@
                     this.closeMobileMenu();
                     this.currentView = viewName;
                     const root = document.getElementById('appRoot');
-                    const navDesk = document.getElementById('navMenuDesktop');
                     const navHam = document.getElementById('navHamburger');
                     
                     if(this.profile) {
-                        navDesk.classList.remove('md:hidden');
-                        navDesk.classList.add('md:flex');
                         navHam.classList.remove('hidden');
                         
                         const showAdmin = this.profile.isAdmin;
                         const showFeed = this.profile.isPredefined || this.profile.isAdmin;
                         const showInbox = this.profile.isPredefined || this.profile.isAdmin;
 
-                        document.getElementById('btnAdminDesk').classList.toggle('hidden', !showAdmin);
                         document.getElementById('btnAdminMob').classList.toggle('hidden', !showAdmin);
-                        document.getElementById('btnUsersDesk').classList.toggle('hidden', !showAdmin);
                         document.getElementById('btnUsersMob').classList.toggle('hidden', !showAdmin);
-                        document.getElementById('btnQuotaDesk').classList.toggle('hidden', !showAdmin);
                         document.getElementById('btnQuotaMob').classList.toggle('hidden', !showAdmin);
-                        
-                        document.getElementById('btnFeedDesk').classList.toggle('hidden', !showFeed);
                         document.getElementById('btnFeedMob').classList.toggle('hidden', !showFeed);
-
-                        document.getElementById('btnInboxDesk').classList.toggle('hidden', !showInbox);
                         document.getElementById('btnInboxMob').classList.toggle('hidden', !showInbox);
-                        
-                        document.getElementById('btnSentDesk').classList.remove('hidden');
                         document.getElementById('btnSentMob').classList.remove('hidden');
                     } else {
-                        navDesk.classList.add('md:hidden');
-                        navDesk.classList.remove('md:flex');
                         navHam.classList.add('hidden');
                     }
 
@@ -909,6 +860,11 @@
                         isGuest: !!userProfile.isGuest
                     }, { merge: true });
 
+                    // Log session start
+                    const sessionData = { uid: userProfile.studentId, loginAt: Date.now(), logoutAt: null };
+                    const sessionRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions'), sessionData);
+                    localStorage.setItem('currentSessionId', sessionRef.id);
+
                     this.profile = userProfile;
                     localStorage.setItem('songSiangProfile', JSON.stringify(userProfile));
                     this.setupUserStatusListener();
@@ -938,6 +894,16 @@
                         localStorage.setItem('lastLogoutId', this.profile.studentId);
                         localStorage.setItem('lastLogoutTime', Date.now().toString());
                     }
+                    
+                    // End current session if exists
+                    const sessionId = localStorage.getItem('currentSessionId');
+                    if (sessionId) {
+                        try {
+                            updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions', sessionId), { logoutAt: Date.now() });
+                        } catch(e) {}
+                        localStorage.removeItem('currentSessionId');
+                    }
+
                     this.profile = null;
                     localStorage.removeItem('songSiangProfile');
                     if(this.unsubscribeMsgs) this.unsubscribeMsgs();
@@ -950,7 +916,7 @@
 
                 glassSwal.fire({
                     title: 'ออกจากระบบ?',
-                    iconHtml: '<i class="fa-solid fa-arrow-right-from-bracket text-red-400 text-5xl"></i>',
+                    iconHtml: '<i class="fa-solid fa-arrow-right-from-bracket text-secondary text-5xl"></i>',
                     showCancelButton: true,
                     confirmButtonText: 'ออกจากระบบ',
                     cancelButtonText: 'ยกเลิก'
@@ -961,6 +927,16 @@
                             localStorage.setItem('lastLogoutId', this.profile.studentId);
                             localStorage.setItem('lastLogoutTime', Date.now().toString());
                         }
+
+                        // End current session if exists
+                        const sessionId = localStorage.getItem('currentSessionId');
+                        if (sessionId) {
+                            try {
+                                updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions', sessionId), { logoutAt: Date.now() });
+                            } catch(e) {}
+                            localStorage.removeItem('currentSessionId');
+                        }
+
                         this.profile = null;
                         localStorage.removeItem('songSiangProfile');
                         if(this.unsubscribeMsgs) this.unsubscribeMsgs();
@@ -1775,17 +1751,152 @@
                                 <div class="text-[10px] text-primary/70 font-medium truncate">${u.studentId} | ${u.fullName || ''}</div>
                                 <div class="text-[9px] text-primary/50 mt-1 italic">ล่าสุด: ${lastLogin}</div>
                             </div>
-                            <div class="flex gap-2 shrink-0">
-                                <button onclick="app.toggleUserBlock('${u.studentId}', ${isBlocked})" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white transition-all ${isBlocked ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}">
+                            <div class="flex gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
+                                <button onclick="app.viewUserHistory('${u.studentId}')" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white bg-blue-500 hover:bg-blue-600 transition-all shadow-sm">
+                                    <i class="fa-solid fa-clock-rotate-left mr-1"></i> ประวัติ
+                                </button>
+                                <button onclick="app.toggleUserBlock('${u.studentId}', ${isBlocked})" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white transition-all shadow-sm ${isBlocked ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}">
                                     ${isBlocked ? '<i class="fa-solid fa-unlock mr-1"></i> ปลดบล็อก' : '<i class="fa-solid fa-ban mr-1"></i> บล็อก'}
                                 </button>
-                                <button onclick="app.deleteUserFromSystem('${u.studentId}')" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 transition-all">
+                                <button onclick="app.deleteUserFromSystem('${u.studentId}')" class="px-3 py-2 rounded-xl text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-sm">
                                     <i class="fa-solid fa-trash-can mr-1"></i> ลบ
                                 </button>
                             </div>
                         </div>
                     `;
                 }).join('');
+            },
+
+            viewUserHistory: async function(uid) {
+                glassSwal.fire({
+                    title: 'กำลังโหลดข้อมูล...',
+                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i>',
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+
+                try {
+                    // Fetch user sessions
+                    const sessionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions');
+                    const q = query(sessionsRef, where('uid', '==', uid));
+                    const sessionsSnap = await getDocs(q);
+                    
+                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // เรียงตามเวลาเข้าใช้งานจากเก่าไปใหม่ เพื่อจับคู่ข้อความให้ถูกต้อง
+                    sessions.sort((a, b) => a.loginAt - b.loginAt); 
+
+                    // Get messages sent by this user
+                    const userMessages = this.allMessages.filter(m => m.from.id === uid);
+                    userMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+                    // Group messages into their respective sessions
+                    sessions.forEach(session => { session.messages = []; });
+                    let legacyMessages = [];
+
+                    userMessages.forEach(msg => {
+                        let targetSession = null;
+                        // หาย้อนหลังจากเซสชั่นล่าสุดที่เริ่มก่อนหรือเท่ากับเวลาส่งข้อความ
+                        for (let i = sessions.length - 1; i >= 0; i--) {
+                            if (sessions[i].loginAt <= msg.timestamp) {
+                                targetSession = sessions[i];
+                                break;
+                            }
+                        }
+                        if (targetSession) {
+                            targetSession.messages.push(msg);
+                        } else {
+                            legacyMessages.push(msg); // ข้อความที่ส่งก่อนที่จะมีระบบเก็บเซสชั่น
+                        }
+                    });
+
+                    // ถ้ามีข้อความก่อนมีระบบเก็บเซสชั่น ให้สร้างเซสชั่นหลอกขึ้นมาแสดง
+                    if (legacyMessages.length > 0) {
+                        sessions.unshift({
+                            id: 'legacy',
+                            loginAt: legacyMessages[0].timestamp,
+                            logoutAt: null,
+                            messages: legacyMessages,
+                            isLegacy: true
+                        });
+                    }
+
+                    // เรียงกลับเอาใหม่ล่าสุดขึ้นบนสุด
+                    sessions.reverse();
+
+                    let html = `<div class="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar text-left mt-2">`;
+                    html += `<div class="mb-4 text-center"><span class="bg-secondary text-primary font-bold px-3 py-1 rounded-full text-xs shadow-sm">เข้าใช้งานทั้งหมด ${sessions.filter(s=>!s.isLegacy).length} ครั้ง</span></div>`;
+
+                    if (sessions.length === 0) {
+                        html += `<p class="text-center text-gray-500 py-6 font-medium">ไม่พบประวัติการเข้าใช้งาน</p>`;
+                    } else {
+                        sessions.forEach((s, idx) => {
+                            const loginDate = new Date(s.loginAt).toLocaleString('th-TH');
+                            let durationStr = "ไม่ระบุเวลาออก";
+                            
+                            if (s.isLegacy) {
+                                durationStr = "ข้อความเก่าก่อนมีระบบเก็บประวัติ";
+                            } else if (s.logoutAt) {
+                                const diffMins = Math.max(1, Math.round((s.logoutAt - s.loginAt) / 60000));
+                                durationStr = `${diffMins} นาที`;
+                            } else if (s.messages.length > 0) {
+                                const lastMsgTime = s.messages[s.messages.length - 1].timestamp;
+                                const diffMins = Math.max(1, Math.round((lastMsgTime - s.loginAt) / 60000));
+                                durationStr = `~${diffMins} นาที (อิงจากข้อความล่าสุด)`;
+                            }
+
+                            let msgsHtml = '';
+                            if (s.messages.length > 0) {
+                                msgsHtml = `<div class="mt-2 space-y-2 border-l-2 border-primary/30 pl-3 py-1">`;
+                                s.messages.forEach(m => {
+                                    const mTime = new Date(m.timestamp).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+                                    const contentPreview = m.type === 'audio' ? 
+                                        `<i class="fa-solid fa-microphone text-secondary mr-1 drop-shadow-sm"></i> เสียง (${m.audioDuration}วิ)` : 
+                                        `"${m.content.substring(0, 30)}${m.content.length > 30 ? '...' : ''}"`;
+                                    msgsHtml += `
+                                        <div class="text-xs bg-white/70 p-2 rounded-lg border border-gray-200 shadow-sm">
+                                            <span class="font-extrabold text-primary mr-1 text-[10px] bg-primary/10 px-1.5 py-0.5 rounded">[${mTime}]</span> 
+                                            <span class="text-gray-700 font-medium">${contentPreview}</span>
+                                        </div>`;
+                                });
+                                msgsHtml += `</div>`;
+                            } else {
+                                msgsHtml = `<p class="text-xs text-gray-400 italic mt-2 ml-2">- ไม่มีการส่งข้อความในครั้งนี้ -</p>`;
+                            }
+
+                            const sessionTitle = s.isLegacy ? 'ข้อมูลเก่า' : `ครั้งที่ ${sessions.filter(ses=>!ses.isLegacy).length - (sessions.filter(ses=>!ses.isLegacy).indexOf(s))}`;
+
+                            html += `
+                            <div class="mb-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-secondary"></div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="font-extrabold text-primary text-sm">${sessionTitle}</div>
+                                    <div class="text-[10px] bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-bold shadow-sm whitespace-nowrap ml-2"><i class="fa-regular fa-hourglass-half mr-1"></i> ${durationStr}</div>
+                                </div>
+                                <div class="text-[11px] text-gray-500 mb-2 font-medium"><i class="fa-solid fa-right-to-bracket mr-1"></i> เข้าสู่ระบบ: ${loginDate}</div>
+                                ${msgsHtml}
+                            </div>`;
+                        });
+                    }
+                    html += `</div>`;
+
+                    const user = predefinedUsers.find(u => u.studentId === uid) || this.registeredUsers.find(r => r.id === uid);
+                    const userName = user ? user.name : uid;
+
+                    glassSwal.fire({
+                        title: `ประวัติการใช้งาน`,
+                        html: `<div class="text-sm font-bold text-gray-600 mb-1">ของ ${userName}</div>${html}`,
+                        confirmButtonText: 'ปิดหน้าต่าง',
+                        customClass: {
+                            popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-lg bg-white/95',
+                            title: 'text-primary font-extrabold text-xl md:text-2xl mt-2',
+                            confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-3 font-bold shadow-lg transition hover:scale-105 w-full mt-2',
+                        }
+                    });
+
+                } catch (err) {
+                    console.error("Error fetching history:", err);
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลประวัติได้', 'error');
+                }
             },
 
             deleteAllFilteredMembers: async function() {
