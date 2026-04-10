@@ -1381,7 +1381,7 @@
 
             renderLogin3: function() {
                 this.tempSelectedRole = ''; 
-                const isGuest = this.tempStudentId.startsWith('G');
+                const isGuest = this.tempStudentId.startsWith('G') || this.tempStudentId === '90030000';
                 const options = isGuest ? this.guestOptions : this.yearOptions;
                 const roleLabel = isGuest ? 'สถานะของคุณ' : 'ชั้นปีการศึกษา';
 
@@ -1441,7 +1441,7 @@
             registerNewUser: function() {
                 const name = document.getElementById('inputNewName').value.trim();
                 const role = this.tempSelectedRole;
-                const isGuest = this.tempStudentId.startsWith('G');
+                const isGuest = this.tempStudentId.startsWith('G') || this.tempStudentId === '90030000';
 
                 if(!name) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
                 if(!role) return glassSwal.fire('แจ้งเตือน', isGuest ? 'กรุณาเลือกสถานะของคุณ' : 'กรุณาเลือกชั้นปีของคุณ', 'warning');
