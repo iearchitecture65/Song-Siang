@@ -377,7 +377,6 @@
             otpSkipTime: 1,
             tempSelectedYear: '',
             tempSelectedGuestRole: '',
-            tempSelectedRole: '',
             
             mediaRecorder: null,
             audioChunks: [],
@@ -1198,11 +1197,31 @@
                 if (!this.isSiteActive) {
                     return this.showView('site_closed');
                 }
-                this.startWatchdog(5000);
-                this.tempStudentId = 'G' + Math.random().toString(36).substring(2, 9).toUpperCase();
-                this.actualOtp = 'SKIP';
-                document.getElementById('appRoot').innerHTML = this.renderLogin3();
-                this.stopWatchdog();
+
+                const { value: name } = await glassSwal.fire({
+                    title: 'บุคคลทั่วไป',
+                    text: 'กรุณากรอกชื่อเรียกของคุณเพื่อใช้งานระบบ',
+                    input: 'text',
+                    inputPlaceholder: 'ชื่อของคุณ...',
+                    showCancelButton: true,
+                    confirmButtonText: 'เข้าใช้งาน',
+                    cancelButtonText: 'ยกเลิก',
+                    inputValidator: (value) => {
+                        if (!value) return 'กรุณากรอกชื่อก่อนเข้าใช้งาน'
+                    }
+                });
+
+                if (name) {
+                    this.startWatchdog(5000);
+                    const guestId = 'G' + Math.random().toString(36).substring(2, 9).toUpperCase();
+                    this.loginSuccess({ 
+                        studentId: guestId, 
+                        name: name, 
+                        fullName: name + ' (บุคคลทั่วไป)', 
+                        isPredefined: false,
+                        isGuest: true 
+                    });
+                }
             },
 
             requestOTP: async function() {
@@ -1380,15 +1399,11 @@
             },
 
             renderLogin3: function() {
-                this.tempSelectedRole = ''; 
-                const isGuest = this.tempStudentId.startsWith('G') || this.tempStudentId === '90030000';
-                const options = isGuest ? this.guestOptions : this.yearOptions;
-                const roleLabel = isGuest ? 'สถานะของคุณ' : 'ชั้นปีการศึกษา';
-
-                const roleBtns = options.map(opt => `
-                    <button onclick="app.selectRoleChoice('${opt}')" id="role-choice-${opt}"
-                            class="role-choice-btn flex-1 py-2 rounded-xl text-[10px] sm:text-xs font-bold border-2 border-white/40 text-white hover:bg-white/20 transition-all">
-                        ${opt}
+                this.tempSelectedYear = ''; 
+                const yearBtns = this.yearOptions.map(y => `
+                    <button onclick="app.selectYearChoice('${y}')" id="year-choice-${y}"
+                            class="year-choice-btn flex-1 py-2 rounded-xl text-[10px] sm:text-xs font-bold border-2 border-white/40 text-white hover:bg-white/20 transition-all">
+                        ${y}
                     </button>
                 `).join('');
 
@@ -1410,9 +1425,9 @@
                                     class="glass-input w-full px-5 py-4 rounded-xl transition-all outline-none text-center font-bold text-primary">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-white mb-2 ml-2 text-center sm:text-left">${roleLabel}</label>
-                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2" id="roleChoiceContainer">
-                                    ${roleBtns}
+                                <label class="block text-[10px] font-bold text-white mb-2 ml-2 text-center sm:text-left">ชั้นปีการศึกษา</label>
+                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2" id="yearChoiceContainer">
+                                    ${yearBtns}
                                 </div>
                             </div>
                         </div>
@@ -1424,14 +1439,14 @@
                 </div>`;
             },
 
-            selectRoleChoice: function(label) {
-                this.tempSelectedRole = label;
-                const btns = document.querySelectorAll('.role-choice-btn');
+            selectYearChoice: function(label) {
+                this.tempSelectedYear = label;
+                const btns = document.querySelectorAll('.year-choice-btn');
                 btns.forEach(b => {
                     b.classList.remove('bg-secondary', 'text-primary', 'border-secondary', 'scale-105');
                     b.classList.add('border-white/40', 'text-white');
                 });
-                const active = document.getElementById(`role-choice-${label}`);
+                const active = document.getElementById(`year-choice-${label}`);
                 if (active) {
                     active.classList.remove('border-white/40', 'text-white');
                     active.classList.add('bg-secondary', 'text-primary', 'border-secondary', 'scale-105');
@@ -1440,21 +1455,13 @@
 
             registerNewUser: function() {
                 const name = document.getElementById('inputNewName').value.trim();
-                const role = this.tempSelectedRole;
-                const isGuest = this.tempStudentId.startsWith('G') || this.tempStudentId === '90030000';
-
+                const year = this.tempSelectedYear;
                 if(!name) return glassSwal.fire('แจ้งเตือน', 'กรุณากรอกชื่อของคุณ', 'warning');
-                if(!role) return glassSwal.fire('แจ้งเตือน', isGuest ? 'กรุณาเลือกสถานะของคุณ' : 'กรุณาเลือกชั้นปีของคุณ', 'warning');
+                if(!year) return glassSwal.fire('แจ้งเตือน', 'กรุณาเลือกชั้นปีของคุณ', 'warning');
                 
                 this.startWatchdog(5000);
-                const finalName = isGuest ? `${name} (${role})` : `${name}, ${role}`;
-                this.loginSuccess({ 
-                    studentId: this.tempStudentId, 
-                    name: finalName, 
-                    fullName: finalName,
-                    isPredefined: false,
-                    isGuest: isGuest
-                });
+                const finalName = `${name}, ${year}`;
+                this.loginSuccess({ studentId: this.tempStudentId, name: finalName, isPredefined: false });
             },
 
             renderSettings: function() {
