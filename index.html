@@ -1655,7 +1655,7 @@
 
             renderUserManagement: function() {
                 return `
-                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-4xl mx-auto min-h-[75vh] mb-20 animate-slide-up flex flex-col">
+                <div class="glass-card rounded-[2rem] p-4 sm:p-8 shadow-2xl max-w-4xl mx-auto mb-20 animate-slide-up flex flex-col">
                     <div class="flex items-center justify-between mb-6 border-b border-white/40 pb-5">
                         <div class="flex items-center">
                             <button onclick="app.showView('home')" class="p-3 bg-white/20 hover:bg-white/40 rounded-2xl mr-4 transition text-white shadow-sm">
@@ -1688,12 +1688,12 @@
                         </div>
                     </div>
 
-                    <div id="usersListContainer" class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar" style="max-height: 50vh;">
+                    <div id="usersListContainer" class="space-y-3 w-full">
                         ${this.renderUserManagementList()}
                     </div>
                     
-                    <div class="mt-2 pt-2 border-t border-white/10 text-center">
-                         <p class="text-[9px] text-white/50 italic">สมาชิกทั้งหมด ${predefinedUsers.length + this.registeredUsers.filter(r => !predefinedUsers.some(p => p.studentId === r.id)).length} ท่าน (เลื่อนเพื่อดูทั้งหมด)</p>
+                    <div class="mt-6 pt-4 border-t border-white/10 text-center">
+                         <p class="text-[11px] text-white/80 font-medium">สมาชิกทั้งหมด ${predefinedUsers.length + this.registeredUsers.filter(r => !predefinedUsers.some(p => p.studentId === r.id)).length} ท่าน</p>
                     </div>
                 </div>`;
             },
