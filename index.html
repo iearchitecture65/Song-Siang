@@ -2108,13 +2108,13 @@
                 const isEveryone = toCount >= predefinedUsers.length;
                 
                 if (isEveryone) {
-                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
+                    recipientInfo = `<div class="mb-2 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
                 } else if (toCount > 1) {
-                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
+                    recipientInfo = `<div class="mb-2 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
                 }
 
                 const shareBtn = `
-                <div class="mt-4 pt-3 border-t border-gray-100 text-center">
+                <div class="mt-2 pt-2 border-t border-gray-100 text-center -mb-1">
                     <button onclick="app.openSharePreview('${msg.id}')" class="text-[12px] text-primary/60 hover:text-primary font-bold transition-colors">
                         บันทึก หรือแชร์ <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
                     </button>
@@ -2123,14 +2123,14 @@
                 if (msg.type === 'audio') {
                     glassSwal.fire({
                         title: `เสียงจาก ${displayName}`,
-                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>${recipientInfo}${shareBtn}`,
+                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-2 mb-3"></audio>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 } else {
                     glassSwal.fire({
                         title: `ข้อความจาก ${displayName}`,
-                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
+                        html: `<div class="mt-2 mb-3 p-4 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
@@ -2158,7 +2158,7 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, icon: 'success', timer: 1200, showConfirmButton: false });
+                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1200, showConfirmButton: false });
                 } catch (err) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถคัดลอกลิงก์ได้', 'error');
                 }
@@ -2360,7 +2360,7 @@
                 link.click();
                 
                 glassSwal.fire({
-                    iconHtml: '<svg class="w-16 h-16 fill-current text-green-500 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>',
+                    iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>',
                     title: 'บันทึกรูปภาพสำเร็จ!',
                     timer: 1500,
                     showConfirmButton: false
@@ -2389,14 +2389,14 @@
                             title: 'ส่งเสียง | Song Siang',
                             text: shareText
                         });
-                        glassSwal.fire({ title: 'แชร์สำเร็จ!', icon: 'success', timer: 1000, showConfirmButton: false });
+                        glassSwal.fire({ title: 'แชร์สำเร็จ!', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1000, showConfirmButton: false });
                     } catch (err) {
                         console.log('Share failed:', err);
                     }
                 } else {
                     try {
                         await navigator.clipboard.writeText(shareText);
-                        glassSwal.fire({ title: 'คัดลอกข้อความแชร์แล้ว!', text: 'สามารถนำไปวางในแอปต่างๆ ได้เลย', icon: 'success', timer: 1500, showConfirmButton: false });
+                        glassSwal.fire({ title: 'คัดลอกข้อความแชร์แล้ว!', text: 'สามารถนำไปวางในแอปต่างๆ ได้เลย', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1500, showConfirmButton: false });
                     } catch (e) {
                          const textArea = document.createElement("textarea");
                          textArea.value = shareText;
@@ -2404,7 +2404,7 @@
                          textArea.select();
                          try {
                              document.execCommand('copy');
-                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', icon: 'success', timer: 1000, showConfirmButton: false });
+                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1000, showConfirmButton: false });
                          } catch (err) {
                              glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถแชร์ได้', 'error');
                          }
