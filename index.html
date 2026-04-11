@@ -226,17 +226,16 @@
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwqM0w_ic8NuZc2r4GmJ6xA86RfLWqdzYP1brOOxAcv2yG9CAqvtwtoiyxQcMWgCnw/exec";
         const GITHUB_IMG_BASE_URL = "./65"; 
 
-        const _kP = ["AIzaSyDLKlp8", "mLuPsw0zyxy5", "cead2n0vPDGP2Kw"];
-        const _gk = () => _kP.join('');
-
+        // ใช้ Firebase Config ของผู้ใช้โดยตรงตามที่ระบุ
         const firebaseConfig = {
-            apiKey: _gk(),
+            apiKey: "AIzaSyDLKlp8mLuPsw0zyxy5cead2n0vPDGP2Kw",
             authDomain: "song-siang-fa86e.firebaseapp.com",
             databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "song-siang-fa86e",
             storageBucket: "song-siang-fa86e.firebasestorage.app",
             messagingSenderId: "1090864995280",
-            appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
+            appId: "1:1090864995280:web:cf08b12aa883ca830937d5",
+            measurementId: "G-KJNWRLY4LC"
         };
 
         const appFirebase = initializeApp(firebaseConfig);
@@ -358,8 +357,9 @@
             startWatchdog: function(ms = 5000) {
                 if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
                 this.watchdogTimer = setTimeout(() => {
-                    console.error("System hung. Executing Hard Reset...");
-                    this.emergencyReset();
+                    console.error("System hung. Handling soft reset...");
+                    this.stopWatchdog();
+                    // เราจะไม่โหลดหน้าใหม่ทิ้ง เพื่อให้ผู้ใช้สามารถอ่าน Error หรือกดยกเลิกได้
                 }, ms);
             },
 
@@ -371,41 +371,50 @@
             },
 
             emergencyReset: async function() {
-                console.warn("Initiating Hard Reset to fix frozen state...");
-                let uidToWipe = null;
-                if (this.profile && this.profile.studentId) {
-                    uidToWipe = this.profile.studentId;
-                } else if (this.tempStudentId) {
-                    uidToWipe = this.tempStudentId;
-                } else {
-                    try {
-                        const saved = localStorage.getItem('songSiangProfile');
-                        if (saved) uidToWipe = JSON.parse(saved).studentId;
-                    } catch(e) {}
-                }
+                console.warn("Initiating Soft Reset to clear session...");
+                this.profile = null;
+                localStorage.removeItem('songSiangProfile');
+                localStorage.removeItem('currentSessionId');
+                this.stopWatchdog();
+                this.showView('login');
+            },
 
-                if (uidToWipe) {
-                    try {
-                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uidToWipe);
-                        await Promise.race([
-                            deleteDoc(ref),
-                            new Promise(r => setTimeout(r, 2000))
-                        ]);
-                        console.log(`Cleared corrupted data for ${uidToWipe}`);
-                    } catch(e) {
-                        console.error("Failed to wipe DB on reset:", e);
-                    }
-                }
-
-                localStorage.clear();
-                window.location.href = window.location.href.split('?')[0];
+            showPermissionError: function() {
+                this.stopWatchdog();
+                glassSwal.fire({
+                    iconHtml: '<i class="fa-solid fa-database text-red-500 text-5xl drop-shadow-md"></i>',
+                    title: 'ติดปัญหา Firebase Rules',
+                    html: `
+                    <div class="text-left text-sm mt-2 text-gray-700 font-medium space-y-3">
+                        <p class="text-center font-bold text-red-500 bg-red-50 border border-red-200 py-1 rounded">Permission Denied</p>
+                        <p>ระบบตรวจพบว่าฐานข้อมูล Firebase ของคุณปิดกั้นการเข้าถึง ทำให้ไม่สามารถใช้งานได้ กรุณาตั้งค่าดังนี้:</p>
+                        <div class="bg-gray-100 p-3 rounded-xl border border-gray-200 text-xs">
+                            1. ไปที่เว็บไซต์ Firebase Console<br>
+                            2. เลือกเมนู <b>Firestore Database</b> > แท็บ <b>Rules</b><br>
+                            3. เปลี่ยนโค้ดให้บรรทัดกลางเป็น:<br>
+                            <code class="text-red-500 font-bold block my-1">allow read, write: if true;</code>
+                            4. กดปุ่ม <b>Publish</b> แล้วรีเฟรชหน้านี้ใหม่
+                        </div>
+                    </div>`,
+                    confirmButtonText: 'รับทราบวิธีแก้ไข',
+                    allowOutsideClick: false
+                });
             },
 
             init: async function() {
-                this.startWatchdog(8000); 
+                this.startWatchdog(10000); 
                 this.isLoadingData = true;
                 try {
                     await signInAnonymously(auth);
+
+                    await new Promise((resolve) => {
+                        const unsub = onAuthStateChanged(auth, (user) => {
+                            if (user) {
+                                unsub();
+                                resolve(user);
+                            }
+                        });
+                    });
                     
                     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config');
                     const docSnap = await getDoc(settingsRef);
@@ -465,7 +474,12 @@
                                     const sessionRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions'), sessionData);
                                     localStorage.setItem('currentSessionId', sessionRef.id);
                                 }
-                            } catch(e) {}
+                            } catch(e) {
+                                if (e.message && (e.message.includes("permissions") || e.message.includes("Missing or insufficient"))) {
+                                    this.showPermissionError();
+                                    return;
+                                }
+                            }
 
                             this.setupUserStatusListener();
                             this.setupMessagesListener();
@@ -477,7 +491,16 @@
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
-                    this.emergencyReset();
+                    this.stopWatchdog();
+                    this.showView('login');
+                    
+                    if (e.code === 'auth/operation-not-allowed') {
+                        glassSwal.fire('Firebase Auth ปิดอยู่', 'กรุณาไปที่ Firebase Console > Authentication > Sign-in method แล้วเปิดใช้งาน Anonymous (บุคคลนิรนาม)', 'error');
+                    } else if (e.message && (e.message.includes("permissions") || e.message.includes("Missing or insufficient"))) {
+                        this.showPermissionError();
+                    } else {
+                        glassSwal.fire('เกิดข้อผิดพลาดในการเชื่อมต่อ', e.message || 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
+                    }
                 }
             },
 
@@ -513,7 +536,12 @@
                     this.renderSharedMessage(msg, expiryTime);
 
                 } catch (err) {
-                    root.innerHTML = this.renderSharedError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+                    if (err.message && (err.message.includes("permissions") || err.message.includes("Missing or insufficient"))) {
+                        this.showPermissionError();
+                        root.innerHTML = this.renderSharedError("ฐานข้อมูลถูกปิดกั้นการเข้าถึง (Permission Denied)");
+                    } else {
+                        root.innerHTML = this.renderSharedError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+                    }
                 }
             },
 
@@ -614,9 +642,13 @@
             },
 
             checkBlockStatus: async function(uid) {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid);
-                const snap = await getDoc(docRef);
-                return snap.exists() && snap.data().isBlocked === true;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uid);
+                    const snap = await getDoc(docRef);
+                    return snap.exists() && snap.data().isBlocked === true;
+                } catch(e) {
+                    throw e; // ให้ function ที่เรียกนำไปจัดการต่อ (เช่น แสดง error rules)
+                }
             },
 
             setupUsersListener: function() {
@@ -895,7 +927,12 @@
                     this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
                 } catch (error) {
                     console.error("Login Error:", error);
-                    this.emergencyReset();
+                    this.stopWatchdog();
+                    if (error.message && (error.message.includes("permissions") || error.message.includes("Missing or insufficient"))) {
+                        this.showPermissionError();
+                    } else {
+                        glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลเข้าสู่ระบบได้', 'error');
+                    }
                 }
             },
 
@@ -1237,6 +1274,10 @@
                                 });
                             }
                         } catch(err) {
+                            if (err.message && (err.message.includes("permissions") || err.message.includes("Missing or insufficient"))) {
+                                this.showPermissionError();
+                                return;
+                            }
                             console.error('Auto login fetch failed', err);
                         }
                         this.stopWatchdog();
@@ -1347,6 +1388,10 @@
                                     this.stopWatchdog(); 
                                 }
                             } catch(err) {
+                                if (err.message && (err.message.includes("permissions") || err.message.includes("Missing or insufficient"))) {
+                                    this.showPermissionError();
+                                    return;
+                                }
                                 document.getElementById('appRoot').innerHTML = this.renderLogin3();
                                 this.stopWatchdog();
                             }
@@ -1796,10 +1841,9 @@
                 try {
                     // Fetch user sessions
                     const sessionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions');
-                    const q = query(sessionsRef, where('uid', '==', uid));
-                    const sessionsSnap = await getDocs(q);
+                    const sessionsSnap = await getDocs(sessionsRef);
                     
-                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.uid === uid);
                     // เรียงตามเวลาเข้าใช้งานจากเก่าไปใหม่ เพื่อจับคู่ข้อความให้ถูกต้อง
                     sessions.sort((a, b) => a.loginAt - b.loginAt); 
 
@@ -2108,13 +2152,13 @@
                 const isEveryone = toCount >= predefinedUsers.length;
                 
                 if (isEveryone) {
-                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
+                    recipientInfo = `<div class="mb-2 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
                 } else if (toCount > 1) {
-                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
+                    recipientInfo = `<div class="mb-2 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
                 }
 
                 const shareBtn = `
-                <div class="mt-4 pt-3 border-t border-gray-100 text-center">
+                <div class="mt-2 pt-2 border-t border-gray-100 text-center -mb-1">
                     <button onclick="app.openSharePreview('${msg.id}')" class="text-[12px] text-primary/60 hover:text-primary font-bold transition-colors">
                         บันทึก หรือแชร์ <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
                     </button>
@@ -2123,14 +2167,14 @@
                 if (msg.type === 'audio') {
                     glassSwal.fire({
                         title: `เสียงจาก ${displayName}`,
-                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>${recipientInfo}${shareBtn}`,
+                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-2 mb-3"></audio>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 } else {
                     glassSwal.fire({
                         title: `ข้อความจาก ${displayName}`,
-                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
+                        html: `<div class="mt-2 mb-3 p-4 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
@@ -2158,7 +2202,7 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, icon: 'success', timer: 1200, showConfirmButton: false });
+                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1200, showConfirmButton: false });
                 } catch (err) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถคัดลอกลิงก์ได้', 'error');
                 }
@@ -2360,7 +2404,7 @@
                 link.click();
                 
                 glassSwal.fire({
-                    iconHtml: '<svg class="w-16 h-16 fill-current text-green-500 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>',
+                    iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>',
                     title: 'บันทึกรูปภาพสำเร็จ!',
                     timer: 1500,
                     showConfirmButton: false
@@ -2389,14 +2433,14 @@
                             title: 'ส่งเสียง | Song Siang',
                             text: shareText
                         });
-                        glassSwal.fire({ title: 'แชร์สำเร็จ!', icon: 'success', timer: 1000, showConfirmButton: false });
+                        glassSwal.fire({ title: 'แชร์สำเร็จ!', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1000, showConfirmButton: false });
                     } catch (err) {
                         console.log('Share failed:', err);
                     }
                 } else {
                     try {
                         await navigator.clipboard.writeText(shareText);
-                        glassSwal.fire({ title: 'คัดลอกข้อความแชร์แล้ว!', text: 'สามารถนำไปวางในแอปต่างๆ ได้เลย', icon: 'success', timer: 1500, showConfirmButton: false });
+                        glassSwal.fire({ title: 'คัดลอกข้อความแชร์แล้ว!', text: 'สามารถนำไปวางในแอปต่างๆ ได้เลย', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1500, showConfirmButton: false });
                     } catch (e) {
                          const textArea = document.createElement("textarea");
                          textArea.value = shareText;
@@ -2404,7 +2448,7 @@
                          textArea.select();
                          try {
                              document.execCommand('copy');
-                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', icon: 'success', timer: 1000, showConfirmButton: false });
+                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1000, showConfirmButton: false });
                          } catch (err) {
                              glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถแชร์ได้', 'error');
                          }
