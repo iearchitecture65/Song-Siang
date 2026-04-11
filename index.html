@@ -363,8 +363,9 @@
             startWatchdog: function(ms = 5000) {
                 if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
                 this.watchdogTimer = setTimeout(() => {
-                    console.error("System hung. Executing Hard Reset...");
-                    this.emergencyReset();
+                    console.error("System hung. Handling soft reset...");
+                    this.stopWatchdog();
+                    this.showView('login');
                 }, ms);
             },
 
@@ -376,34 +377,12 @@
             },
 
             emergencyReset: async function() {
-                console.warn("Initiating Hard Reset to fix frozen state...");
-                let uidToWipe = null;
-                if (this.profile && this.profile.studentId) {
-                    uidToWipe = this.profile.studentId;
-                } else if (this.tempStudentId) {
-                    uidToWipe = this.tempStudentId;
-                } else {
-                    try {
-                        const saved = localStorage.getItem('songSiangProfile');
-                        if (saved) uidToWipe = JSON.parse(saved).studentId;
-                    } catch(e) {}
-                }
-
-                if (uidToWipe) {
-                    try {
-                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uidToWipe);
-                        await Promise.race([
-                            deleteDoc(ref),
-                            new Promise(r => setTimeout(r, 2000))
-                        ]);
-                        console.log(`Cleared corrupted data for ${uidToWipe}`);
-                    } catch(e) {
-                        console.error("Failed to wipe DB on reset:", e);
-                    }
-                }
-
-                localStorage.clear();
-                window.location.href = window.location.href.split('?')[0];
+                console.warn("Initiating Soft Reset to fix frozen state...");
+                this.profile = null;
+                localStorage.removeItem('songSiangProfile');
+                localStorage.removeItem('currentSessionId');
+                this.stopWatchdog();
+                this.showView('login');
             },
 
             init: async function() {
@@ -495,7 +474,11 @@
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
-                    this.emergencyReset();
+                    this.stopWatchdog();
+                    this.showView('login');
+                    if (e.message && e.message.includes("permissions")) {
+                        glassSwal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบสิทธิ์หรือการตั้งค่า Firebase', 'error');
+                    }
                 }
             },
 
