@@ -229,20 +229,25 @@
         const _kP = ["AIzaSyDLKlp8", "mLuPsw0zyxy5", "cead2n0vPDGP2Kw"];
         const _gk = () => _kP.join('');
 
-        const firebaseConfig = {
-            apiKey: _gk(),
-            authDomain: "song-siang-fa86e.firebaseapp.com",
-            databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "song-siang-fa86e",
-            storageBucket: "song-siang-fa86e.firebasestorage.app",
-            messagingSenderId: "1090864995280",
-            appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
-        };
+        let firebaseConfig;
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+            firebaseConfig = {
+                apiKey: _gk(),
+                authDomain: "song-siang-fa86e.firebaseapp.com",
+                databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
+                projectId: "song-siang-fa86e",
+                storageBucket: "song-siang-fa86e.firebasestorage.app",
+                messagingSenderId: "1090864995280",
+                appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
+            };
+        }
 
         const appFirebase = initializeApp(firebaseConfig);
         const auth = getAuth(appFirebase);
         const db = getFirestore(appFirebase);
-        const appId = "song-siang-app";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "song-siang-app";
 
         const predefinedUsers = [
             { id: 1, studentId: "65030001", fullName: "นางสาวกชกร ทรัพย์โคกสูง", name: "กิ๊ฟ" },
@@ -405,7 +410,20 @@
                 this.startWatchdog(8000); 
                 this.isLoadingData = true;
                 try {
-                    await signInAnonymously(auth);
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    await new Promise((resolve) => {
+                        const unsub = onAuthStateChanged(auth, (user) => {
+                            if (user) {
+                                unsub();
+                                resolve(user);
+                            }
+                        });
+                    });
                     
                     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config');
                     const docSnap = await getDoc(settingsRef);
@@ -1796,10 +1814,9 @@
                 try {
                     // Fetch user sessions
                     const sessionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions');
-                    const q = query(sessionsRef, where('uid', '==', uid));
-                    const sessionsSnap = await getDocs(q);
+                    const sessionsSnap = await getDocs(sessionsRef);
                     
-                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.uid === uid);
                     // เรียงตามเวลาเข้าใช้งานจากเก่าไปใหม่ เพื่อจับคู่ข้อความให้ถูกต้อง
                     sessions.sort((a, b) => a.loginAt - b.loginAt); 
 
