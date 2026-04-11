@@ -323,12 +323,12 @@
             
             maxChars: 500,
             maxAudioTime: 30,
-            shareExpiryHours: 24, // Default share link expiry
+            shareExpiryMinutes: 1440, // Default share link expiry (1440 mins = 24h)
             yearOptions: ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'],
             guestOptions: ['อาจารย์', 'เจ้าหน้าที่', 'บุคลากร', 'ผู้ปกครอง', 'บุคคลภายนอก'],
             isSiteActive: true,
             allowUserDelete: true,
-            otpSkipTime: 1,
+            otpSkipTime: 60, // Default skip time (60 mins = 1h)
             tempSelectedYear: '',
             tempSelectedGuestRole: '',
             
@@ -421,7 +421,10 @@
                     if(docSnap.exists()) {
                         const data = docSnap.data();
                         this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
-                        this.shareExpiryHours = data.shareExpiryHours || 24;
+                        
+                        // Support legacy hours config or new minutes config
+                        this.shareExpiryMinutes = data.shareExpiryMinutes !== undefined ? data.shareExpiryMinutes : (data.shareExpiryHours !== undefined ? data.shareExpiryHours * 60 : 1440);
+                        this.otpSkipTime = data.otpSkipTimeMinutes !== undefined ? data.otpSkipTimeMinutes : (data.otpSkipTime !== undefined ? data.otpSkipTime * 60 : 60);
                     } else {
                         this.isSiteActive = true;
                     }
@@ -526,7 +529,7 @@
                     
                     // Priority given to linkExpiryAt (the "new share time" logic)
                     const baseTime = msg.linkExpiryAt || msg.timestamp;
-                    const expiryTime = baseTime + (this.shareExpiryHours * 60 * 60 * 1000);
+                    const expiryTime = baseTime + (this.shareExpiryMinutes * 60 * 1000);
 
                     if (now > expiryTime) {
                         root.innerHTML = this.renderSharedError("ลิ้งก์นี้หมดอายุการใช้งานแล้ว");
@@ -564,6 +567,17 @@
                 const dateStr = new Date(msg.timestamp).toLocaleString('th-TH');
                 const isAudio = msg.type === 'audio';
 
+                const avatarHtml = isAnonymous 
+                    ? '<i class="fa-solid fa-user-secret text-3xl text-primary"></i>' 
+                    : (() => {
+                        const sender = predefinedUsers.find(u => u.studentId === msg.from.id);
+                        const abbr = `<span class="text-2xl font-black text-primary absolute inset-0 flex items-center justify-center z-10">${this.getAbbr(msg.from.name)}</span>`;
+                        if (sender) {
+                            return `<img src="${GITHUB_IMG_BASE_URL}/${sender.id}.png" class="w-full h-full object-cover absolute inset-0 z-20 bg-secondary" onerror="this.style.display='none';">${abbr}`;
+                        }
+                        return abbr;
+                    })();
+
                 root.innerHTML = `
                 <div class="max-w-sm mx-auto animate-slide-up mt-10 mb-20 px-4">
                     <div class="text-center mb-6">
@@ -575,8 +589,7 @@
                     <div class="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/20 bg-white/10 backdrop-blur-2xl">
                         <div class="p-8 flex flex-col items-center text-center">
                             <div class="w-20 h-20 rounded-full bg-secondary shadow-xl mb-5 border-4 border-white/30 flex-center-all overflow-hidden relative">
-                                ${isAnonymous ? '<i class="fa-solid fa-user-secret text-3xl text-primary"></i>' : 
-                                    (msg.from.id ? `<img src="${GITHUB_IMG_BASE_URL}/${predefinedUsers.find(u=>u.studentId===msg.from.id)?.id || 'default'}.png" class="w-full h-full object-cover" onerror="this.innerHTML='${this.getAbbr(msg.from.name)}'">` : `<span class="text-2xl font-black text-primary">${this.getAbbr(msg.from.name)}</span>`)}
+                                ${avatarHtml}
                             </div>
                             <h2 class="text-xl font-extrabold text-white drop-shadow-md mb-0.5">${displayName}</h2>
                             <p class="text-blue-100 text-[9px] font-bold opacity-60 uppercase tracking-widest mb-6">${dateStr}</p>
@@ -771,12 +784,12 @@
                         const data = docSnap.data();
                         this.maxChars = data.maxChars || 500;
                         this.maxAudioTime = data.maxAudioTime || 30;
-                        this.shareExpiryHours = data.shareExpiryHours || 24;
+                        this.shareExpiryMinutes = data.shareExpiryMinutes !== undefined ? data.shareExpiryMinutes : (data.shareExpiryHours ? data.shareExpiryHours * 60 : 1440);
                         this.yearOptions = data.yearOptions || ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ปี 5', 'ศิษย์เก่า'];
                         this.guestOptions = data.guestOptions || ['อาจารย์', 'เจ้าหน้าที่', 'บุคลากร', 'ผู้ปกครอง', 'บุคคลภายนอก'];
                         this.isSiteActive = data.isSiteActive !== undefined ? data.isSiteActive : true;
                         this.allowUserDelete = data.allowUserDelete !== undefined ? data.allowUserDelete : true;
-                        this.otpSkipTime = data.otpSkipTime !== undefined ? data.otpSkipTime : 1;
+                        this.otpSkipTime = data.otpSkipTimeMinutes !== undefined ? data.otpSkipTimeMinutes : (data.otpSkipTime !== undefined ? data.otpSkipTime * 60 : 60);
 
                         if (!this.isSiteActive && this.profile && !this.profile.isAdmin) {
                             this.logout(true); 
@@ -1253,8 +1266,8 @@
                 const lastLogoutTime = localStorage.getItem('lastLogoutTime');
                 
                 if (lastLogoutId === idInput && lastLogoutTime && this.otpSkipTime > 0) {
-                    const hoursElapsed = (Date.now() - parseInt(lastLogoutTime)) / (1000 * 60 * 60);
-                    if (hoursElapsed <= this.otpSkipTime) {
+                    const minutesElapsed = (Date.now() - parseInt(lastLogoutTime)) / (1000 * 60);
+                    if (minutesElapsed <= this.otpSkipTime) {
                         this.startWatchdog(5000);
                         const existingUser = predefinedUsers.find(u => u.studentId === idInput);
                         if (existingUser) {
@@ -1584,13 +1597,13 @@
                         </div>
 
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
-                            <label class="block text-sm font-bold text-white mb-2">เวลาหมดอายุลิ้งก์แชร์ (ชั่วโมง)</label>
-                            <input type="number" id="inpShareExpiry" value="${this.shareExpiryHours}" min="1" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
+                            <label class="block text-sm font-bold text-white mb-2">เวลาหมดอายุลิ้งก์แชร์ (นาที)</label>
+                            <input type="number" id="inpShareExpiry" value="${this.shareExpiryMinutes}" min="1" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
                         </div>
 
                         <div class="bg-white/20 p-5 rounded-2xl border border-white/30 shadow-inner">
-                            <label class="block text-sm font-bold text-white mb-2">เวลาที่ไม่ต้องใช้ OTP หลังออกระบบ (ชั่วโมง)</label>
-                            <input type="number" id="inpOtpSkipTime" value="${this.otpSkipTime}" step="0.5" min="0" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
+                            <label class="block text-sm font-bold text-white mb-2">เวลาที่ไม่ต้องใช้ OTP หลังออกระบบ (นาที)</label>
+                            <input type="number" id="inpOtpSkipTime" value="${this.otpSkipTime}" step="1" min="0" class="glass-input w-full px-4 py-3 rounded-xl outline-none font-bold text-primary text-center text-lg">
                             <p class="text-[9px] text-white/70 mt-2 font-medium">* ใส่ 0 หากต้องการให้กรอก OTP ทุกครั้ง</p>
                         </div>
 
@@ -1631,7 +1644,7 @@
                 const gText = document.getElementById('inpGuestOptions').value;
                 const gRoles = gText.split(',').map(y => y.trim()).filter(y => y !== '');
                 
-                const sTime = parseFloat(document.getElementById('inpOtpSkipTime').value);
+                const sTime = parseInt(document.getElementById('inpOtpSkipTime').value);
                 
                 const isActive = document.getElementById('inpSiteActive').checked;
                 const isAllowDelete = document.getElementById('inpAllowUserDelete').checked;
@@ -1641,17 +1654,17 @@
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config'), { 
                             maxChars: c, 
                             maxAudioTime: a,
-                            shareExpiryHours: ex,
+                            shareExpiryMinutes: ex,
                             yearOptions: years,
                             guestOptions: gRoles,
                             isSiteActive: isActive,
                             allowUserDelete: isAllowDelete,
-                            otpSkipTime: sTime
+                            otpSkipTimeMinutes: sTime
                         }, { merge: true });
                         
                         this.maxChars = c;
                         this.maxAudioTime = a;
-                        this.shareExpiryHours = ex;
+                        this.shareExpiryMinutes = ex;
                         this.yearOptions = years;
                         this.guestOptions = gRoles;
                         this.isSiteActive = isActive;
@@ -2202,7 +2215,7 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1200, showConfirmButton: false });
+                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryMinutes} นาที`, iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1200, showConfirmButton: false });
                 } catch (err) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถคัดลอกลิงก์ได้', 'error');
                 }
