@@ -229,25 +229,20 @@
         const _kP = ["AIzaSyDLKlp8", "mLuPsw0zyxy5", "cead2n0vPDGP2Kw"];
         const _gk = () => _kP.join('');
 
-        let firebaseConfig;
-        if (typeof __firebase_config !== 'undefined') {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } else {
-            firebaseConfig = {
-                apiKey: _gk(),
-                authDomain: "song-siang-fa86e.firebaseapp.com",
-                databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
-                projectId: "song-siang-fa86e",
-                storageBucket: "song-siang-fa86e.firebasestorage.app",
-                messagingSenderId: "1090864995280",
-                appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
-            };
-        }
+        const firebaseConfig = {
+            apiKey: _gk(),
+            authDomain: "song-siang-fa86e.firebaseapp.com",
+            databaseURL: "https://song-siang-fa86e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "song-siang-fa86e",
+            storageBucket: "song-siang-fa86e.firebasestorage.app",
+            messagingSenderId: "1090864995280",
+            appId: "1:1090864995280:web:cf08b12aa883ca830937d5"
+        };
 
         const appFirebase = initializeApp(firebaseConfig);
         const auth = getAuth(appFirebase);
         const db = getFirestore(appFirebase);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : "song-siang-app";
+        const appId = "song-siang-app";
 
         const predefinedUsers = [
             { id: 1, studentId: "65030001", fullName: "นางสาวกชกร ทรัพย์โคกสูง", name: "กิ๊ฟ" },
@@ -363,9 +358,8 @@
             startWatchdog: function(ms = 5000) {
                 if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
                 this.watchdogTimer = setTimeout(() => {
-                    console.error("System hung. Handling soft reset...");
-                    this.stopWatchdog();
-                    this.showView('login');
+                    console.error("System hung. Executing Hard Reset...");
+                    this.emergencyReset();
                 }, ms);
             },
 
@@ -377,32 +371,41 @@
             },
 
             emergencyReset: async function() {
-                console.warn("Initiating Soft Reset to fix frozen state...");
-                this.profile = null;
-                localStorage.removeItem('songSiangProfile');
-                localStorage.removeItem('currentSessionId');
-                this.stopWatchdog();
-                this.showView('login');
+                console.warn("Initiating Hard Reset to fix frozen state...");
+                let uidToWipe = null;
+                if (this.profile && this.profile.studentId) {
+                    uidToWipe = this.profile.studentId;
+                } else if (this.tempStudentId) {
+                    uidToWipe = this.tempStudentId;
+                } else {
+                    try {
+                        const saved = localStorage.getItem('songSiangProfile');
+                        if (saved) uidToWipe = JSON.parse(saved).studentId;
+                    } catch(e) {}
+                }
+
+                if (uidToWipe) {
+                    try {
+                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_user_status', uidToWipe);
+                        await Promise.race([
+                            deleteDoc(ref),
+                            new Promise(r => setTimeout(r, 2000))
+                        ]);
+                        console.log(`Cleared corrupted data for ${uidToWipe}`);
+                    } catch(e) {
+                        console.error("Failed to wipe DB on reset:", e);
+                    }
+                }
+
+                localStorage.clear();
+                window.location.href = window.location.href.split('?')[0];
             },
 
             init: async function() {
                 this.startWatchdog(8000); 
                 this.isLoadingData = true;
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-
-                    await new Promise((resolve) => {
-                        const unsub = onAuthStateChanged(auth, (user) => {
-                            if (user) {
-                                unsub();
-                                resolve(user);
-                            }
-                        });
-                    });
+                    await signInAnonymously(auth);
                     
                     const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_settings', 'config');
                     const docSnap = await getDoc(settingsRef);
@@ -474,11 +477,7 @@
                     }
                 } catch (e) {
                     console.error("Auth error:", e);
-                    this.stopWatchdog();
-                    this.showView('login');
-                    if (e.message && e.message.includes("permissions")) {
-                        glassSwal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบสิทธิ์หรือการตั้งค่า Firebase', 'error');
-                    }
+                    this.emergencyReset();
                 }
             },
 
@@ -1797,9 +1796,10 @@
                 try {
                     // Fetch user sessions
                     const sessionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_sessions');
-                    const sessionsSnap = await getDocs(sessionsRef);
+                    const q = query(sessionsRef, where('uid', '==', uid));
+                    const sessionsSnap = await getDocs(q);
                     
-                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.uid === uid);
+                    let sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                     // เรียงตามเวลาเข้าใช้งานจากเก่าไปใหม่ เพื่อจับคู่ข้อความให้ถูกต้อง
                     sessions.sort((a, b) => a.loginAt - b.loginAt); 
 
@@ -2108,13 +2108,13 @@
                 const isEveryone = toCount >= predefinedUsers.length;
                 
                 if (isEveryone) {
-                    recipientInfo = `<div class="mb-2 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
+                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-users mr-1"></i>ส่งถึงทุกคน</div>`;
                 } else if (toCount > 1) {
-                    recipientInfo = `<div class="mb-2 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
+                    recipientInfo = `<div class="mt-4 text-center cursor-pointer hover:underline text-[10px] text-gray-500 font-medium" onclick="app.showRecipientList('${msg.id}')"><i class="fa-solid fa-user-group mr-1"></i>ส่งถึง ${toCount} คน</div>`;
                 }
 
                 const shareBtn = `
-                <div class="mt-2 pt-2 border-t border-gray-100 text-center -mb-1">
+                <div class="mt-4 pt-3 border-t border-gray-100 text-center">
                     <button onclick="app.openSharePreview('${msg.id}')" class="text-[12px] text-primary/60 hover:text-primary font-bold transition-colors">
                         บันทึก หรือแชร์ <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
                     </button>
@@ -2123,14 +2123,14 @@
                 if (msg.type === 'audio') {
                     glassSwal.fire({
                         title: `เสียงจาก ${displayName}`,
-                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-2 mb-3"></audio>${recipientInfo}${shareBtn}`,
+                        html: `<audio src="${msg.content}" controls autoplay class="w-full mt-4"></audio>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
                 } else {
                     glassSwal.fire({
                         title: `ข้อความจาก ${displayName}`,
-                        html: `<div class="mt-2 mb-3 p-4 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
+                        html: `<div class="mt-4 p-5 bg-white/70 rounded-2xl text-left text-primary border border-white/50 whitespace-pre-wrap break-words font-medium shadow-inner relative"><i class="fa-solid fa-quote-left absolute top-3 left-3 text-xl text-primary/20"></i><div class="pl-6 pt-1">${msg.content.trim()}</div></div>${recipientInfo}${shareBtn}`,
                         showConfirmButton: true,
                         confirmButtonText: 'ปิดหน้าต่าง'
                     });
@@ -2158,7 +2158,7 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1200, showConfirmButton: false });
+                    glassSwal.fire({ title: 'คัดลอกลิงก์แชร์แล้ว!', text: `จะหมดอายุใน ${this.shareExpiryHours} ชม.`, icon: 'success', timer: 1200, showConfirmButton: false });
                 } catch (err) {
                     glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถคัดลอกลิงก์ได้', 'error');
                 }
@@ -2360,7 +2360,7 @@
                 link.click();
                 
                 glassSwal.fire({
-                    iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>',
+                    iconHtml: '<svg class="w-16 h-16 fill-current text-green-500 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>',
                     title: 'บันทึกรูปภาพสำเร็จ!',
                     timer: 1500,
                     showConfirmButton: false
@@ -2389,14 +2389,14 @@
                             title: 'ส่งเสียง | Song Siang',
                             text: shareText
                         });
-                        glassSwal.fire({ title: 'แชร์สำเร็จ!', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1000, showConfirmButton: false });
+                        glassSwal.fire({ title: 'แชร์สำเร็จ!', icon: 'success', timer: 1000, showConfirmButton: false });
                     } catch (err) {
                         console.log('Share failed:', err);
                     }
                 } else {
                     try {
                         await navigator.clipboard.writeText(shareText);
-                        glassSwal.fire({ title: 'คัดลอกข้อความแชร์แล้ว!', text: 'สามารถนำไปวางในแอปต่างๆ ได้เลย', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1500, showConfirmButton: false });
+                        glassSwal.fire({ title: 'คัดลอกข้อความแชร์แล้ว!', text: 'สามารถนำไปวางในแอปต่างๆ ได้เลย', icon: 'success', timer: 1500, showConfirmButton: false });
                     } catch (e) {
                          const textArea = document.createElement("textarea");
                          textArea.value = shareText;
@@ -2404,7 +2404,7 @@
                          textArea.select();
                          try {
                              document.execCommand('copy');
-                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', iconHtml: '<i class="fa-solid fa-circle-check text-primary text-5xl drop-shadow-md"></i>', timer: 1000, showConfirmButton: false });
+                             glassSwal.fire({ title: 'คัดลอกข้อความแล้ว!', icon: 'success', timer: 1000, showConfirmButton: false });
                          } catch (err) {
                              glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถแชร์ได้', 'error');
                          }
