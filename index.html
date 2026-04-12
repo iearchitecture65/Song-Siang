@@ -320,6 +320,7 @@
             adminSearchQuery: '',
             memberSearchQuery: '',
             registeredUsers: [],
+            pendingTargetUser: null,
             
             maxChars: 500,
             maxAudioTime: 30,
@@ -439,6 +440,15 @@
                         this.stopWatchdog();
                         return; 
                     }
+
+                    const targetParam = urlParams.get('target');
+                    if (targetParam) {
+                        const targetUserObj = predefinedUsers.find(u => u.studentId === targetParam || u.id.toString() === targetParam);
+                        if (targetUserObj) {
+                            this.pendingTargetUser = targetUserObj.studentId;
+                        }
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
                     
                     const savedProfile = localStorage.getItem('songSiangProfile');
                     if (savedProfile) {
@@ -487,7 +497,13 @@
                             this.setupUserStatusListener();
                             this.setupMessagesListener();
                             this.setupUsersListener();
-                            this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
+                            if (this.pendingTargetUser) {
+                                this.selectedIds = [this.pendingTargetUser];
+                                this.pendingTargetUser = null;
+                                this.showView('compose');
+                            } else {
+                                this.showView(this.profile.isPredefined || this.profile.isAdmin ? 'feed' : 'home');
+                            }
                         }
                     } else {
                         this.showView(this.isSiteActive ? 'login' : 'site_closed');
@@ -937,7 +953,13 @@
                         showConfirmButton: false
                     });
                     
-                    this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
+                    if (this.pendingTargetUser) {
+                        this.selectedIds = [this.pendingTargetUser];
+                        this.pendingTargetUser = null;
+                        this.showView('compose');
+                    } else {
+                        this.showView(userProfile.isPredefined || userProfile.isAdmin ? 'feed' : 'home');
+                    }
                 } catch (error) {
                     console.error("Login Error:", error);
                     this.stopWatchdog();
