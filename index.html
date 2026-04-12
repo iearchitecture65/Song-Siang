@@ -2853,7 +2853,7 @@
                             </div>
                             <div class="text-left min-w-0 flex-1">
                                 <div class="font-extrabold text-primary text-sm truncate">${user ? user.name : 'ไม่พบชื่อ'}</div>
-                                <div class="text-[10px] text-primary/60 font-medium">${tid}</div>
+                                <div class="text-[10px] text-primary/60 font-medium truncate">${user && user.fullName ? user.fullName : tid}</div>
                             </div>
                         </div>`;
                 });
