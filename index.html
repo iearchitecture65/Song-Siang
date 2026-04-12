@@ -2845,6 +2845,13 @@
                 this.selectedIds.forEach(tid => {
                     const user = predefinedUsers.find(u => u.studentId === tid);
                     const abbr = user ? this.getAbbr(user.name) : "??";
+                    
+                    // ดึงชื่อเต็มมาแล้วตัดคำว่า นาย, นางสาว, นาง ออก
+                    let displayFullName = tid;
+                    if (user && user.fullName) {
+                        displayFullName = user.fullName.replace(/^(นาย|นางสาว|นาง)/, '').trim();
+                    }
+
                     listHTML += `
                         <div class="flex items-center gap-3 p-2 bg-white/60 rounded-xl border border-white/50 hover:bg-white/80 transition-all shadow-sm">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-secondary border border-white shrink-0 relative flex-center-all shadow-sm">
@@ -2853,7 +2860,7 @@
                             </div>
                             <div class="text-left min-w-0 flex-1">
                                 <div class="font-extrabold text-primary text-sm truncate">${user ? user.name : 'ไม่พบชื่อ'}</div>
-                                <div class="text-[10px] text-primary/60 font-medium truncate">${user && user.fullName ? user.fullName : tid}</div>
+                                <div class="text-[10px] text-primary/60 font-medium truncate">${displayFullName}</div>
                             </div>
                         </div>`;
                 });
