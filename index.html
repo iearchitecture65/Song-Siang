@@ -2781,6 +2781,97 @@
                 this.visualizerFrame = requestAnimationFrame(() => this.drawVisualizer());
             },
 
+            // --- เพิ่มฟังก์ชันใหม่สำหรับการแสดงรูปผู้รับในหน้า Compose แบบหน้าแอดมิน ---
+            renderSelectedRecipientsDisplay: function() {
+                const count = this.selectedIds.length;
+                if (count === 0) return `<span class="text-xs text-white/40 italic mt-1">ไม่ระบุผู้รับ</span>`;
+                
+                const isEveryone = count >= predefinedUsers.length;
+                
+                if (isEveryone) {
+                    return `
+                        <div class="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full border border-white/30 shadow-sm cursor-pointer hover:bg-white/30 transition-all mt-2" onclick="app.showSelectedRecipientsList()">
+                            <i class="fa-solid fa-users text-white text-[10px]"></i>
+                            <span class="text-[10px] font-bold text-white">ทุกคนในรุ่น</span>
+                            <span class="bg-secondary text-primary text-[9px] px-1.5 rounded-full font-bold">${count}</span>
+                        </div>`;
+                }
+
+                if (count === 1) {
+                    const recipientId = this.selectedIds[0];
+                    const user = predefinedUsers.find(u => u.studentId === recipientId);
+                    const abbr = user ? this.getAbbr(user.name) : "??";
+                    return `
+                        <div class="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full border border-white/30 shadow-sm cursor-pointer hover:bg-white/30 transition-all mt-2" onclick="app.showSelectedRecipientsList()">
+                             <div class="w-5 h-5 rounded-full overflow-hidden bg-secondary border border-white flex-shrink-0 relative flex-center-all shadow-sm">
+                                ${user ? this.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-[10px] flex-center-all h-full w-full text-primary"></i>`}
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-[8px] h-full w-full">${abbr}</span>
+                             </div>
+                             <span class="text-[10px] font-bold text-white truncate max-w-[120px]">${user ? user.name : recipientId}</span>
+                        </div>`;
+                }
+
+                let stackedAvatars = '';
+                const displayLimit = 3; 
+                for (let i = 0; i < Math.min(count, displayLimit); i++) {
+                    const user = predefinedUsers.find(u => u.studentId === this.selectedIds[i]);
+                    const abbr = user ? this.getAbbr(user.name) : "??";
+                    stackedAvatars += `
+                        <div class="w-6 h-6 rounded-full overflow-hidden bg-secondary border-2 border-primary/20 -ml-2 first:ml-0 relative shadow-sm flex-center-all">
+                            ${user ? this.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-[8px] text-primary flex-center-all h-full w-full"></i>`}
+                            <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-[8px] h-full w-full">${abbr}</span>
+                        </div>`;
+                }
+
+                return `
+                    <div class="flex items-center gap-2 mt-2 cursor-pointer group bg-white/20 hover:bg-white/30 p-1 pr-3 rounded-full transition-all border border-white/30 shadow-sm" onclick="app.showSelectedRecipientsList()">
+                        <div class="flex items-center ml-1">
+                            ${stackedAvatars}
+                            ${count > displayLimit ? `<div class="w-6 h-6 rounded-full bg-white text-primary text-[8px] flex items-center justify-center -ml-2 border border-white shadow-sm font-extrabold z-10">+${count - displayLimit}</div>` : ''}
+                        </div>
+                        <div class="text-white text-[10px] font-bold">
+                            ส่งถึง ${count} คน
+                        </div>
+                    </div>`;
+            },
+
+            // --- ฟังก์ชันเด้งป็อปอัพรายชื่อคนที่จะส่งข้อความหาแบบกล่องแอดมิน ---
+            showSelectedRecipientsList: function() {
+                const count = this.selectedIds.length;
+                if (count === 0) return;
+
+                let listHTML = `<div class="grid grid-cols-1 gap-2 mt-4 max-h-[300px] overflow-y-auto px-2 custom-scrollbar">`;
+                
+                this.selectedIds.forEach(tid => {
+                    const user = predefinedUsers.find(u => u.studentId === tid);
+                    const abbr = user ? this.getAbbr(user.name) : "??";
+                    listHTML += `
+                        <div class="flex items-center gap-3 p-2 bg-white/60 rounded-xl border border-white/50 hover:bg-white/80 transition-all shadow-sm">
+                            <div class="w-10 h-10 rounded-full overflow-hidden bg-secondary border border-white shrink-0 relative flex-center-all shadow-sm">
+                                ${user ? this.renderImage(`${GITHUB_IMG_BASE_URL}/${user.id}.png`, user.name) : `<i class="fa-solid fa-user text-xs text-primary flex-center-all h-full w-full"></i>`}
+                                <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-xs h-full w-full">${abbr}</span>
+                            </div>
+                            <div class="text-left min-w-0 flex-1">
+                                <div class="font-extrabold text-primary text-sm truncate">${user ? user.name : 'ไม่พบชื่อ'}</div>
+                                <div class="text-[10px] text-primary/60 font-medium">${tid}</div>
+                            </div>
+                        </div>`;
+                });
+                
+                listHTML += `</div>`;
+
+                glassSwal.fire({
+                    title: `รายชื่อผู้รับ (${count} ท่าน)`,
+                    html: listHTML,
+                    confirmButtonText: 'ปิดหน้าต่าง',
+                    customClass: {
+                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm sm:max-w-md',
+                        title: 'text-primary font-extrabold text-xl md:text-2xl',
+                        confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-3 font-bold shadow-lg transition hover:scale-105 w-full mt-2',
+                    }
+                });
+            },
+
             renderCompose: function() {
                 const isAudio = this.composeMode === 'audio';
                 const sendBtnLabel = isAudio ? 'ส่งข้อความเสียง' : 'ส่งข้อความ';
@@ -2833,14 +2924,12 @@
                 return `
                 <div class="glass-card rounded-[2rem] p-6 md:p-8 shadow-2xl max-md mx-auto animate-slide-up mb-20">
                     <div class="flex items-center mb-6 pb-4 border-b border-white/40">
-                        <button onclick="app.showView('home')" class="p-2.5 hover:bg-white/40 bg-white/20 rounded-full mr-4 transition text-primary shadow-sm flex-shrink-0">
+                        <button onclick="app.showView('home')" class="p-2.5 hover:bg-white/40 bg-white/20 rounded-full mr-4 transition text-white shadow-sm flex-shrink-0">
                             <i class="fa-solid fa-arrow-left text-lg"></i>
                         </button>
-                        <div class="overflow-hidden">
-                            <h2 class="text-xl font-extrabold text-white truncate">สร้างข้อความใหม่</h2>
-                            <p class="text-xs text-white/90 font-bold mt-1 truncate">
-                                ส่งถึง: <span class="inline-block bg-secondary text-primary px-3 py-1 rounded-full shadow-sm ml-1 leading-none">${this.selectedIds.length} คน</span>
-                            </p>
+                        <div class="overflow-hidden flex flex-col items-start justify-center w-full">
+                            <h2 class="text-xl font-extrabold text-white truncate leading-tight">สร้างข้อความใหม่</h2>
+                            ${this.renderSelectedRecipientsDisplay()}
                         </div>
                     </div>
                     <div class="flex bg-white/30 p-1 rounded-2xl mb-6 shadow-inner relative border border-white/40">
