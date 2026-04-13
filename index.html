@@ -997,9 +997,6 @@
                     }
                     else if(viewName === 'admin_email_system') {
                         if (!this.profile.isAdmin) { this.showView('home'); return; }
-                        // เพิ่มบรรทัดนี้เพื่อให้ซิงค์ข้อมูลทันทีที่เข้าหน้านี้
-                        this.syncDataForAppsScript(true); 
-                        
                         root.innerHTML = this.renderAdminEmailSystem();
                         this.updateFAB();
                     }
@@ -3137,10 +3134,7 @@
                         type: this.composeMode,
                         content: content,
                         audioDuration: this.composeMode === 'audio' ? this.lastRecordingTime : null,
-                        timestamp: Date.now(),
-                        emailSent: false,      // <--- เพิ่มบรรทัดนี้: สำคัญมากเพื่อให้ Apps Script ตื่นมาส่งเมล
-                        resetForUsers: [],      // <--- เพิ่มบรรทัดนี้
-                        linkExpiryAt: 0         // <--- เพิ่มบรรทัดนี้
+                        timestamp: Date.now()
                     };
                     const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
                     await addDoc(msgsRef, messageData);
@@ -3717,11 +3711,7 @@
                                     userMsgs.forEach(m => {
                                         const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
                                         let newReset = (m.resetForUsers || []).filter(id => id !== uid);
-                                        batch.update(ref, { 
-                                            emailSent: true, 
-                                            resetForUsers: newReset,
-                                            linkExpiryAt: Date.now() // เริ่มนับเวลาหมดอายุใหม่จากจุดนี้
-                                        });
+                                        batch.update(ref, { emailSent: true, resetForUsers: newReset });
                                     });
                                     await batch.commit();
                                 }
@@ -3914,70 +3904,6 @@
                 glassSwal.close();
             },
 
-            // ฟังก์ชันส่งข้อมูลซิงค์ให้ Apps Script อ่านได้ 100%
-            syncDataForAppsScript: async function(silent = false) {
-                if (!silent) {
-                    glassSwal.fire({
-                        title: 'กำลังซิงค์ข้อมูล...',
-                        html: '<i class="fa-solid fa-sync fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-xs">กำลังปรับปรุงโครงสร้างข้อมูลให้ Apps Script...</p>',
-                        showConfirmButton: false, allowOutsideClick: false
-                    });
-                }
-
-                try {
-                    const batch = writeBatch(db);
-                    let count = 0;
-                    
-                    this.allMessages.forEach(m => {
-                        const updates = {};
-                        
-                        // 1. ตรวจสอบ timestamp (Apps Script บังคับเป็น Integer)
-                        if (typeof m.timestamp !== 'number') {
-                            updates.timestamp = Number(m.timestamp) || Date.now();
-                        }
-
-                        // 2. ตรวจสอบ emailSent (ต้องเป็น Boolean)
-                        if (typeof m.emailSent !== 'boolean') {
-                            updates.emailSent = m.emailSent === 'true' ? true : false;
-                        }
-
-                        // 3. ตรวจสอบ resetForUsers (Apps Script บังคับเป็น Array เพื่อวนลูป .map)
-                        if (!Array.isArray(m.resetForUsers)) {
-                            updates.resetForUsers = [];
-                        }
-
-                        // 4. ตรวจสอบฟิลด์ linkExpiryAt (ให้เริ่มนับเวลาลิ้งก์ได้ถูกต้อง)
-                        if (m.linkExpiryAt === undefined || m.linkExpiryAt === null) {
-                            updates.linkExpiryAt = 0;
-                        }
-
-                        // ถ้ามีอะไรต้องแก้ ให้ใส่ลงใน batch
-                        if (Object.keys(updates).length > 0) {
-                            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                            batch.update(ref, updates);
-                            count++;
-                        }
-                    });
-
-                    if (count > 0) {
-                        await batch.commit();
-                    }
-                    
-                    if (!silent) {
-                        glassSwal.fire({ 
-                            icon: 'success', 
-                            title: 'ซิงค์ข้อมูลสำเร็จ', 
-                            text: `ปรับปรุงข้อมูล ${count} รายการให้พร้อมส่งแล้ว`, 
-                            timer: 2000, 
-                            showConfirmButton: false 
-                        });
-                    }
-                } catch (e) {
-                    console.error("Sync Error:", e);
-                    if (!silent) glassSwal.fire('Error', 'ไม่สามารถซิงค์ข้อมูลได้: ' + e.message, 'error');
-                }
-            },
-            
             renderAdminEmailSystem: function() {
                 // คัดเฉพาะคนที่มียอดข้อความ "ค้างส่ง" (อิงรายบุคคล)
                 const usersWithMessages = predefinedUsers.map(user => {
@@ -4049,9 +3975,6 @@
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <button onclick="app.syncDataForAppsScript()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden sm:inline">ซิงค์ข้อมูลเรียลไทม์</span>
-                            </button>
                             <button onclick="app.resetEmailStatus()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all flex items-center gap-2">
                                 <i class="fa-solid fa-rotate-left"></i> <span class="hidden sm:inline">รีเซ็ตสถานะการส่ง</span>
                             </button>
@@ -4407,15 +4330,11 @@
                             </div>
                         `;
                     } else {
-                        const contentRaw = msg.content ? msg.content.trim() : "";
-                        const parsedContent = (typeof this.parseTextWithEmojis === 'function') 
-                            ? this.parseTextWithEmojis(contentRaw) 
-                            : contentRaw;
-                
+                        const parsedContent = parseTextWithEmojis(msg.content.trim());
                         msgContentHtml = `
-                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6;">
-                                <div style="font-size: 32px; color: #cbd5e1; font-family: Georgia, serif; line-height: 1; margin-bottom: 2px;">"</div>
-                                <div style="word-break: break-word; margin-top: 0; padding-left: 5px;">${parsedContent}</div>
+                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6; position: relative;">
+                                <div style="font-size: 28px; color: #cbd5e1; position: absolute; top: 8px; left: 12px; font-family: Georgia, serif; line-height: 1;">"</div>
+                                <div style="padding-left: 20px; word-break: break-word;">${parsedContent}</div>
                             </div>
                         `;
                     }
@@ -4528,11 +4447,7 @@
                             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
                             // ลบ uid ของคนที่ส่งสำเร็จออกจากคิวรีเซ็ต และอัปเดต emailSent เป็น true
                             let newReset = (m.resetForUsers || []).filter(id => id !== uid);
-                            batch.update(ref, { 
-                                emailSent: true, 
-                                resetForUsers: newReset,
-                                linkExpiryAt: Date.now() // เริ่มนับเวลาหมดอายุใหม่จากจุดนี้
-                            });
+                            batch.update(ref, { emailSent: true, resetForUsers: newReset });
                         });
                         await batch.commit();
 
@@ -4624,11 +4539,7 @@
                                     user.messages.forEach(m => {
                                         const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
                                         let newReset = (m.resetForUsers || []).filter(id => id !== user.studentId);
-                                        batch.update(ref, { 
-                                            emailSent: true, 
-                                            resetForUsers: newReset,
-                                            linkExpiryAt: Date.now() // เริ่มนับเวลาหมดอายุใหม่จากจุดนี้
-                                        });
+                                        batch.update(ref, { emailSent: true, resetForUsers: newReset });
                                     });
                                     await batch.commit();
 
