@@ -4337,12 +4337,7 @@
                         `;
                     } else {
                         const parsedContent = parseTextWithEmojis(msg.content.trim());
-                        msgContentHtml = `
-                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6; text-align: left;">
-                                <div style="font-size: 36px; color: #cbd5e1; font-family: Georgia, serif; line-height: 0.6; margin-bottom: 10px; text-align: left;">"</div>
-                                <div style="word-break: break-word; margin: 0; padding: 0; text-align: left;">${parsedContent}</div>
-                            </div>
-                        `;
+                        msgContentHtml = `<div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6; text-align: left;"><div style="font-size: 36px; color: #cbd5e1; font-family: Georgia, serif; line-height: 0.6; margin-bottom: 10px; margin-left: -2px;">"</div><div style="word-break: break-word; margin: 0; padding: 0;">${parsedContent}</div></div>`;
                     }
 
                     msgsListHtml += `
