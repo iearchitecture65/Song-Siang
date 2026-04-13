@@ -3575,6 +3575,22 @@
                 console.log("AutoPilot System Stopped");
             },
 
+            // ฟังก์ชันใหม่: เช็คว่าข้อความนี้ "ค้างส่ง" สำหรับคนๆ นี้หรือไม่ (แยกรายบุคคล)
+            isMsgEligibleForUser: function(m, uid) {
+                // เช็คก่อนว่าข้อความนี้ส่งถึงคนนี้ไหม
+                const isToUser = m.to && Array.isArray(m.to) && (m.to.includes(uid) || m.to.length >= predefinedUsers.length);
+                if (!isToUser) return false;
+                
+                // ถ้าตั้งค่าให้ส่งทุกข้อความ (ไม่สนว่าเคยส่งหรือยัง)
+                if (!this.emailConfig.onlyNew) return true;
+                
+                // ถ้าระบุว่าให้รีเซ็ตสถานะเฉพาะคนนี้
+                if (m.resetForUsers && m.resetForUsers.includes(uid)) return true;
+                
+                // คืนค่าสถานะปกติ (ถ้ายังไม่เคยส่งเลย)
+                return !m.emailSent;
+            },
+
             checkAndRunAutoPilot: async function() {
                 if (!this.profile || !this.profile.isAdmin || !this.emailConfig.autoPilot) return;
 
@@ -3585,7 +3601,8 @@
                 const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
                 let msgsToProcess = this.allMessages.filter(m => {
-                    if (this.emailConfig.onlyNew && m.emailSent) return false;
+                    // ถ้าส่งแล้ว และไม่มีใครถูกสั่งให้ส่งซ้ำ (Reset) ให้ข้ามข้อความนี้ไปเลย
+                    if (this.emailConfig.onlyNew && m.emailSent && (!m.resetForUsers || m.resetForUsers.length === 0)) return false;
                     return true;
                 });
 
@@ -3608,33 +3625,25 @@
                 if (!shouldSend || eligibleMsgs.length === 0) return;
 
                 const userGroups = {};
-                eligibleMsgs.forEach(msg => {
-                    const recipients = msg.to && Array.isArray(msg.to) ? msg.to : [];
-                    if (recipients.length >= predefinedUsers.length) {
-                        predefinedUsers.forEach(u => {
-                            if (!userGroups[u.studentId]) userGroups[u.studentId] = [];
-                            userGroups[u.studentId].push(msg);
-                        });
-                    } else {
-                        recipients.forEach(uid => {
-                            if (!userGroups[uid]) userGroups[uid] = [];
-                            userGroups[uid].push(msg);
-                        });
+                // จัดกลุ่มข้อความที่จะส่ง โดยอิงความถูกต้องแบบรายบุคคล
+                predefinedUsers.forEach(u => {
+                    const userMsgs = eligibleMsgs.filter(m => this.isMsgEligibleForUser(m, u.studentId));
+                    if (userMsgs.length > 0) {
+                        userGroups[u.studentId] = userMsgs;
                     }
                 });
 
                 for (const uid in userGroups) {
-                    // เพิ่มบรรทัดนี้: ข้ามการส่งอัตโนมัติหากถูกตั้งค่าให้ยกเลิกใน Popup
                     if ((this.emailConfig.excludedAutoPilotUsers || []).includes(uid)) continue;
 
                     const user = predefinedUsers.find(u => u.studentId === uid);
                     if (user) {
-                        const userMsgs = userGroups[uid].slice(0, 10);
+                        const userMsgs = userGroups[uid]; 
                         const htmlBody = this.buildEmailTemplate(user, userMsgs);
                         const email = `${uid}@kmitl.ac.th`;
 
                         try {
-                            await fetch(this.EMAIL_API_URL, {
+                            const response = await fetch(this.EMAIL_API_URL, {
                                 method: "POST",
                                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                                 body: JSON.stringify({
@@ -3643,18 +3652,22 @@
                                     htmlBody: htmlBody
                                 })
                             });
+                            
+                            const resJson = await response.json();
+                            
+                            // ถ้าส่งผ่านแล้ว ให้เคลียร์สถานะของคนๆ นี้ออก
+                            if (resJson.status === 'success' && this.emailConfig.onlyNew) {
+                                const batch = writeBatch(db);
+                                userMsgs.forEach(m => {
+                                    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
+                                    let newReset = (m.resetForUsers || []).filter(id => id !== uid);
+                                    batch.update(ref, { emailSent: true, resetForUsers: newReset });
+                                });
+                                await batch.commit();
+                            }
                         } catch(e) { console.error("AutoPilot send failed", e); }
                         await new Promise(r => setTimeout(r, 1500));
                     }
-                }
-
-                if (this.emailConfig.onlyNew) {
-                    const batch = writeBatch(db);
-                    eligibleMsgs.forEach(m => {
-                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                        batch.update(ref, { emailSent: true });
-                    });
-                    await batch.commit();
                 }
             },
 
@@ -3715,7 +3728,6 @@
                     if (isAutoPilot && !this.autoPilotInterval) this.startAutoPilot();
                     if (!isAutoPilot && this.autoPilotInterval) this.stopAutoPilot();
 
-                    // พับเก็บหน้าจอตั้งค่า Auto-Pilot หลังจากบันทึกสำเร็จ
                     this.isAutoPilotExpanded = false;
                     const content = document.getElementById('autoPilotSettingsContent');
                     const icon = document.getElementById('autoPilotCollapseIcon');
@@ -3735,11 +3747,7 @@
 
             showAutoPilotTargetSelectModal: function() {
                 const usersWithMessages = predefinedUsers.map(user => {
-                    const userMsgs = this.allMessages.filter(m => {
-                        const isToUser = m.to && Array.isArray(m.to) && (m.to.includes(user.studentId) || m.to.length >= predefinedUsers.length);
-                        const isEligible = this.emailConfig.onlyNew ? !m.emailSent : true;
-                        return isToUser && isEligible;
-                    });
+                    const userMsgs = this.allMessages.filter(m => this.isMsgEligibleForUser(m, user.studentId));
                     return { ...user, msgCount: userMsgs.length };
                 }).filter(u => u.msgCount > 0);
 
@@ -3844,18 +3852,14 @@
             },
 
             renderAdminEmailSystem: function() {
+                // คัดเฉพาะคนที่มียอดข้อความ "ค้างส่ง" (อิงรายบุคคล)
                 const usersWithMessages = predefinedUsers.map(user => {
-                    const userMsgs = this.allMessages.filter(m => {
-                        // เช็คว่าส่งถึง user นี้ไหม และสถานะ emailSent ต้องเป็น falsy ถ้าเลือกส่งเฉพาะที่ยังไม่เคยส่ง
-                        const isToUser = m.to && Array.isArray(m.to) && (m.to.includes(user.studentId) || m.to.length >= predefinedUsers.length);
-                        const isEligible = this.emailConfig.onlyNew ? !m.emailSent : true;
-                        return isToUser && isEligible;
-                    });
+                    const userMsgs = this.allMessages.filter(m => this.isMsgEligibleForUser(m, user.studentId));
                     return { ...user, msgCount: userMsgs.length, messages: userMsgs };
                 }).filter(u => u.msgCount > 0).sort((a, b) => b.msgCount - a.msgCount);
 
+                // คัดข้อความทั้งหมดที่แต่ละคนมีในระบบ (เพื่อให้แสดงในรายการด้านล่าง)
                 let listHtml = '';
-                // ทำการกรองแบบปกติสำหรับด้านล่าง
                 const allUsersWithMsgsList = predefinedUsers.map(user => {
                     const userMsgs = this.allMessages.filter(m => m.to && Array.isArray(m.to) && (m.to.includes(user.studentId) || m.to.length >= predefinedUsers.length));
                     return { ...user, msgCount: userMsgs.length, messages: userMsgs };
@@ -3866,6 +3870,11 @@
                 } else {
                     allUsersWithMsgsList.forEach(u => {
                         const abbr = this.getAbbr(u.name);
+                        
+                        // หายอดที่ค้างส่งของคนๆ นี้ เพื่อนำมาแสดงในวงเล็บ
+                        const pendingCount = usersWithMessages.find(pendingUser => pendingUser.studentId === u.studentId)?.msgCount || 0;
+                        const pendingBadge = pendingCount > 0 ? `<span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-[9px] ml-1 shadow-sm border border-red-400">ค้าง ${pendingCount}</span>` : '';
+
                         listHtml += `
                         <div class="bg-white/60 p-4 rounded-2xl flex items-center justify-between border border-white/40 shadow-sm hover:bg-white/80 transition-colors">
                             <div class="flex items-center gap-3">
@@ -3880,7 +3889,7 @@
                             </div>
                             <div class="flex items-center gap-3">
                                 <div class="bg-secondary text-primary px-3 py-1 rounded-full text-xs font-bold border border-white shadow-sm">
-                                    ${u.msgCount} ข้อความ
+                                    ทั้งหมด ${u.msgCount} ${pendingBadge}
                                 </div>
                                 <button onclick="app.showEmailMessageSelectModal('${u.studentId}')" class="bg-primary hover:bg-blue-600 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-transform transform active:scale-95">
                                     <i class="fa-solid fa-paper-plane text-xs"></i>
@@ -3937,8 +3946,8 @@
                         <div id="autoPilotSettingsContent" class="p-5 pt-0 border-t border-white/10 mt-2 ${this.isAutoPilotExpanded ? '' : 'hidden'}">
                             <div class="flex justify-between items-center mb-4 pb-4 border-b border-white/10 mt-4">
                                 <div>
-                                    <div class="text-sm font-bold text-white">เปิดใช้งานระบบอัตโนมัติ</div>
-                                    <div class="text-[10px] text-white/60">ระบบจะทำงานเมื่อ<span class="text-secondary">เปิดหน้านี้ทิ้งไว้ในเครื่องแอดมิน</span>เท่านั้น</div>
+                                    <div class="text-sm font-bold text-white">เปิดใช้งานระบบส่งอัตโนมัติ</div>
+                                    <div class="text-[10px] text-white/60">ให้ระบบตรวจสอบคิวและส่งอีเมลแจ้งเตือน<span class="text-secondary font-bold">อัตโนมัติอย่างต่อเนื่อง</span></div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="inpAutoPilot" class="sr-only peer" ${this.emailConfig.autoPilot ? 'checked' : ''}>
@@ -4008,54 +4017,172 @@
 
             resetEmailStatus: function() {
                 const msgsToReset = this.allMessages.filter(m => m.emailSent);
-                if (msgsToReset.length === 0) return glassSwal.fire('แจ้งเตือน', 'ไม่มีข้อความที่เคยส่งอีเมลแล้ว', 'info');
+                if (msgsToReset.length === 0) return glassSwal.fire('แจ้งเตือน', 'ไม่มีข้อความที่เคยส่งอีเมลแล้วให้รีเซ็ต', 'info');
 
-                glassSwal.fire({
-                    title: 'รีเซ็ตสถานะการส่ง?',
-                    html: `ข้อความที่เคยถูกส่งอีเมลไปแล้วจำนวน <b>${msgsToReset.length} ข้อความ</b> จะถูกรีเซ็ตกลับมาเป็น <b>"ค้างส่ง"</b> อีกครั้ง<br><br><span class="text-xs text-blue-500">*เหมาะสำหรับดึงข้อความกลับมาทดสอบส่งใหม่</span>`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'รีเซ็ตกลับมาค้างส่ง',
-                    cancelButtonText: 'ยกเลิก'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        glassSwal.fire({
-                            title: 'กำลังรีเซ็ต...',
-                            html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i>',
-                            showConfirmButton: false,
-                            allowOutsideClick: false
-                        });
-
-                        try {
-                            const batch = writeBatch(db);
-                            msgsToReset.forEach(m => {
-                                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                                batch.update(ref, { emailSent: false });
-                            });
-                            await batch.commit();
-
-                            glassSwal.fire({
-                                iconHtml: '<i class="fa-solid fa-check-circle text-green-500 text-5xl"></i>',
-                                title: 'รีเซ็ตสำเร็จ!',
-                                text: 'ข้อความกลับมาอยู่ในคิวค้างส่งแล้ว',
-                                showConfirmButton: false,
-                                timer: 2000
-                            });
-                            this.showView('admin_email_system');
-                        } catch (e) {
-                            glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถรีเซ็ตได้', 'error');
-                            console.error(e);
+                const resetTargets = new Set();
+                msgsToReset.forEach(msg => {
+                    if (msg.to && Array.isArray(msg.to)) {
+                        if (msg.to.length >= predefinedUsers.length) {
+                            predefinedUsers.forEach(u => resetTargets.add(u.studentId));
+                        } else {
+                            msg.to.forEach(uid => resetTargets.add(uid));
                         }
                     }
                 });
+
+                const usersWithResettableMsgs = predefinedUsers.filter(u => resetTargets.has(u.studentId));
+
+                if (usersWithResettableMsgs.length === 0) return;
+
+                let html = `
+                    <div class="text-left mb-4">
+                        <div class="font-bold text-gray-700 text-sm mb-1">เลือกผู้ที่ต้องการรีเซ็ตสถานะ</div>
+                        <div class="text-xs text-gray-500">ระบบจะรีเซ็ตเฉพาะคนที่คุณเลือกเท่านั้น <br><span class="text-[10px] text-green-600">*คนอื่นๆ ในกลุ่มข้อความเดียวกันจะไม่ได้รับอีเมลซ้ำ</span></div>
+                    </div>
+                    <div class="flex justify-between items-center mb-3 px-1">
+                        <span class="text-xs font-bold text-primary" id="resetSelectCount">เลือกแล้ว 0 / ${usersWithResettableMsgs.length}</span>
+                        <button type="button" onclick="app.toggleResetSelectAll()" class="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold hover:bg-blue-200 transition-colors shadow-sm" id="btnResetSelectAll">
+                            เลือกทั้งหมด
+                        </button>
+                    </div>
+                    <div class="max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar text-left" id="resetTargetList">
+                `;
+
+                usersWithResettableMsgs.forEach(u => {
+                    const userSentMsgs = msgsToReset.filter(m => m.to && (m.to.includes(u.studentId) || m.to.length >= predefinedUsers.length));
+                    
+                    html += `
+                        <label class="relative flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors mb-2">
+                            <input type="checkbox" class="reset-target-checkbox sr-only" value="${u.studentId}" onchange="app.updateResetSelectCount()">
+                            <div class="w-5 h-5 rounded border-2 border-gray-300 bg-white flex items-center justify-center shrink-0 transition-colors">
+                                <i class="fa-solid fa-check text-white text-[10px] check-icon hidden"></i>
+                            </div>
+                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                <div class="w-8 h-8 rounded-full overflow-hidden bg-secondary border border-gray-200 shrink-0 relative flex items-center justify-center">
+                                    ${this.renderImage(`${GITHUB_IMG_BASE_URL}/${u.id}.png`, u.name)}
+                                    <span class="fallback-name absolute inset-0 z-10 hidden flex-center-all bg-secondary text-primary font-bold text-[10px] h-full w-full">${this.getAbbr(u.name)}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-bold text-primary text-sm truncate">${u.name}</div>
+                                    <div class="text-[10px] text-gray-500">มี ${userSentMsgs.length} ข้อความที่รีเซ็ตได้</div>
+                                </div>
+                            </div>
+                        </label>
+                    `;
+                });
+                
+                html += `</div>
+                    <style>
+                        .reset-target-checkbox:checked + div { border-color: #2b71b8; background-color: #2b71b8; }
+                        .reset-target-checkbox:checked + div .check-icon { display: block !important; }
+                    </style>
+                    <button onclick="app.confirmResetEmailStatus()" class="w-full mt-4 py-3 bg-secondary hover:bg-yellow-400 text-primary rounded-xl font-bold text-sm shadow-md transition-transform transform active:scale-95 flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i> ยืนยันการรีเซ็ต
+                    </button>
+                `;
+
+                glassSwal.fire({
+                    html: html,
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    customClass: {
+                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[90%] max-w-sm sm:max-w-md',
+                    }
+                });
+            },
+
+            updateResetSelectCount: function() {
+                const checkboxes = document.querySelectorAll('.reset-target-checkbox');
+                const checked = document.querySelectorAll('.reset-target-checkbox:checked');
+                const countDisplay = document.getElementById('resetSelectCount');
+                const btnSelectAll = document.getElementById('btnResetSelectAll');
+                
+                if (countDisplay) countDisplay.innerText = `เลือกแล้ว ${checked.length} / ${checkboxes.length}`;
+                if (btnSelectAll) {
+                    btnSelectAll.innerText = checked.length === checkboxes.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด';
+                }
+            },
+
+            toggleResetSelectAll: function() {
+                const checkboxes = document.querySelectorAll('.reset-target-checkbox');
+                const checked = document.querySelectorAll('.reset-target-checkbox:checked');
+                const isAllChecked = checked.length === checkboxes.length;
+                
+                checkboxes.forEach(cb => {
+                    cb.checked = !isAllChecked;
+                });
+                this.updateResetSelectCount();
+            },
+
+            confirmResetEmailStatus: async function() {
+                const checkboxes = document.querySelectorAll('.reset-target-checkbox:checked');
+                if (checkboxes.length === 0) return glassSwal.fire('แจ้งเตือน', 'กรุณาเลือกผู้ใช้อย่างน้อย 1 คน', 'warning');
+                
+                const selectedUids = Array.from(checkboxes).map(cb => cb.value);
+
+                glassSwal.fire({
+                    title: 'กำลังรีเซ็ต...',
+                    html: '<i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mt-4 mb-3"></i>',
+                    showConfirmButton: false,
+                    allowOutsideClick: false
+                });
+
+                try {
+                    const batch = writeBatch(db);
+                    const msgsToReset = this.allMessages.filter(m => m.emailSent);
+                    let resetCount = 0;
+
+                    msgsToReset.forEach(m => {
+                        const targetUids = selectedUids.filter(uid => m.to && (m.to.includes(uid) || m.to.length >= predefinedUsers.length));
+                        
+                        if (targetUids.length > 0) {
+                            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
+                            let currentReset = m.resetForUsers ? [...m.resetForUsers] : [];
+                            let modified = false;
+                            
+                            targetUids.forEach(uid => {
+                                if (!currentReset.includes(uid)) {
+                                    currentReset.push(uid);
+                                    modified = true;
+                                }
+                            });
+                            
+                            // อัปเดตเฉพาะอาเรย์ resetForUsers โดยไม่ต้องปรับ emailSent หลัก
+                            if (modified) {
+                                batch.update(ref, { resetForUsers: currentReset }); 
+                                resetCount++;
+                            }
+                        }
+                    });
+
+                    if (resetCount > 0) {
+                        await batch.commit();
+                        glassSwal.fire({
+                            iconHtml: '<i class="fa-solid fa-check-circle text-green-500 text-5xl"></i>',
+                            title: 'รีเซ็ตสำเร็จ!',
+                            text: `ดึงข้อความกลับมาค้างส่งให้คนที่เลือกเรียบร้อยแล้ว`,
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                        this.showView('admin_email_system');
+                    } else {
+                        glassSwal.fire('สำเร็จ', 'ไม่มีข้อความให้รีเซ็ตสำหรับคนที่เลือก', 'info');
+                    }
+                } catch (e) {
+                    glassSwal.fire('ข้อผิดพลาด', 'ไม่สามารถรีเซ็ตได้', 'error');
+                    console.error(e);
+                }
             },
 
             showEmailMessageSelectModal: function(uid) {
                 const user = predefinedUsers.find(u => u.studentId === uid);
                 if (!user) return;
 
-                const userMsgs = this.allMessages.filter(m => m.to && Array.isArray(m.to) && (m.to.includes(uid) || m.to.length >= predefinedUsers.length));
+                // คัดเฉพาะข้อความที่อยู่ในคิวค้างส่ง (อิงเงื่อนไขรายบุคคล)
+                const userMsgs = this.allMessages.filter(m => this.isMsgEligibleForUser(m, uid));
                 
+                if (userMsgs.length === 0) return glassSwal.fire('แจ้งเตือน', 'ไม่มีข้อความค้างส่งสำหรับสมาชิกท่านนี้', 'info');
+
                 let msgsHtml = '';
                 userMsgs.forEach(msg => {
                     const isAudio = msg.type === 'audio';
@@ -4085,7 +4212,7 @@
                 const contentHtml = `
                     <div class="text-left mb-4">
                         <div class="font-bold text-gray-700 text-sm mb-1">เลือกข้อความที่จะส่งให้ ${user.name}</div>
-                        <div class="text-xs text-gray-500">ติ๊กเลือกข้อความที่ต้องการส่ง (ส่งเฉพาะข้อความ ไม่มีรูปภาพแล้ว)</div>
+                        <div class="text-xs text-gray-500">ติ๊กเลือกข้อความที่ต้องการส่ง (เฉพาะที่ค้างส่งอยู่)</div>
                     </div>
                     <div class="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar" id="emailMsgSelectContainer">
                         ${msgsHtml}
@@ -4111,10 +4238,8 @@
                 const todayStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
                 let msgsListHtml = '';
                 
-                // กำหนด URL ของเว็บไซต์หลักแบบตายตัว
                 const baseUrl = "https://iearchitecture65.github.io/Song-Siang/";
 
-                // ฟังก์ชันแปลงอิโมจิเป็นรูปภาพ (Twemoji) สำหรับเนื้อหาข้อความ
                 const parseTextWithEmojis = (text) => {
                     if (!text) return '';
                     let htmlText = text.replace(/\n/g, '<br>');
@@ -4161,7 +4286,6 @@
                         `;
                     }
 
-                    // สร้างรูปแบบ Card ให้เหมือนในเว็บ
                     msgsListHtml += `
                         <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.03);">
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 14px;">
@@ -4268,7 +4392,9 @@
                         const batch = writeBatch(db);
                         msgsToSend.forEach(m => {
                             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                            batch.update(ref, { emailSent: true });
+                            // ลบ uid ของคนที่ส่งสำเร็จออกจากคิวรีเซ็ต และอัปเดต emailSent เป็น true
+                            let newReset = (m.resetForUsers || []).filter(id => id !== uid);
+                            batch.update(ref, { emailSent: true, resetForUsers: newReset });
                         });
                         await batch.commit();
 
@@ -4291,12 +4417,9 @@
             },
 
             startBulkEmailProcess: async function() {
+                // คัดเฉพาะคนที่มียอดข้อความ "ค้างส่ง"
                 const usersWithMessages = predefinedUsers.map(user => {
-                    const userMsgs = this.allMessages.filter(m => {
-                        const isToUser = m.to && Array.isArray(m.to) && (m.to.includes(user.studentId) || m.to.length >= predefinedUsers.length);
-                        const isEligible = this.emailConfig.onlyNew ? !m.emailSent : true;
-                        return isToUser && isEligible;
-                    });
+                    const userMsgs = this.allMessages.filter(m => this.isMsgEligibleForUser(m, user.studentId));
                     return { ...user, messages: userMsgs };
                 }).filter(u => u.messages.length > 0);
 
@@ -4306,7 +4429,7 @@
 
                 glassSwal.fire({
                     title: `ยืนยันการส่ง Bulk Email`,
-                    html: `ระบบจะทำการส่งอีเมลแจ้งเตือนไปยังสมาชิก <b>${usersWithMessages.length} ท่าน</b><br><br><span class="text-xs text-red-500">อาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้าต่างนี้จนกว่าจะเสร็จสิ้น</span>`,
+                    html: `ระบบจะทำการส่งอีเมลแจ้งเตือนไปยังสมาชิกที่ค้างส่งทั้งหมด <b>${usersWithMessages.length} ท่าน</b><br><br><span class="text-xs text-red-500">อาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้าต่างนี้จนกว่าจะเสร็จสิ้น</span>`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'เริ่มส่งทันที',
@@ -4362,7 +4485,8 @@
                                     const batch = writeBatch(db);
                                     user.messages.forEach(m => {
                                         const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                                        batch.update(ref, { emailSent: true });
+                                        let newReset = (m.resetForUsers || []).filter(id => id !== user.studentId);
+                                        batch.update(ref, { emailSent: true, resetForUsers: newReset });
                                     });
                                     await batch.commit();
 
