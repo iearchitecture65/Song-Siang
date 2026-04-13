@@ -4338,15 +4338,10 @@
                     } else {
                         const parsedContent = parseTextWithEmojis(msg.content.trim());
                         msgContentHtml = `
-                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 18px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.5; text-align: left;">
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                    <tr>
-                                        <td style="font-size: 50px; color: #cbd5e1; font-family: Georgia, serif; line-height: 20px; vertical-align: top; width: 30px; padding-top: 10px;">"</td>
-                                        <td style="padding-left: 5px; vertical-align: top; word-break: break-word; padding-top: 2px;">
-                                            ${parseTextWithEmojis(msg.content.trim())}
-                                        </td>
-                                    </tr>
-                                </table>
+                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 6px solid #2b71b8; border-radius: 8px; padding: 18px 22px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.7; text-align: left;">
+                                <div style="word-break: break-word; margin: 0;">
+                                    ${parseTextWithEmojis(msg.content.trim())}
+                                </div>
                             </div>`;
                     }
 
