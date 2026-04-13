@@ -842,7 +842,49 @@
                         this.otpSkipTime = data.otpSkipTimeMinutes !== undefined ? data.otpSkipTimeMinutes : (data.otpSkipTime !== undefined ? data.otpSkipTime * 60 : 60);
                         
                         if (data.emailConfig) {
+                            const oldConfigStr = JSON.stringify(this.emailConfig);
                             this.emailConfig = { ...this.emailConfig, ...data.emailConfig };
+                            const newConfigStr = JSON.stringify(this.emailConfig);
+
+                            // ซิงค์ข้อมูล Real-time ไปยังหน้าต่าง UI หากแอดมินเปิดหน้านี้อยู่
+                            if (oldConfigStr !== newConfigStr && this.currentView === 'admin_email_system') {
+                                const inpAutoPilot = document.getElementById('inpAutoPilot');
+                                if (inpAutoPilot) inpAutoPilot.checked = this.emailConfig.autoPilot;
+                                
+                                const inpEmailDelay = document.getElementById('inpEmailDelay');
+                                if (inpEmailDelay) inpEmailDelay.value = this.emailConfig.delayMinutes;
+                                
+                                const inpEmailTime = document.getElementById('inpEmailTime');
+                                if (inpEmailTime) inpEmailTime.value = this.emailConfig.scheduleTime;
+
+                                const type = this.emailConfig.sendType;
+                                const delaySettings = document.getElementById('emailDelaySettings');
+                                const scheduleSettings = document.getElementById('emailScheduleSettings');
+                                if (delaySettings) delaySettings.className = type === 'delay' ? 'block mb-4 p-4 bg-black/10 rounded-xl border border-white/10' : 'hidden';
+                                if (scheduleSettings) scheduleSettings.className = type === 'schedule' ? 'block mb-4 p-4 bg-black/10 rounded-xl border border-white/10' : 'hidden';
+                                
+                                document.querySelectorAll('[onclick^="app.setEmailSendType"]').forEach(el => {
+                                    el.className = `flex-1 py-2 rounded-xl text-xs font-bold transition-colors border ${el.getAttribute('onclick').includes(type) ? 'bg-secondary text-primary border-secondary' : 'bg-transparent text-white border-white/40'}`;
+                                });
+
+                                ['0','1','2','3','4','5','6'].forEach(d => {
+                                    const btn = document.getElementById(`btnDay${d}`);
+                                    if (btn) {
+                                        const isSelected = this.emailConfig.scheduleDays.includes(d);
+                                        btn.className = `px-3 py-1 rounded-lg text-xs font-bold transition-colors border ${isSelected ? 'bg-secondary text-primary border-secondary' : 'bg-white/10 text-white/60 border-white/30'}`;
+                                    }
+                                });
+
+                                const targetCountDisplay = document.getElementById('autoPilotTargetCountText');
+                                if (targetCountDisplay) {
+                                    const usersWithMessages = predefinedUsers.map(user => {
+                                        const userMsgs = this.allMessages.filter(m => this.isMsgEligibleForUser(m, user.studentId));
+                                        return { ...user, msgCount: userMsgs.length };
+                                    }).filter(u => u.msgCount > 0);
+                                    const excludedCount = (this.emailConfig.excludedAutoPilotUsers || []).length;
+                                    targetCountDisplay.innerText = `ส่งให้ ${usersWithMessages.length - excludedCount} จาก ${usersWithMessages.length} ท่าน ที่มีข้อความค้างส่ง`;
+                                }
+                            }
                         }
 
                         if (this.profile && this.profile.isAdmin) {
@@ -4001,24 +4043,14 @@
                                 <label class="block text-[11px] font-bold text-white mb-2"><i class="fa-solid fa-users-viewfinder text-secondary mr-1"></i> เป้าหมายที่จะส่งอัตโนมัติ (ตามเงื่อนไขด้านบน)</label>
                                 <div class="text-xs text-white/90 leading-relaxed">
                                     ${usersWithMessages.length > 0
-                                        ? `<button type="button" onclick="app.showAutoPilotTargetSelectModal()" class="w-full mt-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-3 text-left transition-colors flex justify-between items-center group shadow-sm">
+                                        ? `<button type="button" id="autoPilotTargetBtn" onclick="app.showAutoPilotTargetSelectModal()" class="w-full mt-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-3 text-left transition-colors flex justify-between items-center group shadow-sm">
                                                <div>
                                                    <div class="font-bold text-secondary text-sm mb-0.5"><i class="fa-solid fa-list-check mr-1"></i> กดเพื่อเลือกเป้าหมาย</div>
-                                                   <div class="text-[10px] text-white/70">ส่งให้ ${usersWithMessages.filter(u => !(this.emailConfig.excludedAutoPilotUsers || []).includes(u.studentId)).length} จาก ${usersWithMessages.length} ท่าน ที่มีข้อความค้างส่ง</div>
+                                                   <div id="autoPilotTargetCountText" class="text-[10px] text-white/70">ส่งให้ ${usersWithMessages.filter(u => !(this.emailConfig.excludedAutoPilotUsers || []).includes(u.studentId)).length} จาก ${usersWithMessages.length} ท่าน ที่มีข้อความค้างส่ง</div>
                                                </div>
                                                <i class="fa-solid fa-chevron-right text-white/50 group-hover:text-white transition-colors"></i>
                                            </button>`
                                         : '<span class="text-green-400 font-bold"><i class="fa-solid fa-check-circle mr-1"></i> ไม่มีข้อความใหม่ที่ค้างส่ง</span>'}
-                                </div>
-                            </div>
-
-                            <div class="mb-4 p-4 bg-blue-900/30 rounded-xl border border-blue-400/30 shadow-inner">
-                                <label class="block text-[11px] font-bold text-white mb-2"><i class="fa-solid fa-server text-secondary mr-1"></i> รันระบบอัตโนมัติบนเซิร์ฟเวอร์ (ไม่ต้องเปิดคอมทิ้งไว้)</label>
-                                <div class="text-xs text-blue-100 leading-relaxed">
-                                    หากต้องการให้ระบบเชื่อมกับ Firebase และส่งอีเมลอัตโนมัติตลอด 24 ชม. แม้คุณปิดคอมพิวเตอร์ไปแล้ว ต้องใช้ Google Apps Script ทำหน้าที่แทน
-                                    <button type="button" onclick="app.showServerDeployGuide()" class="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl p-3 text-center transition-colors shadow-lg font-bold flex items-center justify-center gap-2">
-                                        <i class="fa-solid fa-cloud-arrow-up"></i> ดูโค้ดและวิธีติดตั้งเซิร์ฟเวอร์ (ฟรี)
-                                    </button>
                                 </div>
                             </div>
 
@@ -4033,86 +4065,6 @@
                         ${listHtml}
                     </div>
                 </div>`;
-            },
-
-            showServerDeployGuide: function() {
-                const code = `// คัดลอกโค้ดนี้ไปวางใน Google Apps Script (ไฟล์เดียวกับที่ใช้ส่งอีเมลอยู่แล้ว)
-// วิธีตั้งค่ารันอัตโนมัติ: ไปที่เมนู "ทริกเกอร์" (รูปนาฬิกาด้านซ้าย) -> เพิ่มทริกเกอร์
-// เลือกฟังก์ชัน: autoPilotWorker
-// แหล่งที่มา: ตามเวลา (Time-driven) -> ตัวจับเวลาเป็นนาที -> ทุก 1 ชั่วโมง
-
-const FIREBASE_PROJECT_ID = "song-siang-fa86e"; 
-const APP_ID = "song-siang-app";
-
-function autoPilotWorker() {
-  const url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_PROJECT_ID + '/databases/(default)/documents/artifacts/' + APP_ID + '/public/data/song_siang_messages?pageSize=100';
-  
-  try {
-    const response = UrlFetchApp.fetch(url);
-    const data = JSON.parse(response.getContentText());
-    
-    if (!data.documents) return;
-    
-    data.documents.forEach(doc => {
-      const fields = doc.fields;
-      // เช็คว่าข้อความนี้ยังไม่ได้ส่งอีเมล (emailSent = false หรือไม่มีฟิลด์นี้)
-      const isSent = fields.emailSent && fields.emailSent.booleanValue === true;
-      
-      if (!isSent && fields.to && fields.to.arrayValue && fields.to.arrayValue.values) {
-        const toArray = fields.to.arrayValue.values.map(v => v.stringValue);
-        
-        // วนลูปส่งอีเมลหาทุกคนที่อยู่ใน To Array
-        toArray.forEach(studentId => {
-           const email = studentId + "@kmitl.ac.th";
-           const subject = "มีข้อความใหม่จาก Song Siang [ระบบส่งอัตโนมัติ]";
-           const body = "คุณมีข้อความใหม่ กรุณาเข้าระบบเพื่อตรวจสอบ";
-           
-           // หากต้องการส่งจริงๆ ให้เอาเครื่องหมาย // ออกจากบรรทัดด้านล่าง
-           // MailApp.sendEmail(email, subject, body); 
-        });
-        
-        // อัปเดตสถานะกลับไปที่ Firebase ว่าส่งแล้ว (emailSent = true)
-        const docUrl = 'https://firestore.googleapis.com/v1/' + doc.name + '?updateMask.fieldPaths=emailSent';
-        const payload = { fields: { emailSent: { booleanValue: true } } };
-        
-        UrlFetchApp.fetch(docUrl, {
-          method: 'PATCH',
-          contentType: 'application/json',
-          payload: JSON.stringify(payload)
-        });
-      }
-    });
-  } catch (e) {
-    Logger.log(e);
-  }
-}`;
-
-                glassSwal.fire({
-                    title: 'เชื่อมต่อ Firebase กับ Server 24 ชม.',
-                    html: `
-                        <div class="text-left text-sm text-gray-700 space-y-3">
-                            <p>ภาษา HTML ไม่สามารถทำงานได้ตอนคุณปิดหน้าเว็บ <b>แต่คุณสามารถให้ Google Apps Script ทำหน้าที่เป็นเซิร์ฟเวอร์อัตโนมัติคอยเชื่อมกับ Firebase แทนได้ฟรี!</b></p>
-                            <p class="font-bold text-primary border-b pb-1">ขั้นตอนการตั้งค่า (ทำแค่ครั้งเดียวจบ):</p>
-                            <ol class="list-decimal pl-5 space-y-2 text-xs font-medium">
-                                <li>ไปที่ <b>Google Apps Script</b> (โปรเจกต์เดิมที่คุณใช้ทำ API ส่งอีเมล)</li>
-                                <li>คัดลอกโค้ดในกล่องดำด้านล่าง ไปวางต่อท้ายในสคริปต์เดิมของคุณ</li>
-                                <li>ไปที่เมนู <b>"ทริกเกอร์"</b> (รูปนาฬิกาที่แถบซ้ายมือ)</li>
-                                <li>กดปุ่ม <b>"เพิ่มทริกเกอร์"</b> (สีน้ำเงินขวาล่าง)</li>
-                                <li>ตั้งค่า: เลือกฟังก์ชัน <code>autoPilotWorker</code> > แหล่งที่มา <b>"ตามเวลา"</b> > ตั้งเป็น <b>ทุก 1 ชั่วโมง</b> หรือตามที่ต้องการ</li>
-                            </ol>
-                            <div class="relative mt-4">
-                                <textarea readonly class="w-full h-48 p-3 bg-slate-900 text-green-400 text-[10px] font-mono rounded-xl border border-slate-700 focus:outline-none" id="gasCodeCopy">${code}</textarea>
-                                <button onclick="document.getElementById('gasCodeCopy').select(); document.execCommand('copy'); Swal.showValidationMessage('คัดลอกโค้ดเรียบร้อย! นำไปวางใน Apps Script ได้เลย');" class="absolute top-3 right-3 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold backdrop-blur-md border border-white/30 transition-colors shadow-sm">คัดลอกโค้ด</button>
-                            </div>
-                        </div>
-                    `,
-                    confirmButtonText: 'รับทราบวิธีทำ',
-                    customClass: {
-                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-xl',
-                        title: 'text-primary font-extrabold text-xl mt-2',
-                        confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-3 font-bold shadow-lg transition hover:scale-105 w-full mt-2',
-                    }
-                });
             },
 
             resetEmailStatus: function() {
