@@ -3134,10 +3134,10 @@
                         type: this.composeMode,
                         content: content,
                         audioDuration: this.composeMode === 'audio' ? this.lastRecordingTime : null,
-                        timestamp: Date.now()
-                        emailSent: false,      // เพิ่มบรรทัดนี้: เพื่อให้ Apps Script ตรวจเจอแน่นอน
-                        resetForUsers: [],      // เพิ่มบรรทัดนี้
-                        linkExpiryAt: 0         // เพิ่มบรรทัดนี้
+                        timestamp: Date.now(),
+                        emailSent: false,      // <--- เพิ่มบรรทัดนี้: สำคัญมากเพื่อให้ Apps Script ตื่นมาส่งเมล
+                        resetForUsers: [],      // <--- เพิ่มบรรทัดนี้
+                        linkExpiryAt: 0         // <--- เพิ่มบรรทัดนี้
                     };
                     const msgsRef = collection(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages');
                     await addDoc(msgsRef, messageData);
