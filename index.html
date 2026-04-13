@@ -3662,10 +3662,12 @@
                         if (eligibleMsgs.length > 0) shouldSend = true;
                     } else if (this.emailConfig.sendType === 'schedule') {
                         if (this.emailConfig.scheduleDays.includes(currentDay) && this.emailConfig.scheduleTime === currentTimeStr) {
-                            // ป้องกันการส่งซ้ำในนาทีเดียวกัน (เผื่อ setInterval รัน 2 รอบใน 1 นาที)
+                            // ป้องกันการส่งซ้ำในนาทีเดียวกัน ทั้งแท็บปัจจุบัน และกรณีเปิดค้างไว้หลายแท็บ (ใช้ localStorage ล็อคไว้)
                             const todayStr = now.toDateString() + '-' + currentTimeStr;
-                            if (this.lastScheduleSentTime === todayStr) return;
+                            if (this.lastScheduleSentTime === todayStr || localStorage.getItem('lastScheduleSentTime') === todayStr) return;
+                            
                             this.lastScheduleSentTime = todayStr;
+                            localStorage.setItem('lastScheduleSentTime', todayStr);
 
                             eligibleMsgs = msgsToProcess;
                             if (eligibleMsgs.length > 0) shouldSend = true;
@@ -4323,7 +4325,7 @@
                     if (isAudio) {
                         const link = `${baseUrl}?m=${msg.id}`;
                         msgContentHtml = `
-                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px 16px; display: inline-block;">
+                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px 16px; display: inline-block; width: 100%; box-sizing: border-box; text-align: left;">
                                 <div style="color: #2b71b8; font-weight: bold; font-size: 14px; margin-bottom: 8px;">
                                     <img src="https://cdn-icons-png.flaticon.com/512/25/25694.png" width="14" style="vertical-align: middle; opacity: 0.7; margin-right: 5px;"> 
                                     คลิปเสียง (${msg.audioDuration || '?'} วินาที)
@@ -4336,15 +4338,15 @@
                     } else {
                         const parsedContent = parseTextWithEmojis(msg.content.trim());
                         msgContentHtml = `
-                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6;">
-                                <div style="font-size: 28px; color: #cbd5e1; font-family: Georgia, serif; line-height: 1; margin-bottom: -10px;">"</div>
-                                <div style="word-break: break-word; margin-top: 0;">${parsedContent}</div>
+                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6; text-align: left;">
+                                <div style="font-size: 36px; color: #cbd5e1; font-family: Georgia, serif; line-height: 0.6; margin-bottom: 10px; text-align: left;">"</div>
+                                <div style="word-break: break-word; margin: 0; padding: 0; text-align: left;">${parsedContent}</div>
                             </div>
                         `;
                     }
 
                     msgsListHtml += `
-                        <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.03);">
+                        <div style="background-color: #ffffff; border: 2px solid #e2e8f0; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.03); text-align: left;">
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 14px;">
                                 <tr>
                                     <td width="55" valign="top">
@@ -4352,7 +4354,7 @@
                                             ${msg.from.isAnonymous ? '<img src="https://cdn-icons-png.flaticon.com/512/2202/2202112.png" width="24" style="vertical-align: middle; margin-top: 10px;">' : abbr}
                                         </div>
                                     </td>
-                                    <td valign="middle" style="padding-left: 12px;">
+                                    <td valign="middle" style="padding-left: 12px; text-align: left;">
                                         <div style="color: #2b71b8; font-weight: 800; font-size: 16px;">${displayName}</div>
                                         <div style="color: #64748b; font-size: 12px; margin-top: 3px;">
                                             <img src="https://cdn-icons-png.flaticon.com/512/2088/2088617.png" width="12" style="vertical-align: middle; margin-right: 4px; opacity: 0.6;">${dateStr}
@@ -4376,7 +4378,7 @@
                         body { font-family: 'Prompt', Tahoma, sans-serif; background-color: #f1f5f9; margin: 0; padding: 0; }
                         .container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
                         .header { background: linear-gradient(135deg, #1e5288 0%, #2b71b8 100%); padding: 30px 20px; text-align: center; color: white; }
-                        .content { padding: 25px; background-color: #f1f5f9; }
+                        .content { padding: 25px; background-color: #f1f5f9; text-align: left; }
                         .footer { background-color: #e2e8f0; padding: 20px; text-align: center; font-size: 12px; color: #64748b; }
                     </style>
                 </head>
