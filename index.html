@@ -4402,7 +4402,10 @@
                         <div class="content">
                             <div style="background-color: #ffffff; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
                                 <h2 style="color: #1e293b; font-size: 20px; margin-top: 0; margin-bottom: 8px;">สวัสดี, ${user.name} <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f44b.png" width="20" style="vertical-align: middle; margin-left: 4px;"></h2>
-                                <p style="color: #475569; font-size: 14px; margin: 0;">คุณมี <b>${msgs.length}</b> ข้อความใหม่ ประจำวันที่ ${todayStr}</p>
+                                <p style="color: #475569; font-size: 14px; margin: 0; line-height: 1.5;">
+                                    คุณมี <b>${msgs.length}</b> ข้อความใหม่<br>
+                                    ประจำวันที่ ${todayStr}
+                                </p>
                             </div>
                             
                             <div>
@@ -4410,8 +4413,9 @@
                             </div>
                             
                             <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                                <a href="${baseUrl}" style="display: inline-block; background-color: #fddf31; color: #2b71b8; text-decoration: none; padding: 14px 32px; border-radius: 25px; font-weight: 800; font-size: 16px; box-shadow: 0 4px 12px rgba(253,223,49,0.4);">
-                                    <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f449.png" width="18" style="vertical-align: middle; margin-right: 6px;">เข้าสู่ระบบเพื่ออ่านและตอบกลับ</a>
+                                <a href="${baseUrl}" style="display: inline-block; background-color: #fddf31; color: #2b71b8; text-decoration: none; padding: 12px 28px; border-radius: 25px; font-weight: 800; font-size: 14.5px; box-shadow: 0 4px 12px rgba(253,223,49,0.4);">
+                                    เข้าสู่ระบบเพื่ออ่าน
+                                </a>
                             </div>
                         </div>
                         <div class="footer">
