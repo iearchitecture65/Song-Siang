@@ -4337,13 +4337,18 @@
                             </div>
                         `;
                     } else {
-                        const parsedContent = parseTextWithEmojis(msg.content.trim());
+                        // ใช้การเช็คเงื่อนไขเพื่อความปลอดภัย ป้องกันเว็บค้าง
+                        const contentRaw = msg.content ? msg.content.trim() : "";
+                        const parsedContent = (typeof this.parseTextWithEmojis === 'function') 
+                            ? this.parseTextWithEmojis(contentRaw) 
+                            : contentRaw;
+                
                         msgContentHtml = `
-                                <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6;">
-                                    <div style="font-size: 28px; color: #cbd5e1; font-family: Georgia, serif; line-height: 1; margin-bottom: -10px;">"</div>
-                                    <div style="word-break: break-word; margin-top: 0;">${parsedContent}</div>
-                                </div>
-                            `;
+                            <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px; color: #1e293b; font-size: 15px; font-weight: 500; line-height: 1.6;">
+                                <div style="font-size: 32px; color: #cbd5e1; font-family: Georgia, serif; line-height: 1; margin-bottom: 5px;">"</div>
+                                <div style="word-break: break-word; margin-top: 0; padding-left: 5px;">${parsedContent}</div>
+                            </div>
+                        `;
                     }
 
                     msgsListHtml += `
