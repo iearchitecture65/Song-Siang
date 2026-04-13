@@ -3919,36 +3919,62 @@
                 if (!silent) {
                     glassSwal.fire({
                         title: 'กำลังซิงค์ข้อมูล...',
-                        html: '<i class="fa-solid fa-sync fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-xs">กำลังเตรียมข้อมูลให้ Apps Script...</p>',
+                        html: '<i class="fa-solid fa-sync fa-spin text-4xl text-primary mt-4 mb-3"></i><p class="text-xs">กำลังปรับปรุงโครงสร้างข้อมูลให้ Apps Script...</p>',
                         showConfirmButton: false, allowOutsideClick: false
                     });
                 }
-            
+
                 try {
                     const batch = writeBatch(db);
                     let count = 0;
+                    
                     this.allMessages.forEach(m => {
-                        // ตรวจสอบฟิลด์ที่ Apps Script บังคับใช้ ถ้าไม่มีให้เติมทันที
-                        if (m.emailSent === undefined || m.resetForUsers === undefined || m.timestamp === undefined) {
+                        const updates = {};
+                        
+                        // 1. ตรวจสอบ timestamp (Apps Script บังคับเป็น Integer)
+                        if (typeof m.timestamp !== 'number') {
+                            updates.timestamp = Number(m.timestamp) || Date.now();
+                        }
+
+                        // 2. ตรวจสอบ emailSent (ต้องเป็น Boolean)
+                        if (typeof m.emailSent !== 'boolean') {
+                            updates.emailSent = m.emailSent === 'true' ? true : false;
+                        }
+
+                        // 3. ตรวจสอบ resetForUsers (Apps Script บังคับเป็น Array เพื่อวนลูป .map)
+                        if (!Array.isArray(m.resetForUsers)) {
+                            updates.resetForUsers = [];
+                        }
+
+                        // 4. ตรวจสอบฟิลด์ linkExpiryAt (ให้เริ่มนับเวลาลิ้งก์ได้ถูกต้อง)
+                        if (m.linkExpiryAt === undefined || m.linkExpiryAt === null) {
+                            updates.linkExpiryAt = 0;
+                        }
+
+                        // ถ้ามีอะไรต้องแก้ ให้ใส่ลงใน batch
+                        if (Object.keys(updates).length > 0) {
                             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                            batch.update(ref, {
-                                emailSent: m.emailSent !== undefined ? m.emailSent : false,
-                                resetForUsers: m.resetForUsers || [],
-                                timestamp: m.timestamp || Date.now(),
-                                linkExpiryAt: m.linkExpiryAt || 0
-                            });
+                            batch.update(ref, updates);
                             count++;
                         }
                     });
-            
-                    if (count > 0) await batch.commit();
+
+                    if (count > 0) {
+                        await batch.commit();
+                    }
                     
                     if (!silent) {
-                        glassSwal.fire({ icon: 'success', title: 'ซิงค์เรียลไทม์สำเร็จ', text: `เตรียมข้อมูล ${count} รายการพร้อมส่งแล้ว`, timer: 1500, showConfirmButton: false });
+                        glassSwal.fire({ 
+                            icon: 'success', 
+                            title: 'ซิงค์ข้อมูลสำเร็จ', 
+                            text: `ปรับปรุงข้อมูล ${count} รายการให้พร้อมส่งแล้ว`, 
+                            timer: 2000, 
+                            showConfirmButton: false 
+                        });
                     }
                 } catch (e) {
                     console.error("Sync Error:", e);
-                    if (!silent) glassSwal.fire('Error', 'ไม่สามารถซิงค์ข้อมูลได้', 'error');
+                    if (!silent) glassSwal.fire('Error', 'ไม่สามารถซิงค์ข้อมูลได้: ' + e.message, 'error');
                 }
             },
             
