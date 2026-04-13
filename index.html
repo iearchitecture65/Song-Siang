@@ -3581,9 +3581,6 @@
                 const isToUser = m.to && Array.isArray(m.to) && (m.to.includes(uid) || m.to.length >= predefinedUsers.length);
                 if (!isToUser) return false;
                 
-                // ถ้าตั้งค่าให้ส่งทุกข้อความ (ไม่สนว่าเคยส่งหรือยัง)
-                if (!this.emailConfig.onlyNew) return true;
-                
                 // ถ้าระบุว่าให้รีเซ็ตสถานะเฉพาะคนนี้
                 if (m.resetForUsers && m.resetForUsers.includes(uid)) return true;
                 
@@ -3594,80 +3591,93 @@
             checkAndRunAutoPilot: async function() {
                 if (!this.profile || !this.profile.isAdmin || !this.emailConfig.autoPilot) return;
 
-                const now = new Date();
-                const currentDay = now.getDay().toString(); // 0=Sun, 1=Mon...
-                const currentHours = String(now.getHours()).padStart(2, '0');
-                const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-                const currentTimeStr = `${currentHours}:${currentMinutes}`;
+                // ป้องกันการรันซ้อนทับกัน ถ้ารอบเก่ายังส่งไม่เสร็จ (แก้ปัญหาส่งเบิ้ล 2-3 รอบ)
+                if (this.isProcessingAutoPilot) return;
+                this.isProcessingAutoPilot = true;
 
-                let msgsToProcess = this.allMessages.filter(m => {
-                    // ถ้าส่งแล้ว และไม่มีใครถูกสั่งให้ส่งซ้ำ (Reset) ให้ข้ามข้อความนี้ไปเลย
-                    if (this.emailConfig.onlyNew && m.emailSent && (!m.resetForUsers || m.resetForUsers.length === 0)) return false;
-                    return true;
-                });
+                try {
+                    const now = new Date();
+                    const currentDay = now.getDay().toString(); // 0=Sun, 1=Mon...
+                    const currentHours = String(now.getHours()).padStart(2, '0');
+                    const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+                    const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
-                if (msgsToProcess.length === 0) return;
+                    let msgsToProcess = this.allMessages.filter(m => {
+                        // ข้ามข้อความที่เคยส่งแล้วและไม่ได้ถูกสั่งให้รีเซ็ต
+                        if (m.emailSent && (!m.resetForUsers || m.resetForUsers.length === 0)) return false;
+                        return true;
+                    });
 
-                let eligibleMsgs = [];
-                let shouldSend = false;
+                    if (msgsToProcess.length === 0) return;
 
-                if (this.emailConfig.sendType === 'delay') {
-                    const delayMs = (this.emailConfig.delayMinutes || 0) * 60 * 1000;
-                    eligibleMsgs = msgsToProcess.filter(m => (Date.now() - m.timestamp) >= delayMs);
-                    if (eligibleMsgs.length > 0) shouldSend = true;
-                } else if (this.emailConfig.sendType === 'schedule') {
-                    if (this.emailConfig.scheduleDays.includes(currentDay) && this.emailConfig.scheduleTime === currentTimeStr) {
-                        eligibleMsgs = msgsToProcess;
+                    let eligibleMsgs = [];
+                    let shouldSend = false;
+
+                    if (this.emailConfig.sendType === 'delay') {
+                        const delayMs = (this.emailConfig.delayMinutes || 0) * 60 * 1000;
+                        eligibleMsgs = msgsToProcess.filter(m => (Date.now() - m.timestamp) >= delayMs);
                         if (eligibleMsgs.length > 0) shouldSend = true;
+                    } else if (this.emailConfig.sendType === 'schedule') {
+                        if (this.emailConfig.scheduleDays.includes(currentDay) && this.emailConfig.scheduleTime === currentTimeStr) {
+                            // ป้องกันการส่งซ้ำในนาทีเดียวกัน (เผื่อ setInterval รัน 2 รอบใน 1 นาที)
+                            const todayStr = now.toDateString() + '-' + currentTimeStr;
+                            if (this.lastScheduleSentTime === todayStr) return;
+                            this.lastScheduleSentTime = todayStr;
+
+                            eligibleMsgs = msgsToProcess;
+                            if (eligibleMsgs.length > 0) shouldSend = true;
+                        }
                     }
-                }
 
-                if (!shouldSend || eligibleMsgs.length === 0) return;
+                    if (!shouldSend || eligibleMsgs.length === 0) return;
 
-                const userGroups = {};
-                // จัดกลุ่มข้อความที่จะส่ง โดยอิงความถูกต้องแบบรายบุคคล
-                predefinedUsers.forEach(u => {
-                    const userMsgs = eligibleMsgs.filter(m => this.isMsgEligibleForUser(m, u.studentId));
-                    if (userMsgs.length > 0) {
-                        userGroups[u.studentId] = userMsgs;
-                    }
-                });
+                    const userGroups = {};
+                    // จัดกลุ่มข้อความที่จะส่ง โดยอิงความถูกต้องแบบรายบุคคล
+                    predefinedUsers.forEach(u => {
+                        const userMsgs = eligibleMsgs.filter(m => this.isMsgEligibleForUser(m, u.studentId));
+                        if (userMsgs.length > 0) {
+                            userGroups[u.studentId] = userMsgs;
+                        }
+                    });
 
-                for (const uid in userGroups) {
-                    if ((this.emailConfig.excludedAutoPilotUsers || []).includes(uid)) continue;
+                    for (const uid in userGroups) {
+                        if ((this.emailConfig.excludedAutoPilotUsers || []).includes(uid)) continue;
 
-                    const user = predefinedUsers.find(u => u.studentId === uid);
-                    if (user) {
-                        const userMsgs = userGroups[uid]; 
-                        const htmlBody = this.buildEmailTemplate(user, userMsgs);
-                        const email = `${uid}@kmitl.ac.th`;
+                        const user = predefinedUsers.find(u => u.studentId === uid);
+                        if (user) {
+                            const userMsgs = userGroups[uid]; 
+                            const htmlBody = this.buildEmailTemplate(user, userMsgs);
+                            const email = `${uid}@kmitl.ac.th`;
 
-                        try {
-                            const response = await fetch(this.EMAIL_API_URL, {
-                                method: "POST",
-                                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                                body: JSON.stringify({
-                                    email: email,
-                                    subject: `คุณมีข้อความใหม่จากระบบ Song Siang [อัตโนมัติ]`,
-                                    htmlBody: htmlBody
-                                })
-                            });
-                            
-                            const resJson = await response.json();
-                            
-                            // ถ้าส่งผ่านแล้ว ให้เคลียร์สถานะของคนๆ นี้ออก
-                            if (resJson.status === 'success' && this.emailConfig.onlyNew) {
-                                const batch = writeBatch(db);
-                                userMsgs.forEach(m => {
-                                    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
-                                    let newReset = (m.resetForUsers || []).filter(id => id !== uid);
-                                    batch.update(ref, { emailSent: true, resetForUsers: newReset });
+                            try {
+                                const response = await fetch(this.EMAIL_API_URL, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                                    body: JSON.stringify({
+                                        email: email,
+                                        subject: `คุณมีข้อความใหม่จากระบบ Song Siang [อัตโนมัติ]`,
+                                        htmlBody: htmlBody
+                                    })
                                 });
-                                await batch.commit();
-                            }
-                        } catch(e) { console.error("AutoPilot send failed", e); }
-                        await new Promise(r => setTimeout(r, 1500));
+                                
+                                const resJson = await response.json();
+                                
+                                // ถ้าส่งผ่านแล้ว ให้เคลียร์สถานะของคนๆ นี้ออก
+                                if (resJson.status === 'success') {
+                                    const batch = writeBatch(db);
+                                    userMsgs.forEach(m => {
+                                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'song_siang_messages', m.id);
+                                        let newReset = (m.resetForUsers || []).filter(id => id !== uid);
+                                        batch.update(ref, { emailSent: true, resetForUsers: newReset });
+                                    });
+                                    await batch.commit();
+                                }
+                            } catch(e) { console.error("AutoPilot send failed", e); }
+                            await new Promise(r => setTimeout(r, 1500));
+                        }
                     }
+                } finally {
+                    this.isProcessingAutoPilot = false;
                 }
             },
 
@@ -3946,8 +3956,8 @@
                         <div id="autoPilotSettingsContent" class="p-5 pt-0 border-t border-white/10 mt-2 ${this.isAutoPilotExpanded ? '' : 'hidden'}">
                             <div class="flex justify-between items-center mb-4 pb-4 border-b border-white/10 mt-4">
                                 <div>
-                                    <div class="text-sm font-bold text-white">เปิดใช้งานระบบส่งอัตโนมัติ</div>
-                                    <div class="text-[10px] text-white/60">ให้ระบบตรวจสอบคิวและส่งอีเมลแจ้งเตือน<span class="text-secondary font-bold">อัตโนมัติอย่างต่อเนื่อง</span></div>
+                                    <div class="text-sm font-bold text-white">เปิดใช้งานระบบส่งอัตโนมัติ (รันบนเครื่องนี้)</div>
+                                    <div class="text-[10px] text-white/60">ให้ระบบตรวจสอบและส่งอีเมลอัตโนมัติ<span class="text-secondary font-bold">เฉพาะตอนที่เปิดหน้านี้ทิ้งไว้เท่านั้น</span></div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="inpAutoPilot" class="sr-only peer" ${this.emailConfig.autoPilot ? 'checked' : ''}>
@@ -3957,10 +3967,10 @@
                             
                             <div class="mb-4">
                                 <label class="block text-[10px] font-bold text-white mb-2">เงื่อนไขข้อความ</label>
-                                <select id="selEmailOnlyNew" class="glass-input w-full px-4 py-2 rounded-xl outline-none font-bold text-primary text-xs">
-                                    <option value="true" ${this.emailConfig.onlyNew ? 'selected' : ''}>ส่งเฉพาะข้อความที่ยังไม่เคยส่งอีเมล (แนะนำ)</option>
-                                    <option value="false" ${!this.emailConfig.onlyNew ? 'selected' : ''}>ส่งทุกข้อความซ้ำอีกครั้ง</option>
-                                </select>
+                                <div class="glass-input w-full px-4 py-2 rounded-xl font-bold text-primary text-xs bg-white/50 text-center shadow-inner">
+                                    <i class="fa-solid fa-shield-halved mr-1"></i> ส่งเฉพาะข้อความที่ยังไม่เคยส่ง (ป้องกันส่งซ้ำ)
+                                </div>
+                                <input type="hidden" id="selEmailOnlyNew" value="true">
                             </div>
 
                             <div class="mb-4">
@@ -4002,8 +4012,18 @@
                                 </div>
                             </div>
 
+                            <div class="mb-4 p-4 bg-blue-900/30 rounded-xl border border-blue-400/30 shadow-inner">
+                                <label class="block text-[11px] font-bold text-white mb-2"><i class="fa-solid fa-server text-secondary mr-1"></i> รันระบบอัตโนมัติบนเซิร์ฟเวอร์ (ไม่ต้องเปิดคอมทิ้งไว้)</label>
+                                <div class="text-xs text-blue-100 leading-relaxed">
+                                    หากต้องการให้ระบบเชื่อมกับ Firebase และส่งอีเมลอัตโนมัติตลอด 24 ชม. แม้คุณปิดคอมพิวเตอร์ไปแล้ว ต้องใช้ Google Apps Script ทำหน้าที่แทน
+                                    <button type="button" onclick="app.showServerDeployGuide()" class="w-full mt-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl p-3 text-center transition-colors shadow-lg font-bold flex items-center justify-center gap-2">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> ดูโค้ดและวิธีติดตั้งเซิร์ฟเวอร์ (ฟรี)
+                                    </button>
+                                </div>
+                            </div>
+
                             <button onclick="app.saveEmailAutomationSettings()" class="w-full py-3 bg-secondary hover:bg-yellow-400 text-primary rounded-xl font-extrabold text-sm shadow-lg transition-transform hover:-translate-y-1 mt-2">
-                                <i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกตั้งค่าระบบส่งอัตโนมัติ
+                                <i class="fa-solid fa-floppy-disk mr-2"></i> บันทึกตั้งค่าระบบส่งอัตโนมัติ (รันบนเครื่องนี้)
                             </button>
                         </div>
                     </div>
@@ -4013,6 +4033,86 @@
                         ${listHtml}
                     </div>
                 </div>`;
+            },
+
+            showServerDeployGuide: function() {
+                const code = `// คัดลอกโค้ดนี้ไปวางใน Google Apps Script (ไฟล์เดียวกับที่ใช้ส่งอีเมลอยู่แล้ว)
+// วิธีตั้งค่ารันอัตโนมัติ: ไปที่เมนู "ทริกเกอร์" (รูปนาฬิกาด้านซ้าย) -> เพิ่มทริกเกอร์
+// เลือกฟังก์ชัน: autoPilotWorker
+// แหล่งที่มา: ตามเวลา (Time-driven) -> ตัวจับเวลาเป็นนาที -> ทุก 1 ชั่วโมง
+
+const FIREBASE_PROJECT_ID = "song-siang-fa86e"; 
+const APP_ID = "song-siang-app";
+
+function autoPilotWorker() {
+  const url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_PROJECT_ID + '/databases/(default)/documents/artifacts/' + APP_ID + '/public/data/song_siang_messages?pageSize=100';
+  
+  try {
+    const response = UrlFetchApp.fetch(url);
+    const data = JSON.parse(response.getContentText());
+    
+    if (!data.documents) return;
+    
+    data.documents.forEach(doc => {
+      const fields = doc.fields;
+      // เช็คว่าข้อความนี้ยังไม่ได้ส่งอีเมล (emailSent = false หรือไม่มีฟิลด์นี้)
+      const isSent = fields.emailSent && fields.emailSent.booleanValue === true;
+      
+      if (!isSent && fields.to && fields.to.arrayValue && fields.to.arrayValue.values) {
+        const toArray = fields.to.arrayValue.values.map(v => v.stringValue);
+        
+        // วนลูปส่งอีเมลหาทุกคนที่อยู่ใน To Array
+        toArray.forEach(studentId => {
+           const email = studentId + "@kmitl.ac.th";
+           const subject = "มีข้อความใหม่จาก Song Siang [ระบบส่งอัตโนมัติ]";
+           const body = "คุณมีข้อความใหม่ กรุณาเข้าระบบเพื่อตรวจสอบ";
+           
+           // หากต้องการส่งจริงๆ ให้เอาเครื่องหมาย // ออกจากบรรทัดด้านล่าง
+           // MailApp.sendEmail(email, subject, body); 
+        });
+        
+        // อัปเดตสถานะกลับไปที่ Firebase ว่าส่งแล้ว (emailSent = true)
+        const docUrl = 'https://firestore.googleapis.com/v1/' + doc.name + '?updateMask.fieldPaths=emailSent';
+        const payload = { fields: { emailSent: { booleanValue: true } } };
+        
+        UrlFetchApp.fetch(docUrl, {
+          method: 'PATCH',
+          contentType: 'application/json',
+          payload: JSON.stringify(payload)
+        });
+      }
+    });
+  } catch (e) {
+    Logger.log(e);
+  }
+}`;
+
+                glassSwal.fire({
+                    title: 'เชื่อมต่อ Firebase กับ Server 24 ชม.',
+                    html: `
+                        <div class="text-left text-sm text-gray-700 space-y-3">
+                            <p>ภาษา HTML ไม่สามารถทำงานได้ตอนคุณปิดหน้าเว็บ <b>แต่คุณสามารถให้ Google Apps Script ทำหน้าที่เป็นเซิร์ฟเวอร์อัตโนมัติคอยเชื่อมกับ Firebase แทนได้ฟรี!</b></p>
+                            <p class="font-bold text-primary border-b pb-1">ขั้นตอนการตั้งค่า (ทำแค่ครั้งเดียวจบ):</p>
+                            <ol class="list-decimal pl-5 space-y-2 text-xs font-medium">
+                                <li>ไปที่ <b>Google Apps Script</b> (โปรเจกต์เดิมที่คุณใช้ทำ API ส่งอีเมล)</li>
+                                <li>คัดลอกโค้ดในกล่องดำด้านล่าง ไปวางต่อท้ายในสคริปต์เดิมของคุณ</li>
+                                <li>ไปที่เมนู <b>"ทริกเกอร์"</b> (รูปนาฬิกาที่แถบซ้ายมือ)</li>
+                                <li>กดปุ่ม <b>"เพิ่มทริกเกอร์"</b> (สีน้ำเงินขวาล่าง)</li>
+                                <li>ตั้งค่า: เลือกฟังก์ชัน <code>autoPilotWorker</code> > แหล่งที่มา <b>"ตามเวลา"</b> > ตั้งเป็น <b>ทุก 1 ชั่วโมง</b> หรือตามที่ต้องการ</li>
+                            </ol>
+                            <div class="relative mt-4">
+                                <textarea readonly class="w-full h-48 p-3 bg-slate-900 text-green-400 text-[10px] font-mono rounded-xl border border-slate-700 focus:outline-none" id="gasCodeCopy">${code}</textarea>
+                                <button onclick="document.getElementById('gasCodeCopy').select(); document.execCommand('copy'); Swal.showValidationMessage('คัดลอกโค้ดเรียบร้อย! นำไปวางใน Apps Script ได้เลย');" class="absolute top-3 right-3 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold backdrop-blur-md border border-white/30 transition-colors shadow-sm">คัดลอกโค้ด</button>
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonText: 'รับทราบวิธีทำ',
+                    customClass: {
+                        popup: 'rounded-[2rem] border border-white/50 shadow-2xl backdrop-blur-xl w-[95%] max-w-xl',
+                        title: 'text-primary font-extrabold text-xl mt-2',
+                        confirmButton: 'bg-secondary text-primary rounded-xl px-6 py-3 font-bold shadow-lg transition hover:scale-105 w-full mt-2',
+                    }
+                });
             },
 
             resetEmailStatus: function() {
